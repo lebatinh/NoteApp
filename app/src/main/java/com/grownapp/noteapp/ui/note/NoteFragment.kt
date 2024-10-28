@@ -27,6 +27,7 @@ import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.grownapp.noteapp.R
 import com.grownapp.noteapp.databinding.FragmentNoteBinding
+import com.grownapp.noteapp.ui.categories.dao.Category
 import com.grownapp.noteapp.ui.note.adapter.NoteAdapter
 import com.grownapp.noteapp.ui.note.dao.Note
 import com.grownapp.noteapp.ui.note_category.NoteCategoryViewModel
@@ -91,17 +92,40 @@ class NoteFragment : Fragment(), MenuProvider {
 
         noteViewModel.allNote.observe(viewLifecycleOwner) { notes ->
             notes.let {
-                noteAdapter.updateListNote(it)
+                val noteItems = notes.map { note ->
+                    NoteItem.NoteWithCategories(note, emptyList())
+                }
+                noteAdapter.updateListNote(noteItems)
             }
         }
 
         val categoryName = arguments?.getString("categoryName")
-        (activity as AppCompatActivity).supportActionBar?.subtitle = categoryName
+        (activity as AppCompatActivity).supportActionBar?.subtitle = categoryName ?: "Uncategorized"
         if (categoryName != null) {
             noteCategoryViewModel.getAllNoteOnCategory(categoryName)
-                .observe(viewLifecycleOwner) { notes ->
-                    noteAdapter.updateListNote(notes)
+                .observe(viewLifecycleOwner) { notes  ->
+                    noteAdapter.updateListNote(notes.map { NoteItem.NoteWithCategories(it.note, getCategoriesForNote(it.note.id)) })
                 }
+        } else {
+            // Lấy tất cả note không có category
+            noteCategoryViewModel.getNotesWithoutCategory()
+                .observe(viewLifecycleOwner) { uncategorizedNotes ->
+                    val noteItems = uncategorizedNotes.map { NoteItem.NoteWithoutCategories(it) }
+                    noteAdapter.updateListNote(noteItems)
+                }
+        }
+
+        // Lấy danh sách các category cho từng note
+        noteViewModel.allNote.observe(viewLifecycleOwner) { notes ->
+            notes.forEach { note ->
+                noteCategoryViewModel.getAllCategoryOfNote(note.id)
+                    .observe(viewLifecycleOwner) { categories ->
+                        val noteItems = notes.map { noteItem ->
+                            NoteItem.NoteWithCategories(noteItem, categories)
+                        }
+                        noteAdapter.updateListNote(noteItems)
+                    }
+            }
         }
 
         val menuHost: MenuHost = requireActivity()
@@ -122,6 +146,14 @@ class NoteFragment : Fragment(), MenuProvider {
         return root
     }
 
+    private fun getCategoriesForNote(id: Int): List<Category> {
+        var listCategory = emptyList<Category>()
+        noteCategoryViewModel.getAllCategoryOfNote(id).observe(viewLifecycleOwner){
+            listCategory = it
+        }
+        return listCategory
+    }
+
     private fun rotateArrowToCorner(arrowImageView: ImageView, cornerX: Float, cornerY: Float) {
         val location = IntArray(2)
         arrowImageView.getLocationOnScreen(location)
@@ -140,13 +172,9 @@ class NoteFragment : Fragment(), MenuProvider {
         val dateFormat = SimpleDateFormat("dd/MM/yyyy, hh:mm a", Locale.getDefault())
         val time = dateFormat.format(currentDateTime)
 
-        val newNote = Note(
-            category = categoryName,
-            time = time
-        )
-
         viewLifecycleOwner.lifecycleScope.launch {
-            noteViewModel.upsert(newNote)
+            noteViewModel.upsert(Note(time = time))
+
             noteViewModel.noteId.observe(viewLifecycleOwner) { id ->
                 id?.let {
                     if (!categoryName.isNullOrEmpty()) {
@@ -177,8 +205,11 @@ class NoteFragment : Fragment(), MenuProvider {
                 searchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
                     override fun onQueryTextSubmit(query: String?): Boolean {
                         query?.let {
-                            noteViewModel.search("%$it%").observe(viewLifecycleOwner) { note ->
-                                noteAdapter.updateListNote(note)
+                            noteViewModel.search("%$it%").observe(viewLifecycleOwner) { notes ->
+                                val noteItems = notes.map { note ->
+                                    NoteItem.NoteWithCategories(note, emptyList())
+                                }
+                                noteAdapter.updateListNote(noteItems)
                             }
                         }
                         return true
@@ -187,7 +218,10 @@ class NoteFragment : Fragment(), MenuProvider {
                     override fun onQueryTextChange(newText: String?): Boolean {
                         newText?.let {
                             noteViewModel.search(it).observe(viewLifecycleOwner) { notes ->
-                                noteAdapter.updateListNote(notes)
+                                val noteItems = notes.map { note ->
+                                    NoteItem.NoteWithCategories(note, emptyList())
+                                }
+                                noteAdapter.updateListNote(noteItems)
                             }
                         }
                         return true
@@ -228,7 +262,8 @@ class NoteFragment : Fragment(), MenuProvider {
 
         buttonSort.setOnClickListener {
             val selectedRadioButtonId = rdgSort.checkedRadioButtonId
-            val selectedRadioButton = dialogView.findViewById<RadioButton>(selectedRadioButtonId)
+            val selectedRadioButton =
+                dialogView.findViewById<RadioButton>(selectedRadioButtonId)
 
             if (selectedRadioButton != null) {
                 val selectedId = selectedRadioButton.id

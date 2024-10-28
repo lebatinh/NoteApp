@@ -7,20 +7,25 @@ import com.grownapp.noteapp.ui.note.dao.Note
 class Note_CategoryRepository(
     private val noteCategoryDao: Note_CategoryDao
 ) {
-    suspend fun upsertNoteCategories(noteId: Int, newCategories: String) {
+    suspend fun upsertNoteCategories(noteId: Int, newCategories: Int) {
         noteCategoryDao.upsertNoteToCategory(Note_Category(noteId, newCategories))
     }
 
     suspend fun removeNoteCategory(noteId: Int){
         noteCategoryDao.removeNoteCategory(noteId)
     }
+
+    fun getNotesWithoutCategory(): LiveData<List<Note>>{
+        return noteCategoryDao.getNotesWithoutCategory()
+    }
+
     // Lấy all category của note nào đó
     fun getAllCategoryOfNote(noteId: Int): LiveData<List<Category>> {
         return noteCategoryDao.getAllCategoryOfNote(noteId)
     }
 
     // Lấy all note trong category nào đó
-    fun getAllNoteOnCategory(categoryName: String): LiveData<List<Note>> {
-        return noteCategoryDao.getAllNoteOnCategory(categoryName)
+    fun getAllNoteOnCategory(categoryId: Int): LiveData<List<NoteWithCategories>> {
+        return noteCategoryDao.getAllNoteOnCategory(categoryId)
     }
 }

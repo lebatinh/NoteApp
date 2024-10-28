@@ -17,6 +17,17 @@ interface Note_CategoryDao {
     @Query("DELETE FROM note_category WHERE noteId = :noteId")
     suspend fun removeNoteCategory(noteId: Int)
 
+    // Lấy all note mà k thuộc category nào (Uncategorized)
+    @Query(
+        """
+    SELECT * FROM note
+    WHERE id NOT IN (
+        SELECT noteId FROM note_category
+    )
+    """
+    )
+    fun getNotesWithoutCategory(): LiveData<List<Note>>
+
     // Lấy all note cho danh mục nào đó
     @Transaction
     @Query(
@@ -24,10 +35,10 @@ interface Note_CategoryDao {
         SELECT note.*
         FROM note
         INNER JOIN note_category ON note.id = note_category.noteId
-        WHERE note_category.categoryName = :categoryName
+        WHERE note_category.categoryId  = :categoryId 
     """
     )
-    fun getAllNoteOnCategory(categoryName: String): LiveData<List<Note>>
+    fun getAllNoteOnCategory(categoryId : Int): LiveData<List<NoteWithCategories>>
 
     // Lấy all danh mục của note
     @Transaction
@@ -35,7 +46,7 @@ interface Note_CategoryDao {
         """
         SELECT category.*
         FROM category
-        INNER JOIN note_category ON category.name = note_category.categoryName
+        INNER JOIN note_category ON category.id = note_category.categoryId 
         WHERE note_category.noteId = :noteId
     """
     )

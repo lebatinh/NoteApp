@@ -7,6 +7,7 @@ import android.view.ViewGroup
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.grownapp.noteapp.R
+import com.grownapp.noteapp.ui.note.NoteItem
 import com.grownapp.noteapp.ui.note.dao.Note
 
 class NoteAdapter(
@@ -14,7 +15,7 @@ class NoteAdapter(
     private val onDelete: (Note) -> Unit
 ) : RecyclerView.Adapter<NoteAdapter.NoteViewHolder>() {
 
-    private var notes: List<Note> = emptyList()
+    private var noteItems: List<NoteItem> = emptyList()
 
     class NoteViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         val title: TextView = itemView.findViewById(R.id.noteTitle)
@@ -30,27 +31,44 @@ class NoteAdapter(
 
     @SuppressLint("SetTextI18n")
     override fun onBindViewHolder(holder: NoteViewHolder, position: Int) {
-        val note = notes[position]
-        holder.title.text = if (note.title.toString()
-                .isEmpty() || note.title.toString() == ""
-        ) "Untitled" else note.title
-        holder.content.text = note.note
-        holder.time.text = "Last edit: ${note.time}"
-        holder.noteCategory.text = note.category
+        when (val noteItem = noteItems[position]) {
+            is NoteItem.NoteWithCategories -> {
+                holder.title.text = if (noteItem.note.title.isNullOrEmpty()) "Untitled" else noteItem.note.title
+                holder.content.text = noteItem.note.note
+                holder.time.text = "Last edit: ${noteItem.note.time}"
+                holder.noteCategory.text = if (noteItem.categories.isNotEmpty()) {
+                    noteItem.categories.joinToString(", ")
+                } else null
 
-        holder.itemView.setOnClickListener {
-            onClickNote(note)
-        }
-        holder.itemView.setOnLongClickListener {
-            onDelete(note)
-            true
+                holder.itemView.setOnClickListener {
+                    onClickNote(noteItem.note)
+                }
+                holder.itemView.setOnLongClickListener {
+                    onDelete(noteItem.note)
+                    true
+                }
+            }
+            is NoteItem.NoteWithoutCategories -> {
+                holder.title.text = if (noteItem.note.title.isNullOrEmpty()) "Untitled" else noteItem.note.title
+                holder.content.text = noteItem.note.note
+                holder.time.text = "Last edit: ${noteItem.note.time}"
+                holder.noteCategory.text = null
+
+                holder.itemView.setOnClickListener {
+                    onClickNote(noteItem.note)
+                }
+                holder.itemView.setOnLongClickListener {
+                    onDelete(noteItem.note)
+                    true
+                }
+            }
         }
     }
 
-    override fun getItemCount(): Int = notes.size
+    override fun getItemCount(): Int = noteItems.size
 
-    fun updateListNote(newNote: List<Note>) {
-        notes = newNote
+    fun updateListNote(newNoteItems: List<NoteItem>) {
+        noteItems = newNoteItems
         notifyDataSetChanged()
     }
 

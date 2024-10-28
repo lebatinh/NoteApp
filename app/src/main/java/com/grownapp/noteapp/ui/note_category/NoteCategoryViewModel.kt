@@ -6,6 +6,7 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.viewModelScope
 import com.grownapp.noteapp.ui.categories.dao.Category
 import com.grownapp.noteapp.ui.note.dao.Note
+import com.grownapp.noteapp.ui.note_category.dao.NoteWithCategories
 import com.grownapp.noteapp.ui.note_category.dao.Note_CategoryDatabase
 import com.grownapp.noteapp.ui.note_category.dao.Note_CategoryRepository
 import kotlinx.coroutines.Dispatchers
@@ -19,24 +20,27 @@ class NoteCategoryViewModel(application: Application) : AndroidViewModel(applica
         noteNoteCategoryRepository = Note_CategoryRepository(noteCategoryDao)
     }
 
-    fun upsertNoteCategories(noteId: Int, newCategories: String) {
+    fun upsertNoteCategories(noteId: Int, newCategories: Int) {
         viewModelScope.launch(Dispatchers.IO) {
-            noteNoteCategoryRepository.removeNoteCategory(noteId)
             noteNoteCategoryRepository.upsertNoteCategories(noteId, newCategories)
         }
     }
 
-    fun removeNoteCategory(noteId: Int){
+    fun removeNoteCategory(noteId: Int) {
         viewModelScope.launch(Dispatchers.IO) {
             noteNoteCategoryRepository.removeNoteCategory(noteId)
         }
+    }
+
+    fun getNotesWithoutCategory(): LiveData<List<Note>> {
+        return noteNoteCategoryRepository.getNotesWithoutCategory()
     }
 
     fun getAllCategoryOfNote(noteId: Int): LiveData<List<Category>> {
         return noteNoteCategoryRepository.getAllCategoryOfNote(noteId)
     }
 
-    fun getAllNoteOnCategory(categoryName: String): LiveData<List<Note>> {
-        return noteNoteCategoryRepository.getAllNoteOnCategory(categoryName)
+    fun getAllNoteOnCategory(categoryId: Int): LiveData<List<NoteWithCategories>> {
+        return noteNoteCategoryRepository.getAllNoteOnCategory(categoryId)
     }
 }

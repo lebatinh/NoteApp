@@ -49,7 +49,6 @@ class NoteViewModel(application: Application) : AndroidViewModel(application) {
                         "\n" +
                         "Have a nice day.\n" +
                         "☺\uFE0F",
-                null,
                 time
             )
 

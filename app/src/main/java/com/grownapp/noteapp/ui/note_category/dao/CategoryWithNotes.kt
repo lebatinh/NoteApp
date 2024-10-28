@@ -1,11 +1,10 @@
-package com.grownapp.noteapp.ui.note_category
+package com.grownapp.noteapp.ui.note_category.dao
 
 import androidx.room.Embedded
 import androidx.room.Junction
 import androidx.room.Relation
 import com.grownapp.noteapp.ui.categories.dao.Category
 import com.grownapp.noteapp.ui.note.dao.Note
-import com.grownapp.noteapp.ui.note_category.dao.Note_Category
 
 data class CategoryWithNotes(
     @Embedded val category: Category,
