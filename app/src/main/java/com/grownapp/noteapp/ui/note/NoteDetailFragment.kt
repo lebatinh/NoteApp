@@ -15,12 +15,9 @@ import androidx.core.view.MenuProvider
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ViewModelProvider
-import androidx.lifecycle.lifecycleScope
 import com.grownapp.noteapp.R
 import com.grownapp.noteapp.databinding.FragmentNoteDetailBinding
 import com.grownapp.noteapp.ui.note.dao.Note
-import com.grownapp.noteapp.ui.note_category.NoteCategoryViewModel
-import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -32,7 +29,6 @@ class NoteDetailFragment : Fragment(), MenuProvider {
     private val binding get() = _binding!!
 
     private lateinit var noteViewModel: NoteViewModel
-    private lateinit var noteCategoryViewModel: NoteCategoryViewModel
 
     private var noteId: Int? = null
     private var category: String? = null
@@ -43,8 +39,6 @@ class NoteDetailFragment : Fragment(), MenuProvider {
         // Khởi tạo ViewModel
         noteViewModel =
             ViewModelProvider(this)[NoteViewModel::class.java]
-
-        noteCategoryViewModel = ViewModelProvider(this)[NoteCategoryViewModel::class.java]
     }
 
     override fun onCreateView(
@@ -109,7 +103,7 @@ class NoteDetailFragment : Fragment(), MenuProvider {
 
         val updateNote = noteId?.let {
             Note(
-                id = it,
+                noteId = it,
                 title = binding.edtTitle.text.toString(),
                 note = binding.edtNote.text.toString(),
                 time = time
@@ -117,11 +111,7 @@ class NoteDetailFragment : Fragment(), MenuProvider {
         }
 
         if (updateNote != null) {
-            if (category.isNullOrEmpty()){
-                noteViewModel.upsert(updateNote)
-            }else{
-                noteId?.let { noteCategoryViewModel.upsertNoteCategories(it, category!!) }
-            }
+            noteViewModel.insert(updateNote){}
         }
         Toast.makeText(requireContext(), "Saved", Toast.LENGTH_SHORT).show()
     }
@@ -197,43 +187,65 @@ class NoteDetailFragment : Fragment(), MenuProvider {
     }
 
     private fun showCategorizeDialog() {
-        noteId?.let { id ->
-            noteCategoryViewModel.getAllCategoryOfNote(id).observe(viewLifecycleOwner) { categories ->
-                if (categories.isEmpty()) {
-                    Toast.makeText(requireContext(), "Không có danh mục nào.", Toast.LENGTH_SHORT).show()
-                } else {
-                    val selectedCategories = mutableSetOf<String>()
-                    val builder = AlertDialog.Builder(requireContext())
-                    builder.setTitle("Chọn danh mục")
+        val categories = noteViewModel.allCategory.value ?: emptyList()
 
-                    val categoryNames = categories.map { it.name }.toTypedArray()
-                    val checkedItems = BooleanArray(categoryNames.size) { false }
-
-                    builder.setMultiChoiceItems(categoryNames, checkedItems) { _, which, isChecked ->
-                        if (isChecked) selectedCategories.add(categoryNames[which])
-                        else selectedCategories.remove(categoryNames[which])
-                    }
-
-                    builder.setPositiveButton("Lưu") { _, _ ->
-                        noteId?.let { id ->
-                            viewLifecycleOwner.lifecycleScope.launch {
-                                noteCategoryViewModel.removeNoteCategory(id)
-                                selectedCategories.forEach { category ->
-                                    noteCategoryViewModel.upsertNoteCategories(id, category)
-                                }
-                            }
-                            Toast.makeText(requireContext(), "Danh mục đã cập nhật", Toast.LENGTH_SHORT).show()
-                        }
-                    }
-
-                    builder.setNegativeButton("Hủy") { dialog, _ ->
-                        dialog.dismiss()
-                    }
-
-                    builder.create().show()
-                }
+        val builder = AlertDialog.Builder(requireContext())
+        builder.setTitle("Chọn danh mục")
+            .setItems(categories.map { it.name }.toTypedArray()) { _, which ->
+                // Xử lý khi chọn danh mục
             }
-        }
+        builder.create()
     }
 
+//    private fun showCategorizeDialog() {
+//        noteId?.let { id ->
+//            noteViewModel.getAllCategoryOfNote(id)
+//                .observe(viewLifecycleOwner) { categories ->
+//                    if (categories.isEmpty()) {
+//                        Toast.makeText(
+//                            requireContext(),
+//                            "Không có danh mục nào.",
+//                            Toast.LENGTH_SHORT
+//                        ).show()
+//                    } else {
+//                        val selectedCategories = mutableSetOf<String>()
+//                        val builder = AlertDialog.Builder(requireContext())
+//                        builder.setTitle("Chọn danh mục")
+//
+//                        val categoryNames = categories.map { it.name }.toTypedArray()
+//                        val checkedItems = BooleanArray(categoryNames.size) { false }
+//
+//                        builder.setMultiChoiceItems(
+//                            categoryNames,
+//                            checkedItems
+//                        ) { _, which, isChecked ->
+//                            if (isChecked) selectedCategories.add(categoryNames[which])
+//                            else selectedCategories.remove(categoryNames[which])
+//                        }
+//
+//                        builder.setPositiveButton("Lưu") { _, _ ->
+//                            noteId?.let { id ->
+//                                viewLifecycleOwner.lifecycleScope.launch {
+//                                    noteCategoryViewModel.removeNoteCategory(id)
+//                                    selectedCategories.forEach { category ->
+//                                        noteCategoryViewModel.upsertNoteCategories(id, category)
+//                                    }
+//                                }
+//                                Toast.makeText(
+//                                    requireContext(),
+//                                    "Danh mục đã cập nhật",
+//                                    Toast.LENGTH_SHORT
+//                                ).show()
+//                            }
+//                        }
+//
+//                        builder.setNegativeButton("Hủy") { dialog, _ ->
+//                            dialog.dismiss()
+//                        }
+//
+//                        builder.create().show()
+//                    }
+//                }
+//        }
+//    }
 }

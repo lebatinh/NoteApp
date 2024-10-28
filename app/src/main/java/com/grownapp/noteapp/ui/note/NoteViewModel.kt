@@ -7,9 +7,12 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
 import com.grownapp.dao.NoteDatabase
-import com.grownapp.dao.NoteRepository
 import com.grownapp.noteapp.ReturnResult
+import com.grownapp.noteapp.ui.categories.dao.Category
 import com.grownapp.noteapp.ui.note.dao.Note
+import com.grownapp.noteapp.ui.note.dao.NoteRepository
+import com.grownapp.noteapp.ui.note_category.NoteCategoryCrossRef
+import com.grownapp.noteapp.ui.note_category.NoteWithCategories
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
@@ -19,6 +22,8 @@ import java.util.Locale
 class NoteViewModel(application: Application) : AndroidViewModel(application) {
     private val repository: NoteRepository
     val allNote: LiveData<List<Note>>
+    val allCategory: LiveData<List<Category>>
+    val allNoteWithoutCategory: LiveData<List<Note>>
 
     private val _noteId = MutableLiveData<Int?>()
     val noteId: LiveData<Int?> get() = _noteId
@@ -27,8 +32,11 @@ class NoteViewModel(application: Application) : AndroidViewModel(application) {
 
     init {
         val noteDao = NoteDatabase.getDatabase(application).noteDao()
-        repository = NoteRepository(noteDao)
+        val categoryDao = NoteDatabase.getDatabase(application).categoryDao()
+        repository = NoteRepository(noteDao, categoryDao)
         allNote = repository.allNote
+        allCategory = repository.getAllCategories()
+        allNoteWithoutCategory = repository.notesWithoutCategory
     }
 
     fun insertFirstNote(sharedPreferences: SharedPreferences) {
@@ -53,7 +61,7 @@ class NoteViewModel(application: Application) : AndroidViewModel(application) {
             )
 
             viewModelScope.launch {
-                repository.upsert(firstNote)
+                repository.insert(firstNote)
             }
             with(sharedPreferences.edit()) {
                 putBoolean("isFirstRun", false)
@@ -62,21 +70,27 @@ class NoteViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun upsert(note: Note) {
+    fun insert(note: Note, callback: (Long) -> Unit) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                if (note.id == 0) {
-                    val insertedNoteId = repository.upsert(note)
-                    _noteId.postValue(insertedNoteId)
+                if (note.noteId == 0) {
+                    val insertedNoteId = repository.insert(note)
+                    _noteId.postValue(insertedNoteId.toInt())
+                    callback(insertedNoteId)
                 } else {
-                    repository.upsert(note)
-                    _noteId.postValue(note.id)
+                    repository.insert(note)
+                    _noteId.postValue(note.noteId)
+                    callback(note.noteId.toLong())
                 }
                 _returnResult.postValue(ReturnResult.Success)
             } catch (e: Exception) {
                 _returnResult.postValue(ReturnResult.Error("Có lỗi xảy ra vui lòng thử lại sau!"))
             }
         }
+    }
+
+    fun insertNoteCategoryCrossRef(noteCategoryCrossRef: NoteCategoryCrossRef) = viewModelScope.launch {
+        repository.insertNoteCategoryCrossRef(noteCategoryCrossRef)
     }
 
     fun delete(note: Note) {
@@ -88,6 +102,14 @@ class NoteViewModel(application: Application) : AndroidViewModel(application) {
                 _returnResult.postValue(ReturnResult.Error("Xóa thất bại! Hãy thử lại"))
             }
         }
+    }
+
+    fun getNotesByCategory(categoryId: Int): LiveData<List<NoteWithCategories>> {
+        return repository.getNotesByCategory(categoryId)
+    }
+
+    fun insertCategory(category: Category) = viewModelScope.launch {
+        repository.insertCategory(category)
     }
 
     fun getNoteById(id: Int): LiveData<Note> {

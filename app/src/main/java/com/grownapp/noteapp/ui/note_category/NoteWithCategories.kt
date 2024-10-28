@@ -1,4 +1,4 @@
-package com.grownapp.noteapp.ui.note_category.dao
+package com.grownapp.noteapp.ui.note_category
 
 import androidx.room.Embedded
 import androidx.room.Junction
@@ -9,11 +9,8 @@ import com.grownapp.noteapp.ui.note.dao.Note
 data class NoteWithCategories(
     @Embedded val note: Note,
     @Relation(
-        parentColumn = "id",
-        entityColumn = "id",
-        associateBy = Junction(Note_Category::class)
-    )
-    val categories: List<Category>
-){
-    constructor() : this(Note(time = ""), emptyList())
-}
+        parentColumn = "noteId",
+        entityColumn = "categoryId",
+        associateBy = Junction(NoteCategoryCrossRef::class)
+    ) val categories: List<Category> = emptyList()
+)

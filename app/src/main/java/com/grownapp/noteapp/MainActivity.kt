@@ -38,7 +38,7 @@ class MainActivity : AppCompatActivity() {
 
         appBarConfiguration = AppBarConfiguration(
             setOf(
-                R.id.nav_note, R.id.nav_edit_categories, R.id.nav_backup,
+                R.id.nav_note, R.id.nav_backup,
                 R.id.nav_trash, R.id.nav_settings, R.id.nav_rate,
                 R.id.nav_help, R.id.nav_policy
             ), drawerLayout
@@ -71,7 +71,10 @@ class MainActivity : AppCompatActivity() {
             val menuItem = categoryGroup?.add(category.name)
             menuItem?.icon = ContextCompat.getDrawable(this, R.drawable.category)
             menuItem?.setOnMenuItemClickListener {
-                val action = NoteNavigationDirections.actionGlobalNavNote(category.name)
+                val action = NoteNavigationDirections.actionGlobalNavToNoteList(
+                    category.categoryId.toString(),
+                    category.name
+                )
                 navController.navigate(action)
                 drawerLayout.closeDrawers()
                 true
@@ -81,7 +84,7 @@ class MainActivity : AppCompatActivity() {
         val menuItemUncategorized = categoryGroup?.add("Uncategorized")
         menuItemUncategorized?.icon = ContextCompat.getDrawable(this, R.drawable.uncategorized)
         menuItemUncategorized?.setOnMenuItemClickListener {
-            val action = NoteNavigationDirections.actionGlobalNavNote("Uncategorized")
+            val action = NoteNavigationDirections.actionGlobalNavToNoteList(null, null)
             navController.navigate(action)
             drawerLayout.closeDrawer(GravityCompat.START)
             true

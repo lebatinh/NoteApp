@@ -9,6 +9,20 @@
         app:destination="@id/nav_edit_categories" />
 
     <action
+        android:id="@+id/action_global_nav_to_note_list"
+        app:destination="@id/noteListFragment" >
+        <argument
+            android:name="id"
+            app:argType="string"
+            app:nullable="true"/>
+        <argument
+            android:name="name"
+            app:argType="string"
+            app:nullable="true"/>
+    </action>
+
+
+    <action
         android:id="@+id/action_global_nav_note"
         app:destination="@id/nav_note" />
 
@@ -79,4 +93,17 @@
         android:name="com.grownapp.noteapp.ui.settings.PasswordSettingsFragment"
         android:label="@string/password_settings"
         tools:layout="@layout/fragment_password_settings" />
+    <fragment
+        android:id="@+id/noteListFragment"
+        android:name="com.grownapp.noteapp.ui.note.NoteListFragment"
+        android:label="@string/notepad_free"
+        tools:layout="@layout/fragment_note_list">
+        <action
+            android:id="@+id/action_noteListFragment_to_noteDetailFragment"
+            app:destination="@id/noteDetailFragment" >
+            <argument
+                android:name="id"
+                app:argType="integer" />
+        </action>
+    </fragment>
 </navigation>
