@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:showIn="navigation_view">
+
+    <group android:id="@+id/group1">
+        <item
+            android:id="@+id/nav_note"
+            android:icon="@drawable/note"
+            android:title="@string/menu_note" />
+    </group>
+
+    <group android:id="@+id/group2">
+        <item
+            android:id="@+id/nav_categories_placeholder"
+            android:enabled="false"
+            android:title="@string/categories">
+            <menu>
+                <item
+                    android:id="@+id/nav_edit_categories"
+                    android:icon="@drawable/edit_category"
+                    android:title="@string/menu_categories" />
+            </menu>
+        </item>
+    </group>
+
+    <group android:id="@+id/group3">
+        <item
+            android:id="@+id/nav_backup"
+            android:icon="@drawable/backup"
+            android:title="@string/menu_backup" />
+        <item
+            android:id="@+id/nav_trash"
+            android:icon="@drawable/trash"
+            android:title="@string/menu_trash" />
+    </group>
+
+    <group android:id="@+id/group4">
+        <item
+            android:id="@+id/nav_settings"
+            android:icon="@drawable/setting"
+            android:title="@string/menu_setting" />
+        <item
+            android:id="@+id/nav_rate"
+            android:icon="@drawable/rate"
+            android:title="@string/menu_rate_the_app" />
+        <item
+            android:id="@+id/nav_help"
+            android:icon="@drawable/help"
+            android:title="@string/menu_help" />
+        <item
+            android:id="@+id/nav_policy"
+            android:icon="@drawable/policy"
+            android:title="@string/menu_privacy_policy" />
+    </group>
+</menu>

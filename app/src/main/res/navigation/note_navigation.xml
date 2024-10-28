@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/note_navigation"
+    app:startDestination="@+id/nav_note">
+    <action
+        android:id="@+id/action_nav_note_to_nav_edit_categories"
+        app:destination="@id/nav_edit_categories" />
+
+    <action
+        android:id="@+id/action_global_nav_note"
+        app:destination="@id/nav_note" />
+
+    <fragment
+        android:id="@+id/nav_note"
+        android:name="com.grownapp.noteapp.ui.note.NoteFragment"
+        android:label="@string/notepad_free"
+        tools:layout="@layout/fragment_note">
+        <action
+            android:id="@+id/action_nav_note_to_noteDetailFragment"
+            app:destination="@id/noteDetailFragment" />
+        <argument
+            android:name="categoryName"
+            app:argType="string" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/nav_edit_categories"
+        android:name="com.grownapp.noteapp.ui.categories.CategoriesFragment"
+        android:label="@string/categories"
+        tools:layout="@layout/fragment_categories" />
+
+    <fragment
+        android:id="@+id/nav_backup"
+        android:name="com.grownapp.noteapp.ui.backup.BackupFragment"
+        android:label="@string/menu_backup"
+        tools:layout="@layout/fragment_backup" />
+    <fragment
+        android:id="@+id/nav_trash"
+        android:name="com.grownapp.noteapp.ui.trash.TrashFragment"
+        android:label="@string/menu_trash"
+        tools:layout="@layout/fragment_trash" />
+    <fragment
+        android:id="@+id/nav_settings"
+        android:name="com.grownapp.noteapp.ui.settings.SettingsFragment"
+        android:label="@string/menu_setting"
+        tools:layout="@layout/fragment_settings">
+        <action
+            android:id="@+id/action_nav_settings_to_passwordSettingsFragment"
+            app:destination="@id/passwordSettingsFragment" />
+    </fragment>
+    <fragment
+        android:id="@+id/nav_rate"
+        android:name="com.grownapp.noteapp.ui.rate.RateFragment"
+        android:label="@string/menu_rate_the_app"
+        tools:layout="@layout/fragment_rate" />
+    <fragment
+        android:id="@+id/nav_help"
+        android:name="com.grownapp.noteapp.ui.help.HelpFragment"
+        android:label="@string/menu_help"
+        tools:layout="@layout/fragment_help" />
+    <fragment
+        android:id="@+id/nav_policy"
+        android:name="com.grownapp.noteapp.ui.privacy_policy.PrivacyPolicyFragment"
+        android:label="@string/menu_privacy_policy"
+        tools:layout="@layout/fragment_privacy_policy" />
+    <fragment
+        android:id="@+id/noteDetailFragment"
+        android:name="com.grownapp.noteapp.ui.note.NoteDetailFragment"
+        android:label="@string/notepad_free"
+        tools:layout="@layout/fragment_note_detail">
+        <argument
+            android:name="id"
+            app:argType="integer" />
+    </fragment>
+    <fragment
+        android:id="@+id/passwordSettingsFragment"
+        android:name="com.grownapp.noteapp.ui.settings.PasswordSettingsFragment"
+        android:label="@string/password_settings"
+        tools:layout="@layout/fragment_password_settings" />
+</navigation>

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+    <item
+        android:id="@+id/undelete_all"
+        android:orderInCategory="100"
+        android:title="@string/undelete_all" />
+    <item
+        android:id="@+id/export_notes_to_text_files"
+        android:orderInCategory="100"
+        android:title="@string/export_notes_to_text_files"
+        app:showAsAction="never" />
+    <item
+        android:id="@+id/empty_trash"
+        android:orderInCategory="100"
+        android:title="@string/empty_trash"
+        app:showAsAction="never" />
+</menu>

@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <color name="transparent">#00000000</color>
+
+    <color name="topBarBackgroundLight">#917753</color>
+    <color name="topBackgroundItem">#FEFED9</color>
+    <color name="bottomBackgroundItem">#F9F8C1</color>
+    <color name="background">#FFFFDD</color>
+    <color name="backgroundAddButton">#796A43</color>
+    <color name="startBackgroundHeader">#7C6C45</color>
+    <color name="endBackgroundHeader">#917753</color>
+    <color name="backgroundNavMain">#FFFFDC</color>
+    <color name="startBackgroundBtnADD">#F8F8D6</color>
+    <color name="endBackgroundBtnADD">#F9F9C2</color>
+    <color name="backgroundTitleDialog">#757575</color>
+
+    <color name="backgroundIndicator">#646457</color>
+
+    <color name="border_stroke">#A48862</color>
+    <color name="borderBtnADD">#A48862</color>
+
+    <color name="textTopBar">#FFFFFF</color>
+    <color name="text">#21211B</color>
+    <color name="textDisable">#BAAA94</color>
+    <color name="textDes">#666658</color>
+    <color name="textHide">#C1C1A7</color>
+
+    <color name="backgroundDivider">#E9E9C9</color>
+</resources>

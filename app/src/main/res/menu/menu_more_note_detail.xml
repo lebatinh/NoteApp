@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+    <item
+        android:id="@+id/redo"
+        android:orderInCategory="100"
+        android:title="@string/redo" />
+    <item
+        android:id="@+id/undo_all"
+        app:showAsAction="never"
+        android:orderInCategory="100"
+        android:title="@string/undo_all" />
+    <item
+        android:id="@+id/share"
+        app:showAsAction="never"
+        android:orderInCategory="100"
+        android:title="@string/share" />
+
+    <item
+        android:id="@+id/delete"
+        android:orderInCategory="100"
+        android:title="@string/delete" />
+    <item
+        android:id="@+id/search"
+        app:showAsAction="never"
+        android:orderInCategory="100"
+        android:title="@string/search" />
+    <item
+        android:id="@+id/export_to_a_text_files"
+        app:showAsAction="never"
+        android:orderInCategory="100"
+        android:title="@string/export_to_a_text_files" />
+
+    <item
+        android:id="@+id/categorize"
+        android:orderInCategory="100"
+        android:title="@string/categorize" />
+    <item
+        android:id="@+id/colorize"
+        app:showAsAction="never"
+        android:orderInCategory="100"
+        android:title="@string/colorize" />
+    <item
+        android:id="@+id/convert_to_checklist"
+        app:showAsAction="never"
+        android:orderInCategory="100"
+        android:title="@string/convert_to_checklist" />
+
+    <item
+        android:id="@+id/switch_to_read_mode"
+        android:orderInCategory="100"
+        android:title="@string/switch_to_read_mode" />
+    <item
+        android:id="@+id/print"
+        app:showAsAction="never"
+        android:orderInCategory="100"
+        android:title="@string/print" />
+    <item
+        android:id="@+id/show_formatting_bar"
+        app:showAsAction="never"
+        android:orderInCategory="100"
+        android:title="@string/show_fomatting_bar" />
+
+    <item
+        android:id="@+id/show_info"
+        app:showAsAction="never"
+        android:orderInCategory="100"
+        android:title="@string/show_info" />
+</menu>
