@@ -89,4 +89,7 @@
     <string name="menu_backup_group">Backup</string>
     <string name="select_category">Select category</string>
     <string name="time_create">Created: 22/ 10/ 2024, 10h51 SA</string>
+    <string name="select_all">Select All</string>
+    <string name="drawer_open">drawer open</string>
+    <string name="drawer_close">drawer close</string>
 </resources>

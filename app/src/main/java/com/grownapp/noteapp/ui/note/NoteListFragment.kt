@@ -12,7 +12,6 @@ import android.view.ViewGroup
 import android.widget.Button
 import android.widget.ImageView
 import android.widget.RadioGroup
-import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.PopupMenu
@@ -83,7 +82,7 @@ class NoteListFragment : Fragment(), MenuProvider {
             val action =
                 NoteListFragmentDirections.actionNoteListFragmentToNoteDetailFragment(it.noteId)
             findNavController().navigate(action)
-        }, onDelete = {
+        }, onLongClickNote = {
             noteViewModel.delete(it)
         })
 

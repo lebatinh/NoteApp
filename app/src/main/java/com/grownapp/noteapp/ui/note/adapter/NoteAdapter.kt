@@ -11,7 +11,7 @@ import com.grownapp.noteapp.ui.note.dao.Note
 
 class NoteAdapter(
     private val onClickNote: (Note) -> Unit,
-    private val onDelete: (Note) -> Unit,
+    private val onLongClickNote: (Note) -> Unit,
     private var hideCreated: (Boolean) = true
 ) : RecyclerView.Adapter<NoteAdapter.NoteViewHolder>() {
 
@@ -22,14 +22,15 @@ class NoteAdapter(
         fun bind(note: Note) {
             title.text = if (note.title.isNullOrEmpty()) "Untitled" else note.title
             content.text = note.note
-            noteTime.text = if(hideCreated) "Last edit: ${note.timeLastEdit}" else "Created: ${note.timeCreate}"
+            noteTime.text =
+                if (hideCreated) "Last edit: ${note.timeLastEdit}" else "Created: ${note.timeCreate}"
 
             itemView.setOnClickListener {
                 onClickNote(note)
             }
 
             itemView.setOnLongClickListener {
-                onDelete(note)
+                onLongClickNote(note)
                 true
             }
         }

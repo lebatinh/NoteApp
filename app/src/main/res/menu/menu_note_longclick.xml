@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:showIn="toolbar">
+    <item
+        android:id="@+id/item_select_all"
+        android:icon="@drawable/select_all"
+        android:title="@string/select_all"
+        app:showAsAction="ifRoom|collapseActionView" />
+
+    <item
+        android:id="@+id/item_delete"
+        android:icon="@drawable/trash"
+        app:iconTint="@color/textTopBar"
+        android:title="@string/delete"
+        app:showAsAction="ifRoom" />
+
+    <item
+        android:id="@+id/item_more"
+        android:icon="@drawable/more"
+        android:title="@string/more"
+        app:showAsAction="ifRoom" />
+</menu>

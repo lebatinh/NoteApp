@@ -46,7 +46,7 @@
     <string name="print">Print</string>
     <string name="show_fomatting_bar">Show fomatting bar</string>
     <string name="show_info">Show info</string>
-    <string name="enter_text">Enter text...</string>
+    <string name="enter_text">Enter text…</string>
     <string name="sort_by">Sort by</string>
     <string name="edit_date_from_newest">edit date: from newest</string>
     <string name="edit_date_from_oldest">edit date: from oldest</string>
@@ -92,4 +92,7 @@
     <string name="ok">OK</string>
     <string name="select_category">Select category</string>
     <string name="time_create">Created: 22/ 10/ 2024, 10h51 SA</string>
+    <string name="select_all">Select All</string>
+    <string name="drawer_open">drawer open</string>
+    <string name="drawer_close">drawer close</string>
 </resources>

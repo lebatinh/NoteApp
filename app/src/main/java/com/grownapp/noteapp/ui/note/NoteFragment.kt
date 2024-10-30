@@ -12,11 +12,14 @@ import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.RadioGroup
 import android.widget.TextView
+import androidx.appcompat.app.ActionBarDrawerToggle
 import androidx.appcompat.app.AlertDialog
+import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.PopupMenu
 import androidx.appcompat.widget.SearchView
 import androidx.core.view.MenuHost
 import androidx.core.view.MenuProvider
+import androidx.drawerlayout.widget.DrawerLayout
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.MutableLiveData
@@ -40,7 +43,10 @@ class NoteFragment : Fragment(), MenuProvider {
     private lateinit var noteAdapter: NoteAdapter
     private lateinit var noteViewModel: NoteViewModel
     private lateinit var sharedPreferences: SharedPreferences
-    private var hideCreated = MutableLiveData<Boolean>()
+    private var hideCreated = MutableLiveData(true)
+
+    private var onLongClick = MutableLiveData(false)
+    private var noteSelected = mutableListOf<Note>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -73,8 +79,17 @@ class NoteFragment : Fragment(), MenuProvider {
                 val action = NoteFragmentDirections.actionNavNoteToNoteDetailFragment(it.noteId)
                 findNavController().navigate(action)
             },
-            onDelete = {
-                noteViewModel.delete(it)
+            onLongClickNote = { note ->
+                if (onLongClick.value == true) {
+                    noteSelected.add(note)
+                    onLongClick.value = true
+                    updateToolbarTitle()
+                } else {
+                    onLongClick.value = true
+                    noteSelected.clear()
+                    noteSelected.add(note)
+                    updateToolbarTitle()
+                }
             },
             hideCreated = true
         )
@@ -123,6 +138,40 @@ class NoteFragment : Fragment(), MenuProvider {
         arrowImageView.rotation = angle.toFloat()
     }
 
+    private fun updateToolbarTitle() {
+        val toolbar =
+            requireActivity().findViewById<androidx.appcompat.widget.Toolbar>(R.id.toolbar)
+        toolbar.title = "${noteSelected.size}"
+        toolbar.setNavigationIcon(R.drawable.back)
+        toolbar.setNavigationOnClickListener {
+            exitLongClickMode()
+        }
+    }
+
+    //TODO: Xem lại thanh toolbar cập nhật cho đúng
+    private fun exitLongClickMode() {
+        onLongClick.value = false
+        noteSelected.clear()
+        val toolbar =
+            requireActivity().findViewById<androidx.appcompat.widget.Toolbar>(R.id.toolbar)
+        toolbar.title = getString(R.string.app_name)
+        toolbar.navigationIcon = null
+
+        (activity as AppCompatActivity).supportActionBar?.setDisplayHomeAsUpEnabled(true)
+
+        val drawerToggle = ActionBarDrawerToggle(
+            requireActivity(),
+            requireActivity().findViewById(R.id.drawer_layout),
+            toolbar,
+            R.string.drawer_open,
+            R.string.drawer_close
+        )
+        requireActivity().findViewById<DrawerLayout>(R.id.drawer_layout)?.addDrawerListener(drawerToggle)
+        drawerToggle.syncState()
+
+        requireActivity().invalidateOptionsMenu()
+    }
+
     private fun createNewNote() {
         viewLifecycleOwner.lifecycleScope.launch {
             noteViewModel.insert(Note()) {}
@@ -144,7 +193,14 @@ class NoteFragment : Fragment(), MenuProvider {
     }
 
     override fun onCreateMenu(menu: Menu, menuInflater: MenuInflater) {
-        menuInflater.inflate(R.menu.menu_note, menu)
+        menu.clear()
+        if (onLongClick.value == true) {
+            menuInflater.inflate(R.menu.menu_note_longclick, menu)
+            updateToolbarTitle()
+        } else {
+            menuInflater.inflate(R.menu.menu_note, menu)
+            exitLongClickMode()
+        }
     }
 
     override fun onMenuItemSelected(menuItem: MenuItem): Boolean {
@@ -181,6 +237,20 @@ class NoteFragment : Fragment(), MenuProvider {
 
             R.id.item_more -> {
                 showPopupMenuMore()
+                return true
+            }
+
+            R.id.item_select_all -> {
+                return true
+            }
+
+            R.id.item_delete -> {
+//                        noteViewModel.delete(note)
+                exitLongClickMode()
+                return true
+            }
+
+            R.id.item_more -> {
                 return true
             }
         }
