@@ -64,27 +64,13 @@
         app:layout_constraintTop_toBottomOf="@+id/constraint" />
 
     <TextView
-        android:id="@+id/noteTimeCreate"
+        android:id="@+id/noteTime"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_margin="@dimen/_8sdp"
         android:gravity="end"
         android:maxLines="1"
         android:text="@string/time_note"
-        android:textColor="@color/text"
-        android:textSize="@dimen/_8sdp"
-        android:textStyle="italic"
-        app:layout_constraintEnd_toEndOf="@id/noteItem"
-        app:layout_constraintTop_toBottomOf="@id/constraint" />
-
-    <TextView
-        android:id="@+id/noteTimeLastEdit"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_margin="@dimen/_8sdp"
-        android:gravity="end"
-        android:maxLines="1"
-        android:text="@string/time_create"
         android:textColor="@color/text"
         android:textSize="@dimen/_8sdp"
         android:textStyle="italic"

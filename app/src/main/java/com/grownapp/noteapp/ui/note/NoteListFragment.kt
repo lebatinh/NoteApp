@@ -94,7 +94,6 @@ class NoteListFragment : Fragment(), MenuProvider {
         categoryId = arguments?.getString("id")?.toInt()
         (activity as AppCompatActivity).supportActionBar?.subtitle = categoryName ?: "Uncategorized"
 
-        Toast.makeText(requireContext(), "$categoryId - $categoryName", Toast.LENGTH_SHORT).show()
         if (categoryId != null) {
             noteViewModel.getNotesByCategory(categoryId!!).observe(viewLifecycleOwner) { notes ->
                 val note = notes.map { it.note }

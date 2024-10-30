@@ -19,6 +19,7 @@ import androidx.core.view.MenuHost
 import androidx.core.view.MenuProvider
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
@@ -39,7 +40,7 @@ class NoteFragment : Fragment(), MenuProvider {
     private lateinit var noteAdapter: NoteAdapter
     private lateinit var noteViewModel: NoteViewModel
     private lateinit var sharedPreferences: SharedPreferences
-    private var hideCreated: Boolean = false
+    private var hideCreated = MutableLiveData<Boolean>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -74,14 +75,16 @@ class NoteFragment : Fragment(), MenuProvider {
             },
             onDelete = {
                 noteViewModel.delete(it)
-            }
+            },
+            hideCreated = true
         )
-        hideCreated = sharedPreferences.getBoolean("hideCreated", false)
-        noteAdapter.setHideCreated(hideCreated)
 
         binding.rcvNote.layoutManager = LinearLayoutManager(requireContext())
         binding.rcvNote.adapter = noteAdapter
 
+        hideCreated.observe(viewLifecycleOwner){
+            noteAdapter.updateHideCreated(it)
+        }
         noteViewModel.allNote.observe(viewLifecycleOwner) { notes ->
             notes.let {
                 noteAdapter.updateListNote(notes)
@@ -152,9 +155,6 @@ class NoteFragment : Fragment(), MenuProvider {
                     override fun onQueryTextSubmit(query: String?): Boolean {
                         query?.let {
                             noteViewModel.search("%$it%").observe(viewLifecycleOwner) { notes ->
-//                                val noteItems = notes.map { note ->
-//                                    NoteWithCategories(note, emptyList())
-//                                }
                                 noteAdapter.updateListNote(notes)
                             }
                         }
@@ -164,9 +164,6 @@ class NoteFragment : Fragment(), MenuProvider {
                     override fun onQueryTextChange(newText: String?): Boolean {
                         newText?.let {
                             noteViewModel.search(it).observe(viewLifecycleOwner) { notes ->
-//                                val noteItems = notes.map { note ->
-//                                    NoteWithCategories(note, emptyList())
-//                                }
                                 noteAdapter.updateListNote(notes)
                             }
                         }
@@ -226,43 +223,42 @@ class NoteFragment : Fragment(), MenuProvider {
             when (selectedRadioButtonId) {
                 R.id.rdbEditNewest -> {
                     editor.putString("sort", "editnewest")
-                    hideCreated = false
+                    hideCreated.postValue(true)
                 }
 
                 R.id.rdbEditOldest -> {
                     editor.putString("sort", "editoldest")
-                    hideCreated = false
+                    hideCreated.postValue(true)
                 }
 
                 R.id.rdbA_Z -> {
                     editor.putString("sort", "a_z")
-                    hideCreated = false
+                    hideCreated.postValue(true)
                 }
 
                 R.id.rdbZ_A -> {
                     editor.putString("sort", "z_a")
-                    hideCreated = false
+                    hideCreated.postValue(true)
                 }
 
                 R.id.rdbCreateNewest -> {
                     editor.putString("sort", "createnewest")
-                    hideCreated = true
+                    hideCreated.postValue(false)
                 }
 
                 R.id.rdbCreateOldest -> {
                     editor.putString("sort", "createoldest")
-                    hideCreated = true
+                    hideCreated.postValue(false)
                 }
 
                 R.id.rdbColor -> {
                     editor.putString("sort", "color")
-                    hideCreated = false
+                    hideCreated.postValue(true)
                 }
             }
-            editor.putBoolean("hideCreated", hideCreated)
-            editor.apply() // Lưu thay đổi
+            editor.putBoolean("hideCreated", hideCreated.value!!)
+            editor.apply()
 
-            // Gọi hàm sắp xếp
             sortBy()
             dialog.dismiss()
         }

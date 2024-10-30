@@ -1,5 +1,6 @@
 package com.grownapp.noteapp.ui.note.adapter
 
+import android.annotation.SuppressLint
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -11,17 +12,17 @@ import com.grownapp.noteapp.ui.note.dao.Note
 class NoteAdapter(
     private val onClickNote: (Note) -> Unit,
     private val onDelete: (Note) -> Unit,
-    private var hideCreated: (Boolean) = false
+    private var hideCreated: (Boolean) = true
 ) : RecyclerView.Adapter<NoteAdapter.NoteViewHolder>() {
 
     private var noteList = listOf<Note>()
 
     inner class NoteViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+        @SuppressLint("SetTextI18n")
         fun bind(note: Note) {
             title.text = if (note.title.isNullOrEmpty()) "Untitled" else note.title
             content.text = note.note
-            timeLastEdit.text = "Last edit: ${note.timeLastEdit}"
-            timeCreated.text = "Created: ${note.timeCreate}"
+            noteTime.text = if(hideCreated) "Last edit: ${note.timeLastEdit}" else "Created: ${note.timeCreate}"
 
             itemView.setOnClickListener {
                 onClickNote(note)
@@ -31,21 +32,11 @@ class NoteAdapter(
                 onDelete(note)
                 true
             }
-
-            if (hideCreated) {
-                timeCreated.visibility = View.GONE
-                timeLastEdit.visibility = View.VISIBLE
-            } else {
-                timeCreated.visibility = View.VISIBLE
-                timeLastEdit.visibility = View.GONE
-            }
         }
 
         private val title: TextView = itemView.findViewById(R.id.noteTitle)
         private val content: TextView = itemView.findViewById(R.id.noteContent)
-        private val timeCreated: TextView = itemView.findViewById(R.id.noteTimeCreate)
-        private val noteCategory: TextView = itemView.findViewById(R.id.noteCategory)
-        private val timeLastEdit: TextView = itemView.findViewById(R.id.noteTimeLastEdit)
+        private val noteTime: TextView = itemView.findViewById(R.id.noteTime)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): NoteViewHolder {
@@ -64,9 +55,9 @@ class NoteAdapter(
         notifyDataSetChanged()
     }
 
-    fun setHideCreated(hide: Boolean) {
+    fun updateHideCreated(hide: Boolean) {
         hideCreated = hide
-        notifyDataSetChanged() // Cập nhật lại UI khi giá trị hideCreated thay đổi
+        notifyDataSetChanged()
     }
 
     // TODO: khi tìm kiếm thì cập nhật ui của noteItem
