@@ -16,7 +16,6 @@ import androidx.core.view.MenuHost
 import androidx.core.view.MenuProvider
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.MediatorLiveData
 import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -27,9 +26,6 @@ import com.grownapp.noteapp.ui.categories.dao.Category
 import com.grownapp.noteapp.ui.note.adapter.CategoryForNoteAdapter
 import com.grownapp.noteapp.ui.note.dao.Note
 import com.grownapp.noteapp.ui.note_category.NoteCategoryCrossRef
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 
 class NoteDetailFragment : Fragment(), MenuProvider {
 
@@ -40,7 +36,7 @@ class NoteDetailFragment : Fragment(), MenuProvider {
     private lateinit var noteViewModel: NoteViewModel
     private lateinit var categoryViewModel: CategoriesViewModel
 
-    private var noteId: Int? = null
+    private var noteId: Int = 0
     private var category: String? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -67,14 +63,14 @@ class NoteDetailFragment : Fragment(), MenuProvider {
             noteId = NoteDetailFragmentArgs.fromBundle(it).id
             category = arguments?.getString("categoryName")
         }
-        noteId?.let { notes ->
-            noteViewModel.getNoteById(notes).observe(viewLifecycleOwner) { note ->
-                note?.let {
-                    binding.edtTitle.setText(it.title)
-                    binding.edtNote.setText(it.note)
-                }
+
+        noteViewModel.getNoteById(noteId).observe(viewLifecycleOwner) { note ->
+            note?.let {
+                binding.edtTitle.setText(it.title)
+                binding.edtNote.setText(it.note)
             }
         }
+
         return root
     }
 
@@ -109,22 +105,13 @@ class NoteDetailFragment : Fragment(), MenuProvider {
     }
 
     private fun saveNote() {
-        val currentDateTime = Date()
-        val dateFormat = SimpleDateFormat("dd/MM/yyyy, hh:mm a", Locale.getDefault())
-        val time = dateFormat.format(currentDateTime)
+        val updateNote = Note().copy(
+            noteId = noteId,
+            title = binding.edtTitle.text.toString(),
+            note = binding.edtNote.text.toString()
+        )
 
-        val updateNote = noteId?.let {
-            Note(
-                noteId = it,
-                title = binding.edtTitle.text.toString(),
-                note = binding.edtNote.text.toString(),
-                time = time
-            )
-        }
-
-        if (updateNote != null) {
-            noteViewModel.insert(updateNote) {}
-        }
+        noteViewModel.insert(updateNote) {}
         Toast.makeText(requireContext(), "Saved", Toast.LENGTH_SHORT).show()
     }
 
@@ -209,7 +196,8 @@ class NoteDetailFragment : Fragment(), MenuProvider {
 
         categoryListView.layoutManager = LinearLayoutManager(requireContext())
 
-        val categoryForNoteAdapter = CategoryForNoteAdapter(categoryMutableList.toList(), selectedCategory)
+        val categoryForNoteAdapter =
+            CategoryForNoteAdapter(categoryMutableList.toList(), selectedCategory)
         categoryListView.adapter = categoryForNoteAdapter
 
         if (noteId != null) {

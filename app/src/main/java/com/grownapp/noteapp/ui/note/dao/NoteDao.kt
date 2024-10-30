@@ -7,14 +7,18 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Transaction
+import androidx.room.Update
 import com.grownapp.noteapp.ui.categories.dao.Category
 import com.grownapp.noteapp.ui.note_category.NoteCategoryCrossRef
 import com.grownapp.noteapp.ui.note_category.NoteWithCategories
 
 @Dao
 interface NoteDao {
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insert(note: Note): Long
+
+    @Query("UPDATE note SET title = :title, note = :content, timeLastEdit = :updatedTime WHERE noteId = :noteId")
+    suspend fun update(noteId: Int, title: String, content: String, updatedTime: String)
 
     @Delete
     suspend fun delete(note: Note)
@@ -72,4 +76,22 @@ interface NoteDao {
         WHERE noteId NOT IN (SELECT noteId FROM note_category)
     """)
     fun getNotesWithoutCategory(): LiveData<List<Note>>
+
+    @Query("SELECT * FROM Note ORDER BY timeLastEdit DESC")
+    fun sortedByUpdatedTimeDesc(): LiveData<List<Note>>
+
+    @Query("SELECT * FROM Note ORDER BY timeLastEdit ASC")
+    fun sortedByUpdatedTimeAsc(): LiveData<List<Note>>
+
+    @Query("SELECT * FROM Note ORDER BY title DESC")
+    fun sortedByTitleDesc(): LiveData<List<Note>>
+
+    @Query("SELECT * FROM Note ORDER BY title ASC")
+    fun sortedByTitleAsc(): LiveData<List<Note>>
+
+    @Query("SELECT * FROM Note ORDER BY timeCreate DESC")
+    fun sortedByCreatedTimeDesc(): LiveData<List<Note>>
+
+    @Query("SELECT * FROM Note ORDER BY timeCreate ASC")
+    fun sortedByCreatedTimeAsc(): LiveData<List<Note>>
 }

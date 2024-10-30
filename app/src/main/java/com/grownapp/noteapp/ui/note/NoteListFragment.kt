@@ -103,15 +103,8 @@ class NoteListFragment : Fragment(), MenuProvider {
         }
     }
 
-    fun addNote(categoryId: Int?) {
-        val currentDateTime = Date()
-        val dateFormat = SimpleDateFormat("dd/MM/yyyy, hh:mm a", Locale.getDefault())
-        val time = dateFormat.format(currentDateTime)
-
-        val note = Note(
-            time = time
-        )
-        viewModel.insert(note) { noteId ->
+    private fun addNote(categoryId: Int?) {
+        viewModel.insert(Note()) { noteId ->
             if (categoryId != null) {
                 val noteCategoryCrossRef =
                     NoteCategoryCrossRef(noteId = noteId.toInt(), categoryId = categoryId)

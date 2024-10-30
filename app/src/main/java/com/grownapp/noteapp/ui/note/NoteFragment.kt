@@ -11,7 +11,6 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
 import android.widget.ImageView
-import android.widget.RadioButton
 import android.widget.RadioGroup
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.widget.PopupMenu
@@ -26,13 +25,9 @@ import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.grownapp.noteapp.R
 import com.grownapp.noteapp.databinding.FragmentNoteBinding
-import com.grownapp.noteapp.ui.categories.dao.Category
 import com.grownapp.noteapp.ui.note.adapter.NoteAdapter
 import com.grownapp.noteapp.ui.note.dao.Note
 import kotlinx.coroutines.launch
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 import kotlin.math.atan2
 
 class NoteFragment : Fragment(), MenuProvider {
@@ -44,6 +39,7 @@ class NoteFragment : Fragment(), MenuProvider {
     private lateinit var noteAdapter: NoteAdapter
     private lateinit var noteViewModel: NoteViewModel
     private lateinit var sharedPreferences: SharedPreferences
+    private var hideCreated: Boolean = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -78,7 +74,8 @@ class NoteFragment : Fragment(), MenuProvider {
             },
             onDelete = {
                 noteViewModel.delete(it)
-            }
+            },
+            hideCreated = hideCreated
         )
 
         binding.rcvNote.layoutManager = LinearLayoutManager(requireContext())
@@ -121,15 +118,8 @@ class NoteFragment : Fragment(), MenuProvider {
         // Xoay mũi tên về góc dưới bên phải
         rotateArrowToCorner(binding.arrowImageView, screenWidth, screenHeight)
 
+        sortBy()
         return root
-    }
-
-    private fun getCategoriesForNote(id: Int): List<Category> {
-        var listCategory = emptyList<Category>()
-//        noteViewModel.getAllCategoryOfNote(id).observe(viewLifecycleOwner){
-//            listCategory = it
-//        }
-        return listCategory
     }
 
     private fun rotateArrowToCorner(arrowImageView: ImageView, cornerX: Float, cornerY: Float) {
@@ -146,12 +136,8 @@ class NoteFragment : Fragment(), MenuProvider {
     }
 
     private fun createNewNote() {
-        val currentDateTime = Date()
-        val dateFormat = SimpleDateFormat("dd/MM/yyyy, hh:mm a", Locale.getDefault())
-        val time = dateFormat.format(currentDateTime)
-
         viewLifecycleOwner.lifecycleScope.launch {
-            noteViewModel.insert(Note(time = time)) {}
+            noteViewModel.insert(Note()) {}
 
             noteViewModel.noteId.observe(viewLifecycleOwner) { id ->
                 id?.let {
@@ -235,23 +221,68 @@ class NoteFragment : Fragment(), MenuProvider {
             dialog.dismiss()
         }
 
+        // Đặt RadioButton checked dựa trên giá trị "sort" trong SharedPreferences
+        val sort = sharedPreferences.getString("sort", null)
+        when (sort) {
+            "editnewest" -> rdgSort.check(R.id.rdbEditNewest)
+            "editoldest" -> rdgSort.check(R.id.rdbEditOldest)
+            "a_z" -> rdgSort.check(R.id.rdbA_Z)
+            "z_a" -> rdgSort.check(R.id.rdbZ_A)
+            "createnewest" -> rdgSort.check(R.id.rdbCreateNewest)
+            "createoldest" -> rdgSort.check(R.id.rdbCreateOldest)
+            "color" -> rdgSort.check(R.id.rdbColor)
+        }
+
         buttonSort.setOnClickListener {
             val selectedRadioButtonId = rdgSort.checkedRadioButtonId
-            val selectedRadioButton =
-                dialogView.findViewById<RadioButton>(selectedRadioButtonId)
+            val editor = sharedPreferences.edit()
 
-            if (selectedRadioButton != null) {
-                val selectedId = selectedRadioButton.id
+            // Lưu giá trị "sort" mới vào SharedPreferences và xử lý trạng thái "hideCreated"
+            when (selectedRadioButtonId) {
+                R.id.rdbEditNewest -> {
+                    editor.putString("sort", "editnewest")
+                    hideCreated = false
+                }
 
-                when (selectedId) {
+                R.id.rdbEditOldest -> {
+                    editor.putString("sort", "editoldest")
+                    hideCreated = false
+                }
 
+                R.id.rdbA_Z -> {
+                    editor.putString("sort", "a_z")
+                    hideCreated = false
+                }
+
+                R.id.rdbZ_A -> {
+                    editor.putString("sort", "z_a")
+                    hideCreated = false
+                }
+
+                R.id.rdbCreateNewest -> {
+                    editor.putString("sort", "createnewest")
+                    hideCreated = true
+                }
+
+                R.id.rdbCreateOldest -> {
+                    editor.putString("sort", "createoldest")
+                    hideCreated = true
+                }
+
+                R.id.rdbColor -> {
+                    editor.putString("sort", "color")
+                    hideCreated = false
                 }
             }
+            editor.apply() // Lưu thay đổi
 
+            // Gọi hàm sắp xếp
+            sortBy()
             dialog.dismiss()
         }
         dialog.show()
     }
+
 
     private fun showPopupMenuMore() {
         val anchorView = requireActivity().findViewById<View>(R.id.item_more)
@@ -280,5 +311,30 @@ class NoteFragment : Fragment(), MenuProvider {
 
         // Hiển thị PopupMenu
         popupMenu.show()
+    }
+
+    private fun sortBy() {
+        val sort = sharedPreferences.getString("sort", null)
+        val sortObserver = { notes: List<Note> -> noteAdapter.updateListNote(notes) }
+
+        when (sort) {
+            "editnewest" -> noteViewModel.sortedByUpdatedTimeDesc()
+                .observe(viewLifecycleOwner, sortObserver)
+
+            "editoldest" -> noteViewModel.sortedByUpdatedTimeAsc()
+                .observe(viewLifecycleOwner, sortObserver)
+
+            "a_z" -> noteViewModel.sortedByTitleAsc().observe(viewLifecycleOwner, sortObserver)
+            "z_a" -> noteViewModel.sortedByTitleDesc().observe(viewLifecycleOwner, sortObserver)
+            "createnewest" -> noteViewModel.sortedByCreatedTimeDesc()
+                .observe(viewLifecycleOwner, sortObserver)
+
+            "createoldest" -> noteViewModel.sortedByCreatedTimeAsc()
+                .observe(viewLifecycleOwner, sortObserver)
+
+            "color" -> {
+                // Xử lý tùy chọn "color" nếu cần
+            }
+        }
     }
 }

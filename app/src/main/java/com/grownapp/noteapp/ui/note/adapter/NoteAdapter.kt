@@ -10,7 +10,8 @@ import com.grownapp.noteapp.ui.note.dao.Note
 
 class NoteAdapter(
     private val onClickNote: (Note) -> Unit,
-    private val onDelete: (Note) -> Unit
+    private val onDelete: (Note) -> Unit,
+    private val hideCreated: (Boolean) = false
 ) : RecyclerView.Adapter<NoteAdapter.NoteViewHolder>() {
 
     private var noteList = listOf<Note>()
@@ -19,7 +20,8 @@ class NoteAdapter(
         fun bind(note: Note) {
             title.text = if (note.title.isNullOrEmpty()) "Untitled" else note.title
             content.text = note.note
-            time.text = note.time
+            timeCreated.text = "Last edit: ${note.timeLastEdit}"
+            timeLastEdit.text = "Created: ${note.timeCreate}"
 
             itemView.setOnClickListener {
                 onClickNote(note)
@@ -29,12 +31,21 @@ class NoteAdapter(
                 onDelete(note)
                 true
             }
+
+            if (hideCreated){
+                timeLastEdit.visibility = View.VISIBLE
+                timeCreated.visibility = View.GONE
+            }else{
+                timeLastEdit.visibility = View.GONE
+                timeCreated.visibility = View.VISIBLE
+            }
         }
 
-        val title: TextView = itemView.findViewById(R.id.noteTitle)
-        val content: TextView = itemView.findViewById(R.id.noteContent)
-        val time: TextView = itemView.findViewById(R.id.noteTime)
-        val noteCategory: TextView = itemView.findViewById(R.id.noteCategory)
+        private val title: TextView = itemView.findViewById(R.id.noteTitle)
+        private val content: TextView = itemView.findViewById(R.id.noteContent)
+        private val timeCreated: TextView = itemView.findViewById(R.id.noteTimeCreate)
+        private val noteCategory: TextView = itemView.findViewById(R.id.noteCategory)
+        private val timeLastEdit: TextView = itemView.findViewById(R.id.noteTimeLastEdit)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): NoteViewHolder {

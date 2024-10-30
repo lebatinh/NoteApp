@@ -1,15 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/noteItem"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:background="@drawable/border_item_note"
-    android:padding="@dimen/_2sdp"
     android:layout_marginStart="@dimen/_2sdp"
+    android:layout_marginTop="@dimen/_2sdp"
     android:layout_marginEnd="@dimen/_2sdp"
-    android:layout_marginTop="@dimen/_2sdp">
+    android:background="@drawable/border_item_note"
+    android:padding="@dimen/_2sdp">
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/constraint"
@@ -56,8 +55,8 @@
         android:layout_margin="@dimen/_8sdp"
         android:layout_marginTop="24dp"
         android:gravity="end"
-        android:maxLines="1"
         android:maxLength="20"
+        android:maxLines="1"
         android:textColor="@color/text"
         android:textSize="@dimen/_8sdp"
         app:layout_constraintBottom_toBottomOf="parent"
@@ -65,13 +64,27 @@
         app:layout_constraintTop_toBottomOf="@+id/constraint" />
 
     <TextView
-        android:id="@+id/noteTime"
+        android:id="@+id/noteTimeCreate"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_margin="@dimen/_8sdp"
         android:gravity="end"
         android:maxLines="1"
         android:text="@string/time_note"
+        android:textColor="@color/text"
+        android:textSize="@dimen/_8sdp"
+        android:textStyle="italic"
+        app:layout_constraintEnd_toEndOf="@id/noteItem"
+        app:layout_constraintTop_toBottomOf="@id/constraint" />
+
+    <TextView
+        android:id="@+id/noteTimeLastEdit"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_margin="@dimen/_8sdp"
+        android:gravity="end"
+        android:maxLines="1"
+        android:text="@string/time_create"
         android:textColor="@color/text"
         android:textSize="@dimen/_8sdp"
         android:textStyle="italic"

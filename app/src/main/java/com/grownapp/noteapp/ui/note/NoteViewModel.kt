@@ -39,11 +39,9 @@ class NoteViewModel(application: Application) : AndroidViewModel(application) {
 
     fun insertFirstNote(sharedPreferences: SharedPreferences) {
         val isFirstRun = sharedPreferences.getBoolean("isFirstRun", true)
-
         val currentDateTime = Date()
         val dateFormat = SimpleDateFormat("dd/MM/yyyy, hh:mm a", Locale.getDefault())
         val time = dateFormat.format(currentDateTime)
-
         if (isFirstRun) {
             val firstNote = Note(
                 0,
@@ -69,14 +67,22 @@ class NoteViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun insert(note: Note, callback: (Long) -> Unit) {
+        val currentDateTime = Date()
+        val dateFormat = SimpleDateFormat("dd/MM/yyyy, hh:mm a", Locale.getDefault())
+        val time = dateFormat.format(currentDateTime)
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 if (note.noteId == 0) {
-                    val insertedNoteId = repository.insert(note)
+                    val insertedNoteId = repository.insert(note.copy(timeCreate = time))
                     _noteId.postValue(insertedNoteId.toInt())
                     callback(insertedNoteId)
                 } else {
-                    repository.insert(note)
+                    repository.update(
+                        note.noteId,
+                        note.title.toString(),
+                        note.note.toString(),
+                        time
+                    )
                     _noteId.postValue(note.noteId)
                     callback(note.noteId.toLong())
                 }
@@ -87,9 +93,10 @@ class NoteViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun insertNoteCategoryCrossRef(noteCategoryCrossRef: NoteCategoryCrossRef) = viewModelScope.launch {
-        repository.insertNoteCategoryCrossRef(noteCategoryCrossRef)
-    }
+    fun insertNoteCategoryCrossRef(noteCategoryCrossRef: NoteCategoryCrossRef) =
+        viewModelScope.launch {
+            repository.insertNoteCategoryCrossRef(noteCategoryCrossRef)
+        }
 
     fun deleteCategoriesForNote(noteId: Int) = viewModelScope.launch {
         repository.deleteCategoriesForNote(noteId)
@@ -114,7 +121,7 @@ class NoteViewModel(application: Application) : AndroidViewModel(application) {
         return repository.getNoteById(id)
     }
 
-    fun getCategoryOfNote(noteId: Int): LiveData<List<Category>>{
+    fun getCategoryOfNote(noteId: Int): LiveData<List<Category>> {
         return repository.getCategoryOfNote(noteId)
     }
 
@@ -122,15 +129,41 @@ class NoteViewModel(application: Application) : AndroidViewModel(application) {
         _noteId.postValue(null)
     }
 
-    fun searchNoteWithCategory(searchQuery: String, categoryId: Int): LiveData<List<NoteWithCategories>> {
+    fun searchNoteWithCategory(
+        searchQuery: String,
+        categoryId: Int
+    ): LiveData<List<NoteWithCategories>> {
         return repository.searchNoteWithCategory("%$searchQuery%", categoryId)
     }
 
-    fun searchNoteWithoutCategory(searchQuery: String): LiveData<List<NoteWithCategories>>{
+    fun searchNoteWithoutCategory(searchQuery: String): LiveData<List<NoteWithCategories>> {
         return repository.searchNoteWithoutCategory("%$searchQuery%")
     }
 
     fun search(searchQuery: String): LiveData<List<Note>> {
         return repository.searchNote("%$searchQuery%")
+    }
+
+    fun sortedByUpdatedTimeDesc(): LiveData<List<Note>> {
+        return repository.sortedByUpdatedTimeDesc()
+    }
+
+    fun sortedByUpdatedTimeAsc(): LiveData<List<Note>> {
+        return repository.sortedByUpdatedTimeAsc()
+    }
+
+    fun sortedByTitleDesc(): LiveData<List<Note>> {
+        return repository.sortedByTitleDesc()
+    }
+    fun sortedByTitleAsc(): LiveData<List<Note>> {
+        return repository.sortedByTitleAsc()
+    }
+
+    fun sortedByCreatedTimeDesc(): LiveData<List<Note>> {
+        return repository.sortedByCreatedTimeDesc()
+    }
+
+    fun sortedByCreatedTimeAsc(): LiveData<List<Note>> {
+        return repository.sortedByCreatedTimeAsc()
     }
 }

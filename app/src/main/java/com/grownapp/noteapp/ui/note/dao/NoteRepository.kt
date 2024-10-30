@@ -16,6 +16,10 @@ class NoteRepository(
         return noteDao.insert(note)
     }
 
+    suspend fun update(noteId: Int, title: String, content: String, updatedTime: String) {
+        noteDao.update(noteId, title, content, updatedTime)
+    }
+
     suspend fun insertNoteCategoryCrossRef(noteCategoryCrossRef: NoteCategoryCrossRef) {
         noteDao.insertNoteCategoryCrossRef(noteCategoryCrossRef)
     }
@@ -51,5 +55,26 @@ class NoteRepository(
 
     fun searchNote(searchQuery: String): LiveData<List<Note>> {
         return noteDao.searchNote(searchQuery)
+    }
+
+    fun sortedByUpdatedTimeDesc(): LiveData<List<Note>> {
+        return noteDao.sortedByUpdatedTimeDesc()
+    }
+    fun sortedByUpdatedTimeAsc(): LiveData<List<Note>> {
+        return noteDao.sortedByUpdatedTimeAsc()
+    }
+
+    fun sortedByTitleDesc(): LiveData<List<Note>> {
+        return noteDao.sortedByTitleDesc()
+    }
+    fun sortedByTitleAsc(): LiveData<List<Note>> {
+        return noteDao.sortedByTitleAsc()
+    }
+
+    fun sortedByCreatedTimeDesc(): LiveData<List<Note>> {
+        return noteDao.sortedByCreatedTimeDesc()
+    }
+    fun sortedByCreatedTimeAsc(): LiveData<List<Note>> {
+        return noteDao.sortedByCreatedTimeAsc()
     }
 }
