@@ -63,31 +63,32 @@ class MainActivity : AppCompatActivity() {
         val menu = navView.menu
         val categoryGroup = menu.findItem(R.id.nav_categories_placeholder).subMenu
 
-        if (categories.isEmpty()) return
 
         categoryGroup?.clear()
 
-        categories.forEach { category ->
-            val menuItem = categoryGroup?.add(category.name)
-            menuItem?.icon = ContextCompat.getDrawable(this, R.drawable.category)
-            menuItem?.setOnMenuItemClickListener {
-                val action = NoteNavigationDirections.actionGlobalNavToNoteList(
-                    category.categoryId.toString(),
-                    category.name
-                )
+        if (categories.isNotEmpty()) {
+            categories.forEach { category ->
+                val menuItem = categoryGroup?.add(category.name)
+                menuItem?.icon = ContextCompat.getDrawable(this, R.drawable.category)
+                menuItem?.setOnMenuItemClickListener {
+                    val action = NoteNavigationDirections.actionGlobalNavToNoteList(
+                        category.categoryId.toString(),
+                        category.name
+                    )
+                    navController.navigate(action)
+                    drawerLayout.closeDrawers()
+                    true
+                }
+            }
+
+            val menuItemUncategorized = categoryGroup?.add("Uncategorized")
+            menuItemUncategorized?.icon = ContextCompat.getDrawable(this, R.drawable.uncategorized)
+            menuItemUncategorized?.setOnMenuItemClickListener {
+                val action = NoteNavigationDirections.actionGlobalNavToNoteList(null, null)
                 navController.navigate(action)
-                drawerLayout.closeDrawers()
+                drawerLayout.closeDrawer(GravityCompat.START)
                 true
             }
-        }
-
-        val menuItemUncategorized = categoryGroup?.add("Uncategorized")
-        menuItemUncategorized?.icon = ContextCompat.getDrawable(this, R.drawable.uncategorized)
-        menuItemUncategorized?.setOnMenuItemClickListener {
-            val action = NoteNavigationDirections.actionGlobalNavToNoteList(null, null)
-            navController.navigate(action)
-            drawerLayout.closeDrawer(GravityCompat.START)
-            true
         }
 
         val menuItemEditCategories = categoryGroup?.add(R.string.menu_categories)
