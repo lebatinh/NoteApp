@@ -12,12 +12,15 @@ class NoteRepository(
 ) {
     val allNote: LiveData<List<Note>> = noteDao.getAllNote()
 
-    suspend fun insert(note: Note):Long {
+    suspend fun insert(note: Note): Long {
         return noteDao.insert(note)
     }
 
-    suspend fun insertNoteCategoryCrossRef(noteCategoryCrossRef: NoteCategoryCrossRef){
+    suspend fun insertNoteCategoryCrossRef(noteCategoryCrossRef: NoteCategoryCrossRef) {
         noteDao.insertNoteCategoryCrossRef(noteCategoryCrossRef)
+    }
+    suspend fun deleteCategoriesForNote(noteId: Int){
+        noteDao.deleteCategoriesForNote(noteId)
     }
 
     val notesWithoutCategory: LiveData<List<Note>> = noteDao.getNotesWithoutCategory()
@@ -27,12 +30,23 @@ class NoteRepository(
     fun getNotesByCategory(categoryId: Int): LiveData<List<NoteWithCategories>> {
         return noteDao.getNotesByCategory(categoryId)
     }
-    suspend fun insertCategory(category: Category) = categoryDao.insert(category)
-
-    fun getAllCategories(): LiveData<List<Category>> = categoryDao.getAllCategory()
 
     fun getNoteById(id: Int): LiveData<Note> {
         return noteDao.getNoteById(id)
+    }
+
+    fun getCategoryOfNote(noteId: Int): LiveData<List<Category>>{
+        return noteDao.getCategoryOfNote(noteId)
+    }
+    fun searchNoteWithCategory(
+        searchQuery: String,
+        categoryId: Int
+    ): LiveData<List<NoteWithCategories>> {
+        return noteDao.searchNoteWithCategory(searchQuery, categoryId)
+    }
+
+    fun searchNoteWithoutCategory(searchQuery: String): LiveData<List<NoteWithCategories>> {
+        return noteDao.searchNoteWithoutCategory(searchQuery)
     }
 
     fun searchNote(searchQuery: String): LiveData<List<Note>> {

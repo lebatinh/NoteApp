@@ -1,23 +1,31 @@
 package com.grownapp.noteapp.ui.note
 
+import android.app.AlertDialog
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.Menu
 import android.view.MenuInflater
 import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
+import android.widget.TextView
 import android.widget.Toast
-import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.widget.PopupMenu
 import androidx.core.view.MenuHost
 import androidx.core.view.MenuProvider
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ViewModelProvider
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.grownapp.noteapp.R
 import com.grownapp.noteapp.databinding.FragmentNoteDetailBinding
+import com.grownapp.noteapp.ui.categories.CategoriesViewModel
+import com.grownapp.noteapp.ui.categories.dao.Category
+import com.grownapp.noteapp.ui.note.adapter.CategoryForNoteAdapter
 import com.grownapp.noteapp.ui.note.dao.Note
+import com.grownapp.noteapp.ui.note_category.NoteCategoryCrossRef
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -29,6 +37,7 @@ class NoteDetailFragment : Fragment(), MenuProvider {
     private val binding get() = _binding!!
 
     private lateinit var noteViewModel: NoteViewModel
+    private lateinit var categoryViewModel: CategoriesViewModel
 
     private var noteId: Int? = null
     private var category: String? = null
@@ -39,6 +48,8 @@ class NoteDetailFragment : Fragment(), MenuProvider {
         // Khởi tạo ViewModel
         noteViewModel =
             ViewModelProvider(this)[NoteViewModel::class.java]
+        categoryViewModel =
+            ViewModelProvider(this)[CategoriesViewModel::class.java]
     }
 
     override fun onCreateView(
@@ -111,7 +122,7 @@ class NoteDetailFragment : Fragment(), MenuProvider {
         }
 
         if (updateNote != null) {
-            noteViewModel.insert(updateNote){}
+            noteViewModel.insert(updateNote) {}
         }
         Toast.makeText(requireContext(), "Saved", Toast.LENGTH_SHORT).show()
     }
@@ -150,7 +161,7 @@ class NoteDetailFragment : Fragment(), MenuProvider {
                 }
 
                 R.id.categorize -> {
-                    showCategorizeDialog()
+                    showCategorizeDialog(noteId)
                     true
                 }
 
@@ -186,66 +197,56 @@ class NoteDetailFragment : Fragment(), MenuProvider {
         popupMenu.show()
     }
 
-    private fun showCategorizeDialog() {
-        val categories = noteViewModel.allCategory.value ?: emptyList()
+    private fun showCategorizeDialog(noteId: Int?) {
+        val dialogView = layoutInflater.inflate(R.layout.category_list_dialog, null)
+        val categoryListView = dialogView.findViewById<RecyclerView>(R.id.rcvCategory)
+        val cancelButon = dialogView.findViewById<TextView>(R.id.btnCancel)
+        val okButton = dialogView.findViewById<TextView>(R.id.btnOk)
 
-        val builder = AlertDialog.Builder(requireContext())
-        builder.setTitle("Chọn danh mục")
-            .setItems(categories.map { it.name }.toTypedArray()) { _, which ->
-                // Xử lý khi chọn danh mục
+        val categoryMutableList = mutableListOf<Category>()
+        val selectedCategory = mutableSetOf<Int>()
+
+        categoryListView.layoutManager = LinearLayoutManager(requireContext())
+        val categoryForNoteAdapter = CategoryForNoteAdapter(categoryMutableList, selectedCategory)
+        categoryListView.adapter = categoryForNoteAdapter
+
+        categoryViewModel.allCategory.observe(this) { category ->
+            if (category.isNullOrEmpty()) {
+                Toast.makeText(requireContext(), "Không có danh mục", Toast.LENGTH_SHORT).show()
+                return@observe
+            }else{
+                categoryMutableList.addAll(category)
+                categoryForNoteAdapter.updateListCategory(category)
             }
-        builder.create()
-    }
+        }
+        if (noteId != null) {
+            noteViewModel.getCategoryOfNote(noteId).observe(this) { c ->
+                for (i in c){
+                    selectedCategory.add(i.categoryId)
+                }
+            }
+        }
 
-//    private fun showCategorizeDialog() {
-//        noteId?.let { id ->
-//            noteViewModel.getAllCategoryOfNote(id)
-//                .observe(viewLifecycleOwner) { categories ->
-//                    if (categories.isEmpty()) {
-//                        Toast.makeText(
-//                            requireContext(),
-//                            "Không có danh mục nào.",
-//                            Toast.LENGTH_SHORT
-//                        ).show()
-//                    } else {
-//                        val selectedCategories = mutableSetOf<String>()
-//                        val builder = AlertDialog.Builder(requireContext())
-//                        builder.setTitle("Chọn danh mục")
-//
-//                        val categoryNames = categories.map { it.name }.toTypedArray()
-//                        val checkedItems = BooleanArray(categoryNames.size) { false }
-//
-//                        builder.setMultiChoiceItems(
-//                            categoryNames,
-//                            checkedItems
-//                        ) { _, which, isChecked ->
-//                            if (isChecked) selectedCategories.add(categoryNames[which])
-//                            else selectedCategories.remove(categoryNames[which])
-//                        }
-//
-//                        builder.setPositiveButton("Lưu") { _, _ ->
-//                            noteId?.let { id ->
-//                                viewLifecycleOwner.lifecycleScope.launch {
-//                                    noteCategoryViewModel.removeNoteCategory(id)
-//                                    selectedCategories.forEach { category ->
-//                                        noteCategoryViewModel.upsertNoteCategories(id, category)
-//                                    }
-//                                }
-//                                Toast.makeText(
-//                                    requireContext(),
-//                                    "Danh mục đã cập nhật",
-//                                    Toast.LENGTH_SHORT
-//                                ).show()
-//                            }
-//                        }
-//
-//                        builder.setNegativeButton("Hủy") { dialog, _ ->
-//                            dialog.dismiss()
-//                        }
-//
-//                        builder.create().show()
-//                    }
-//                }
-//        }
-//    }
+        val dialog = AlertDialog.Builder(requireContext()).setView(dialogView).create()
+
+        cancelButon.setOnClickListener {
+            dialog.dismiss()
+        }
+
+        okButton.setOnClickListener {
+            Log.e("selectedCategory", selectedCategory.toString())
+            if (noteId != null) {
+                noteViewModel.deleteCategoriesForNote(noteId)
+                for (categoryId in selectedCategory) {
+                    val noteCategoryCrossRef =
+                        NoteCategoryCrossRef(noteId = noteId, categoryId = categoryId)
+                    noteViewModel.insertNoteCategoryCrossRef(noteCategoryCrossRef)
+                }
+            }
+            dialog.dismiss()
+        }
+        if (!category.isNullOrEmpty()){
+            dialog.show()
+        }
+    }
 }

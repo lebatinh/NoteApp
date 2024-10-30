@@ -17,7 +17,7 @@ class NoteAdapter(
 
     inner class NoteViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         fun bind(note: Note) {
-            title.text = note.title
+            title.text = if (note.title.isNullOrEmpty()) "Untitled" else note.title
             content.text = note.note
             time.text = note.time
 

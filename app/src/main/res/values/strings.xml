@@ -87,4 +87,5 @@
     <string name="menu_notes_group">Notes</string>
     <string name="menu_categories_group">Categories</string>
     <string name="menu_backup_group">Backup</string>
+    <string name="select_category">Select category</string>
 </resources>

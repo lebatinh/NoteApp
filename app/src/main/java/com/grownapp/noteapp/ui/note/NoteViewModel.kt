@@ -22,7 +22,6 @@ import java.util.Locale
 class NoteViewModel(application: Application) : AndroidViewModel(application) {
     private val repository: NoteRepository
     val allNote: LiveData<List<Note>>
-    val allCategory: LiveData<List<Category>>
     val allNoteWithoutCategory: LiveData<List<Note>>
 
     private val _noteId = MutableLiveData<Int?>()
@@ -35,7 +34,6 @@ class NoteViewModel(application: Application) : AndroidViewModel(application) {
         val categoryDao = NoteDatabase.getDatabase(application).categoryDao()
         repository = NoteRepository(noteDao, categoryDao)
         allNote = repository.allNote
-        allCategory = repository.getAllCategories()
         allNoteWithoutCategory = repository.notesWithoutCategory
     }
 
@@ -93,6 +91,10 @@ class NoteViewModel(application: Application) : AndroidViewModel(application) {
         repository.insertNoteCategoryCrossRef(noteCategoryCrossRef)
     }
 
+    fun deleteCategoriesForNote(noteId: Int) = viewModelScope.launch {
+        repository.deleteCategoriesForNote(noteId)
+    }
+
     fun delete(note: Note) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
@@ -108,16 +110,24 @@ class NoteViewModel(application: Application) : AndroidViewModel(application) {
         return repository.getNotesByCategory(categoryId)
     }
 
-    fun insertCategory(category: Category) = viewModelScope.launch {
-        repository.insertCategory(category)
-    }
-
     fun getNoteById(id: Int): LiveData<Note> {
         return repository.getNoteById(id)
     }
 
+    fun getCategoryOfNote(noteId: Int): LiveData<List<Category>>{
+        return repository.getCategoryOfNote(noteId)
+    }
+
     fun clearNoteId() {
         _noteId.postValue(null)
+    }
+
+    fun searchNoteWithCategory(searchQuery: String, categoryId: Int): LiveData<List<NoteWithCategories>> {
+        return repository.searchNoteWithCategory("%$searchQuery%", categoryId)
+    }
+
+    fun searchNoteWithoutCategory(searchQuery: String): LiveData<List<NoteWithCategories>>{
+        return repository.searchNoteWithoutCategory("%$searchQuery%")
     }
 
     fun search(searchQuery: String): LiveData<List<Note>> {

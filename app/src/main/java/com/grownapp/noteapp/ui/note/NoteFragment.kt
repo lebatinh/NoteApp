@@ -244,19 +244,7 @@ class NoteFragment : Fragment(), MenuProvider {
                 val selectedId = selectedRadioButton.id
 
                 when (selectedId) {
-                    R.id.redo -> {}
-                    R.id.undo_all -> {}
-                    R.id.share -> {}
-                    R.id.delete -> {}
-                    R.id.search -> {}
-                    R.id.export_to_a_text_files -> {}
-                    R.id.categorize -> {}
-                    R.id.colorize -> {}
-                    R.id.convert_to_checklist -> {}
-                    R.id.switch_to_read_mode -> {}
-                    R.id.print -> {}
-                    R.id.show_formatting_bar -> {}
-                    R.id.show_info -> {}
+
                 }
             }
 
