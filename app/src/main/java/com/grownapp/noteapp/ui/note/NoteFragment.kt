@@ -283,7 +283,6 @@ class NoteFragment : Fragment(), MenuProvider {
         dialog.show()
     }
 
-
     private fun showPopupMenuMore() {
         val anchorView = requireActivity().findViewById<View>(R.id.item_more)
 

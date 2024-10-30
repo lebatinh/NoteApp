@@ -10,7 +10,7 @@ import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
-import android.widget.RadioButton
+import android.widget.ImageView
 import android.widget.RadioGroup
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
@@ -29,9 +29,7 @@ import com.grownapp.noteapp.databinding.FragmentNoteListBinding
 import com.grownapp.noteapp.ui.note.adapter.NoteAdapter
 import com.grownapp.noteapp.ui.note.dao.Note
 import com.grownapp.noteapp.ui.note_category.NoteCategoryCrossRef
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
+import kotlin.math.atan2
 
 class NoteListFragment : Fragment(), MenuProvider {
 
@@ -39,15 +37,16 @@ class NoteListFragment : Fragment(), MenuProvider {
 
     private val binding get() = _binding!!
 
-    private lateinit var viewModel: NoteViewModel
-    private lateinit var adapter: NoteAdapter
+    private lateinit var noteViewModel: NoteViewModel
+    private lateinit var noteAdapter: NoteAdapter
     private lateinit var sharedPreferences: SharedPreferences
     private var categoryId: Int? = null
+    private var hideCreated: Boolean = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        viewModel = ViewModelProvider(this)[NoteViewModel::class.java]
+        noteViewModel = ViewModelProvider(this)[NoteViewModel::class.java]
 
         sharedPreferences =
             requireContext().getSharedPreferences("app_preferences", Context.MODE_PRIVATE)
@@ -60,23 +59,36 @@ class NoteListFragment : Fragment(), MenuProvider {
         _binding = FragmentNoteListBinding.inflate(inflater, container, false)
         val root: View = binding.root
 
+        val isVisible = sharedPreferences.getBoolean("isVisible", true)
+        if (isVisible) {
+            binding.ctlInstruct.visibility = View.VISIBLE
+        } else {
+            binding.ctlInstruct.visibility = View.GONE
+        }
 
+        // Lấy kích thước màn hình
+        val screenWidth = resources.displayMetrics.widthPixels.toFloat()
+        val screenHeight = resources.displayMetrics.heightPixels.toFloat()
+
+        // Xoay mũi tên về góc dưới bên phải
+        rotateArrowToCorner(binding.arrowImageView, screenWidth, screenHeight)
+        sortBy()
         return root
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        adapter = NoteAdapter(onClickNote = {
+        noteAdapter = NoteAdapter(onClickNote = {
             val action =
                 NoteListFragmentDirections.actionNoteListFragmentToNoteDetailFragment(it.noteId)
             findNavController().navigate(action)
         }, onDelete = {
-            viewModel.delete(it)
+            noteViewModel.delete(it)
         })
 
         binding.rcvNoteList.layoutManager = LinearLayoutManager(requireContext())
-        binding.rcvNoteList.adapter = adapter
+        binding.rcvNoteList.adapter = noteAdapter
 
         val categoryName = arguments?.getString("name")
         categoryId = arguments?.getString("id")?.toInt()
@@ -84,13 +96,13 @@ class NoteListFragment : Fragment(), MenuProvider {
 
         Toast.makeText(requireContext(), "$categoryId - $categoryName", Toast.LENGTH_SHORT).show()
         if (categoryId != null) {
-            viewModel.getNotesByCategory(categoryId!!).observe(viewLifecycleOwner) { notes ->
+            noteViewModel.getNotesByCategory(categoryId!!).observe(viewLifecycleOwner) { notes ->
                 val note = notes.map { it.note }
-                adapter.updateListNote(note)
+                noteAdapter.updateListNote(note)
             }
         } else {
-            viewModel.allNoteWithoutCategory.observe(viewLifecycleOwner) { notes ->
-                adapter.updateListNote(notes)
+            noteViewModel.allNoteWithoutCategory.observe(viewLifecycleOwner) { notes ->
+                noteAdapter.updateListNote(notes)
             }
         }
 
@@ -104,20 +116,20 @@ class NoteListFragment : Fragment(), MenuProvider {
     }
 
     private fun addNote(categoryId: Int?) {
-        viewModel.insert(Note()) { noteId ->
+        noteViewModel.insert(Note()) { noteId ->
             if (categoryId != null) {
                 val noteCategoryCrossRef =
                     NoteCategoryCrossRef(noteId = noteId.toInt(), categoryId = categoryId)
-                viewModel.insertNoteCategoryCrossRef(noteCategoryCrossRef)
+                noteViewModel.insertNoteCategoryCrossRef(noteCategoryCrossRef)
             }
         }
-        viewModel.noteId.observe(viewLifecycleOwner) { id ->
+        noteViewModel.noteId.observe(viewLifecycleOwner) { id ->
             id?.let {
                 val action =
                     NoteListFragmentDirections.actionNoteListFragmentToNoteDetailFragment(it)
                 findNavController().navigate(action)
-                viewModel.clearNoteId()
-                viewModel.noteId.removeObservers(viewLifecycleOwner)
+                noteViewModel.clearNoteId()
+                noteViewModel.noteId.removeObservers(viewLifecycleOwner)
             }
         }
     }
@@ -132,18 +144,18 @@ class NoteListFragment : Fragment(), MenuProvider {
                 val searchView = menuItem.actionView as SearchView
                 searchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
                     override fun onQueryTextSubmit(query: String?): Boolean {
-                        query?.let {
+                        query?.let { q ->
                             if (categoryId != null) {
-                                viewModel.searchNoteWithCategory("%$it%", categoryId!!)
+                                noteViewModel.searchNoteWithCategory("%$q%", categoryId!!)
                                     .observe(viewLifecycleOwner) { notes ->
                                         val note = notes.map { it.note }
-                                        adapter.updateListNote(note)
+                                        noteAdapter.updateListNote(note)
                                     }
                             } else {
-                                viewModel.searchNoteWithoutCategory("%$it%")
+                                noteViewModel.searchNoteWithoutCategory("%$q%")
                                     .observe(viewLifecycleOwner) { notes ->
                                         val note = notes.map { it.note }
-                                        adapter.updateListNote(note)
+                                        noteAdapter.updateListNote(note)
                                     }
                             }
 
@@ -152,18 +164,18 @@ class NoteListFragment : Fragment(), MenuProvider {
                     }
 
                     override fun onQueryTextChange(newText: String?): Boolean {
-                        newText?.let {
+                        newText?.let { q ->
                             if (categoryId != null) {
-                                viewModel.searchNoteWithCategory("%$it%", categoryId!!)
+                                noteViewModel.searchNoteWithCategory("%$q%", categoryId!!)
                                     .observe(viewLifecycleOwner) { notes ->
                                         val note = notes.map { it.note }
-                                        adapter.updateListNote(note)
+                                        noteAdapter.updateListNote(note)
                                     }
                             } else {
-                                viewModel.searchNoteWithoutCategory("%$it%")
+                                noteViewModel.searchNoteWithoutCategory("%$q%")
                                     .observe(viewLifecycleOwner) { notes ->
                                         val note = notes.map { it.note }
-                                        adapter.updateListNote(note)
+                                        noteAdapter.updateListNote(note)
                                     }
                             }
                         }
@@ -187,6 +199,19 @@ class NoteListFragment : Fragment(), MenuProvider {
         return false
     }
 
+    private fun rotateArrowToCorner(arrowImageView: ImageView, cornerX: Float, cornerY: Float) {
+        val location = IntArray(2)
+        arrowImageView.getLocationOnScreen(location)
+        val arrowX = location[0].toFloat()
+        val arrowY = location[1].toFloat()
+
+        val deltaX = cornerX - arrowX
+        val deltaY = cornerY - arrowY
+        val angle = Math.toDegrees(atan2(deltaY.toDouble(), deltaX.toDouble()))
+
+        arrowImageView.rotation = angle.toFloat()
+    }
+
     private fun showSortDialog() {
         val inflater = layoutInflater
         val dialogView = inflater.inflate(R.layout.menu_sort, null)
@@ -203,19 +228,63 @@ class NoteListFragment : Fragment(), MenuProvider {
             dialog.dismiss()
         }
 
+        // Đặt RadioButton checked dựa trên giá trị "sort" trong SharedPreferences
+        val sort = sharedPreferences.getString("sort", null)
+        when (sort) {
+            "editnewest" -> rdgSort.check(R.id.rdbEditNewest)
+            "editoldest" -> rdgSort.check(R.id.rdbEditOldest)
+            "a_z" -> rdgSort.check(R.id.rdbA_Z)
+            "z_a" -> rdgSort.check(R.id.rdbZ_A)
+            "createnewest" -> rdgSort.check(R.id.rdbCreateNewest)
+            "createoldest" -> rdgSort.check(R.id.rdbCreateOldest)
+            "color" -> rdgSort.check(R.id.rdbColor)
+        }
+
         buttonSort.setOnClickListener {
             val selectedRadioButtonId = rdgSort.checkedRadioButtonId
-            val selectedRadioButton =
-                dialogView.findViewById<RadioButton>(selectedRadioButtonId)
+            val editor = sharedPreferences.edit()
 
-            if (selectedRadioButton != null) {
-                val selectedId = selectedRadioButton.id
+            // Lưu giá trị "sort" mới vào SharedPreferences và xử lý trạng thái "hideCreated"
+            when (selectedRadioButtonId) {
+                R.id.rdbEditNewest -> {
+                    editor.putString("sort", "editnewest")
+                    hideCreated = false
+                }
 
-                when (selectedId) {
+                R.id.rdbEditOldest -> {
+                    editor.putString("sort", "editoldest")
+                    hideCreated = false
+                }
 
+                R.id.rdbA_Z -> {
+                    editor.putString("sort", "a_z")
+                    hideCreated = false
+                }
+
+                R.id.rdbZ_A -> {
+                    editor.putString("sort", "z_a")
+                    hideCreated = false
+                }
+
+                R.id.rdbCreateNewest -> {
+                    editor.putString("sort", "createnewest")
+                    hideCreated = true
+                }
+
+                R.id.rdbCreateOldest -> {
+                    editor.putString("sort", "createoldest")
+                    hideCreated = true
+                }
+
+                R.id.rdbColor -> {
+                    editor.putString("sort", "color")
+                    hideCreated = false
                 }
             }
+            editor.apply() // Lưu thay đổi
 
+            // Gọi hàm sắp xếp
+            sortBy()
             dialog.dismiss()
         }
         dialog.show()
@@ -248,5 +317,64 @@ class NoteListFragment : Fragment(), MenuProvider {
 
         // Hiển thị PopupMenu
         popupMenu.show()
+    }
+
+    private fun sortBy() {
+        val sort = sharedPreferences.getString("sort", null)
+        val sortObserver = { notes: List<Note> -> noteAdapter.updateListNote(notes) }
+
+        when (sort) {
+            "editnewest" -> if (categoryId != null) {
+                noteViewModel.sortedByUpdatedTimeDescByCategory(categoryId!!)
+                    .observe(viewLifecycleOwner, sortObserver)
+            } else {
+                noteViewModel.sortedByUpdatedTimeDescWithoutCategory()
+                    .observe(viewLifecycleOwner, sortObserver)
+            }
+
+            "editoldest" -> if (categoryId != null) {
+                noteViewModel.sortedByUpdatedTimeAscByCategory(categoryId!!)
+                    .observe(viewLifecycleOwner, sortObserver)
+            } else {
+                noteViewModel.sortedByUpdatedTimeAscWithoutCategory()
+                    .observe(viewLifecycleOwner, sortObserver)
+            }
+
+            "a_z" -> if (categoryId != null) {
+                noteViewModel.sortedByTitleAscByCategory(categoryId!!)
+                    .observe(viewLifecycleOwner, sortObserver)
+            } else {
+                noteViewModel.sortedByTitleAscWithoutCategory()
+                    .observe(viewLifecycleOwner, sortObserver)
+            }
+
+            "z_a" -> if (categoryId != null) {
+                noteViewModel.sortedByTitleDescByCategory(categoryId!!)
+                    .observe(viewLifecycleOwner, sortObserver)
+            } else {
+                noteViewModel.sortedByTitleDescWithoutCategory()
+                    .observe(viewLifecycleOwner, sortObserver)
+            }
+
+            "createnewest" -> if (categoryId != null) {
+                noteViewModel.sortedByCreatedTimeDescByCategory(categoryId!!)
+                    .observe(viewLifecycleOwner, sortObserver)
+            } else {
+                noteViewModel.sortedByCreatedTimeDescWithoutCategory()
+                    .observe(viewLifecycleOwner, sortObserver)
+            }
+
+            "createoldest" -> if (categoryId != null) {
+                noteViewModel.sortedByCreatedTimeAscByCategory(categoryId!!)
+                    .observe(viewLifecycleOwner, sortObserver)
+            } else {
+                noteViewModel.sortedByCreatedTimeAscWithoutCategory()
+                    .observe(viewLifecycleOwner, sortObserver)
+            }
+
+            "color" -> {
+                // Xử lý tùy chọn "color" nếu cần
+            }
+        }
     }
 }

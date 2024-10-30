@@ -7,7 +7,6 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Transaction
-import androidx.room.Update
 import com.grownapp.noteapp.ui.categories.dao.Category
 import com.grownapp.noteapp.ui.note_category.NoteCategoryCrossRef
 import com.grownapp.noteapp.ui.note_category.NoteWithCategories
@@ -32,16 +31,22 @@ interface NoteDao {
     @Query("SELECT * FROM note WHERE title LIKE :searchQuery OR note LIKE :searchQuery")
     fun searchNote(searchQuery: String): LiveData<List<Note>>
 
-    @Query("""
+    @Query(
+        """
     SELECT *
     FROM note
     INNER JOIN note_category nc ON note.noteId = nc.noteId
     WHERE (note.title LIKE '%' || :searchQuery || '%' OR note.note LIKE '%' || :searchQuery || '%')
       AND nc.categoryId = :categoryId
-""")
-    fun searchNoteWithCategory(searchQuery: String, categoryId: Int): LiveData<List<NoteWithCategories>>
+"""
+    )
+    fun searchNoteWithCategory(
+        searchQuery: String,
+        categoryId: Int
+    ): LiveData<List<NoteWithCategories>>
 
-    @Query("""
+    @Query(
+        """
     SELECT *
     FROM note
     WHERE (title LIKE '%' || :searchQuery || '%' OR note LIKE '%' || :searchQuery || '%')
@@ -50,16 +55,20 @@ interface NoteDao {
           FROM note_category nc
           WHERE nc.noteId = note.noteId
       )
-    """)
+    """
+    )
     fun searchNoteWithoutCategory(searchQuery: String): LiveData<List<NoteWithCategories>>
 
-    @Query("""
+    @Query(
+        """
     SELECT c.*
     FROM category c
     INNER JOIN note_category nc ON c.categoryId = nc.categoryId
     INNER JOIN note n ON nc.noteId = n.noteId
     WHERE n.noteId = :noteId
-    """)fun getCategoryOfNote(noteId: Int): LiveData<List<Category>>
+    """
+    )
+    fun getCategoryOfNote(noteId: Int): LiveData<List<Category>>
 
     @Transaction
     @Query("SELECT * FROM Note WHERE noteId IN (SELECT noteId FROM note_category WHERE categoryId = :categoryId)")
@@ -71,12 +80,15 @@ interface NoteDao {
     @Query("DELETE FROM note_category WHERE noteId = :noteId")
     suspend fun deleteCategoriesForNote(noteId: Int)
 
-    @Query("""
+    @Query(
+        """
         SELECT * FROM Note 
         WHERE noteId NOT IN (SELECT noteId FROM note_category)
-    """)
+    """
+    )
     fun getNotesWithoutCategory(): LiveData<List<Note>>
 
+    // all
     @Query("SELECT * FROM Note ORDER BY timeLastEdit DESC")
     fun sortedByUpdatedTimeDesc(): LiveData<List<Note>>
 
@@ -94,4 +106,126 @@ interface NoteDao {
 
     @Query("SELECT * FROM Note ORDER BY timeCreate ASC")
     fun sortedByCreatedTimeAsc(): LiveData<List<Note>>
+
+    // ko cateory
+    // Sắp xếp theo thời gian chỉnh sửa
+    @Query(
+        """
+        SELECT * FROM Note 
+        WHERE noteId NOT IN (SELECT noteId FROM note_category) 
+        ORDER BY timeLastEdit DESC
+    """
+    )
+    fun sortedByUpdatedTimeDescWithoutCategory(): LiveData<List<Note>>
+
+    @Query(
+        """
+        SELECT * FROM Note 
+        WHERE noteId NOT IN (SELECT noteId FROM note_category) 
+        ORDER BY timeLastEdit ASC
+    """
+    )
+    fun sortedByUpdatedTimeAscWithoutCategory(): LiveData<List<Note>>
+
+    // Sắp xếp theo tiêu đề
+    @Query(
+        """
+        SELECT * FROM Note 
+        WHERE noteId NOT IN (SELECT noteId FROM note_category) 
+        ORDER BY title DESC
+    """
+    )
+    fun sortedByTitleDescWithoutCategory(): LiveData<List<Note>>
+
+    @Query(
+        """
+        SELECT * FROM Note 
+        WHERE noteId NOT IN (SELECT noteId FROM note_category) 
+        ORDER BY title ASC
+    """
+    )
+    fun sortedByTitleAscWithoutCategory(): LiveData<List<Note>>
+
+    // Sắp xếp theo thời gian tạo
+    @Query(
+        """
+        SELECT * FROM Note 
+        WHERE noteId NOT IN (SELECT noteId FROM note_category) 
+        ORDER BY timeCreate DESC
+    """
+    )
+    fun sortedByCreatedTimeDescWithoutCategory(): LiveData<List<Note>>
+
+    @Query(
+        """
+        SELECT * FROM Note 
+        WHERE noteId NOT IN (SELECT noteId FROM note_category) 
+        ORDER BY timeCreate ASC
+    """
+    )
+    fun sortedByCreatedTimeAscWithoutCategory(): LiveData<List<Note>>
+
+    // theo cateory
+    // Sắp xếp theo thời gian chỉnh sửa
+    @Query(
+        """
+        SELECT Note.* FROM Note 
+        INNER JOIN note_category ON Note.noteId = note_category.noteId 
+        WHERE note_category.categoryId = :categoryId 
+        ORDER BY timeLastEdit DESC
+    """
+    )
+    fun sortedByUpdatedTimeDescByCategory(categoryId: Int): LiveData<List<Note>>
+
+    @Query(
+        """
+        SELECT Note.* FROM Note 
+        INNER JOIN note_category ON Note.noteId = note_category.noteId 
+        WHERE note_category.categoryId = :categoryId 
+        ORDER BY timeLastEdit ASC
+    """
+    )
+    fun sortedByUpdatedTimeAscByCategory(categoryId: Int): LiveData<List<Note>>
+
+    // Sắp xếp theo tiêu đề
+    @Query(
+        """
+        SELECT Note.* FROM Note 
+        INNER JOIN note_category ON Note.noteId = note_category.noteId 
+        WHERE note_category.categoryId = :categoryId 
+        ORDER BY title DESC
+    """
+    )
+    fun sortedByTitleDescByCategory(categoryId: Int): LiveData<List<Note>>
+
+    @Query(
+        """
+        SELECT Note.* FROM Note 
+        INNER JOIN note_category ON Note.noteId = note_category.noteId 
+        WHERE note_category.categoryId = :categoryId 
+        ORDER BY title ASC
+    """
+    )
+    fun sortedByTitleAscByCategory(categoryId: Int): LiveData<List<Note>>
+
+    // Sắp xếp theo thời gian tạo
+    @Query(
+        """
+        SELECT Note.* FROM Note 
+        INNER JOIN note_category ON Note.noteId = note_category.noteId 
+        WHERE note_category.categoryId = :categoryId 
+        ORDER BY timeCreate DESC
+    """
+    )
+    fun sortedByCreatedTimeDescByCategory(categoryId: Int): LiveData<List<Note>>
+
+    @Query(
+        """
+        SELECT Note.* FROM Note 
+        INNER JOIN note_category ON Note.noteId = note_category.noteId 
+        WHERE note_category.categoryId = :categoryId 
+        ORDER BY timeCreate ASC
+    """
+    )
+    fun sortedByCreatedTimeAscByCategory(categoryId: Int): LiveData<List<Note>>
 }

@@ -23,7 +23,8 @@ class NoteRepository(
     suspend fun insertNoteCategoryCrossRef(noteCategoryCrossRef: NoteCategoryCrossRef) {
         noteDao.insertNoteCategoryCrossRef(noteCategoryCrossRef)
     }
-    suspend fun deleteCategoriesForNote(noteId: Int){
+
+    suspend fun deleteCategoriesForNote(noteId: Int) {
         noteDao.deleteCategoriesForNote(noteId)
     }
 
@@ -39,9 +40,10 @@ class NoteRepository(
         return noteDao.getNoteById(id)
     }
 
-    fun getCategoryOfNote(noteId: Int): LiveData<List<Category>>{
+    fun getCategoryOfNote(noteId: Int): LiveData<List<Category>> {
         return noteDao.getCategoryOfNote(noteId)
     }
+
     fun searchNoteWithCategory(
         searchQuery: String,
         categoryId: Int
@@ -57,9 +59,11 @@ class NoteRepository(
         return noteDao.searchNote(searchQuery)
     }
 
+    //all
     fun sortedByUpdatedTimeDesc(): LiveData<List<Note>> {
         return noteDao.sortedByUpdatedTimeDesc()
     }
+
     fun sortedByUpdatedTimeAsc(): LiveData<List<Note>> {
         return noteDao.sortedByUpdatedTimeAsc()
     }
@@ -67,6 +71,7 @@ class NoteRepository(
     fun sortedByTitleDesc(): LiveData<List<Note>> {
         return noteDao.sortedByTitleDesc()
     }
+
     fun sortedByTitleAsc(): LiveData<List<Note>> {
         return noteDao.sortedByTitleAsc()
     }
@@ -74,7 +79,58 @@ class NoteRepository(
     fun sortedByCreatedTimeDesc(): LiveData<List<Note>> {
         return noteDao.sortedByCreatedTimeDesc()
     }
+
     fun sortedByCreatedTimeAsc(): LiveData<List<Note>> {
         return noteDao.sortedByCreatedTimeAsc()
+    }
+
+    // ko category
+    fun sortedByUpdatedTimeDescWithoutCategory(): LiveData<List<Note>> {
+        return noteDao.sortedByUpdatedTimeDescWithoutCategory()
+    }
+
+    fun sortedByUpdatedTimeAscWithoutCategory(): LiveData<List<Note>> {
+        return noteDao.sortedByUpdatedTimeAscWithoutCategory()
+    }
+
+    fun sortedByTitleDescWithoutCategory(): LiveData<List<Note>> {
+        return noteDao.sortedByTitleDescWithoutCategory()
+    }
+
+    fun sortedByTitleAscWithoutCategory(): LiveData<List<Note>> {
+        return noteDao.sortedByTitleAscWithoutCategory()
+    }
+
+    fun sortedByCreatedTimeDescWithoutCategory(): LiveData<List<Note>> {
+        return noteDao.sortedByCreatedTimeDescWithoutCategory()
+    }
+
+    fun sortedByCreatedTimeAscWithoutCategory(): LiveData<List<Note>> {
+        return noteDao.sortedByCreatedTimeAscWithoutCategory()
+    }
+
+    //theo category
+    fun sortedByUpdatedTimeDescByCategory(categoryId: Int): LiveData<List<Note>> {
+        return noteDao.sortedByUpdatedTimeDescByCategory(categoryId)
+    }
+
+    fun sortedByUpdatedTimeAscByCategory(categoryId: Int): LiveData<List<Note>> {
+        return noteDao.sortedByUpdatedTimeAscByCategory(categoryId)
+    }
+
+    fun sortedByTitleDescByCategory(categoryId: Int): LiveData<List<Note>> {
+        return noteDao.sortedByTitleDescByCategory(categoryId)
+    }
+
+    fun sortedByTitleAscByCategory(categoryId: Int): LiveData<List<Note>> {
+        return noteDao.sortedByTitleAscByCategory(categoryId)
+    }
+
+    fun sortedByCreatedTimeDescByCategory(categoryId: Int): LiveData<List<Note>> {
+        return noteDao.sortedByCreatedTimeDescByCategory(categoryId)
+    }
+
+    fun sortedByCreatedTimeAscByCategory(categoryId: Int): LiveData<List<Note>> {
+        return noteDao.sortedByCreatedTimeAscByCategory(categoryId)
     }
 }

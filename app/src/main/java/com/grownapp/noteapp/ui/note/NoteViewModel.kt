@@ -144,6 +144,7 @@ class NoteViewModel(application: Application) : AndroidViewModel(application) {
         return repository.searchNote("%$searchQuery%")
     }
 
+    //all
     fun sortedByUpdatedTimeDesc(): LiveData<List<Note>> {
         return repository.sortedByUpdatedTimeDesc()
     }
@@ -155,6 +156,7 @@ class NoteViewModel(application: Application) : AndroidViewModel(application) {
     fun sortedByTitleDesc(): LiveData<List<Note>> {
         return repository.sortedByTitleDesc()
     }
+
     fun sortedByTitleAsc(): LiveData<List<Note>> {
         return repository.sortedByTitleAsc()
     }
@@ -165,5 +167,55 @@ class NoteViewModel(application: Application) : AndroidViewModel(application) {
 
     fun sortedByCreatedTimeAsc(): LiveData<List<Note>> {
         return repository.sortedByCreatedTimeAsc()
+    }
+
+    // ko category
+    fun sortedByUpdatedTimeDescWithoutCategory(): LiveData<List<Note>> {
+        return repository.sortedByUpdatedTimeDescWithoutCategory()
+    }
+
+    fun sortedByUpdatedTimeAscWithoutCategory(): LiveData<List<Note>> {
+        return repository.sortedByUpdatedTimeAscWithoutCategory()
+    }
+
+    fun sortedByTitleDescWithoutCategory(): LiveData<List<Note>> {
+        return repository.sortedByTitleDescWithoutCategory()
+    }
+
+    fun sortedByTitleAscWithoutCategory(): LiveData<List<Note>> {
+        return repository.sortedByTitleAscWithoutCategory()
+    }
+
+    fun sortedByCreatedTimeDescWithoutCategory(): LiveData<List<Note>> {
+        return repository.sortedByCreatedTimeDescWithoutCategory()
+    }
+
+    fun sortedByCreatedTimeAscWithoutCategory(): LiveData<List<Note>> {
+        return repository.sortedByCreatedTimeAscWithoutCategory()
+    }
+
+    //theo category
+    fun sortedByUpdatedTimeDescByCategory(categoryId: Int): LiveData<List<Note>> {
+        return repository.sortedByUpdatedTimeDescByCategory(categoryId)
+    }
+
+    fun sortedByUpdatedTimeAscByCategory(categoryId: Int): LiveData<List<Note>> {
+        return repository.sortedByUpdatedTimeAscByCategory(categoryId)
+    }
+
+    fun sortedByTitleDescByCategory(categoryId: Int): LiveData<List<Note>> {
+        return repository.sortedByTitleDescByCategory(categoryId)
+    }
+
+    fun sortedByTitleAscByCategory(categoryId: Int): LiveData<List<Note>> {
+        return repository.sortedByTitleAscByCategory(categoryId)
+    }
+
+    fun sortedByCreatedTimeDescByCategory(categoryId: Int): LiveData<List<Note>> {
+        return repository.sortedByCreatedTimeDescByCategory(categoryId)
+    }
+
+    fun sortedByCreatedTimeAscByCategory(categoryId: Int): LiveData<List<Note>> {
+        return repository.sortedByCreatedTimeAscByCategory(categoryId)
     }
 }
