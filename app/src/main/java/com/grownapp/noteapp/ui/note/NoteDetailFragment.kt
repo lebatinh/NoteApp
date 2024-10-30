@@ -16,6 +16,7 @@ import androidx.core.view.MenuHost
 import androidx.core.view.MenuProvider
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.MediatorLiveData
 import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -207,26 +208,21 @@ class NoteDetailFragment : Fragment(), MenuProvider {
         val selectedCategory = mutableSetOf<Int>()
 
         categoryListView.layoutManager = LinearLayoutManager(requireContext())
-        val categoryForNoteAdapter = CategoryForNoteAdapter(categoryMutableList, selectedCategory)
+
+        val categoryForNoteAdapter = CategoryForNoteAdapter(categoryMutableList.toList(), selectedCategory)
         categoryListView.adapter = categoryForNoteAdapter
 
-        categoryViewModel.allCategory.observe(this) { category ->
-            if (category.isNullOrEmpty()) {
-                Toast.makeText(requireContext(), "Không có danh mục", Toast.LENGTH_SHORT).show()
-                return@observe
-            }else{
-                categoryMutableList.addAll(category)
-                categoryForNoteAdapter.updateListCategory(category)
-            }
-        }
         if (noteId != null) {
-            noteViewModel.getCategoryOfNote(noteId).observe(this) { c ->
-                for (i in c){
-                    selectedCategory.add(i.categoryId)
+            noteViewModel.getCategoryOfNote(noteId).observe(viewLifecycleOwner) { c ->
+                selectedCategory.addAll(c.map { it.categoryId })
+                // Lắng nghe toàn bộ danh mục từ ViewModel và cập nhật danh sách
+                categoryViewModel.allCategory.observe(this) { categories ->
+                    categoryMutableList.clear()
+                    categoryMutableList.addAll(categories)
+                    categoryForNoteAdapter.updateListCategory(categoryMutableList)
                 }
             }
         }
-
         val dialog = AlertDialog.Builder(requireContext()).setView(dialogView).create()
 
         cancelButon.setOnClickListener {
@@ -245,8 +241,6 @@ class NoteDetailFragment : Fragment(), MenuProvider {
             }
             dialog.dismiss()
         }
-        if (!category.isNullOrEmpty()){
-            dialog.show()
-        }
+        dialog.show()
     }
 }
