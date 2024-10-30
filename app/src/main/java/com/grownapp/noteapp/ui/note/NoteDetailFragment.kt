@@ -2,7 +2,6 @@ package com.grownapp.noteapp.ui.note
 
 import android.app.AlertDialog
 import android.os.Bundle
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.Menu
 import android.view.MenuInflater
@@ -218,7 +217,6 @@ class NoteDetailFragment : Fragment(), MenuProvider {
         }
 
         okButton.setOnClickListener {
-            Log.e("selectedCategory", selectedCategory.toString())
             if (noteId != null) {
                 noteViewModel.deleteCategoriesForNote(noteId)
                 for (categoryId in selectedCategory) {
@@ -227,6 +225,7 @@ class NoteDetailFragment : Fragment(), MenuProvider {
                     noteViewModel.insertNoteCategoryCrossRef(noteCategoryCrossRef)
                 }
             }
+            Toast.makeText(requireContext(), "Update categories", Toast.LENGTH_SHORT).show()
             dialog.dismiss()
         }
         dialog.show()

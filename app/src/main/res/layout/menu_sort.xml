@@ -68,23 +68,25 @@
             android:text="@string/color_in_order_as_shown_on_color_palette" />
     </RadioGroup>
 
-    <Button
+    <TextView
         android:id="@+id/buttonSort"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="@dimen/_15sdp"
         android:text="@string/sort"
+        android:padding="@dimen/_20sdp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toBottomOf="@id/rdgSort" />
 
-    <Button
+    <TextView
         android:id="@+id/buttonCancel"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="@dimen/_15sdp"
         android:layout_marginEnd="@dimen/_15sdp"
         android:text="@string/cancel"
+        android:padding="@dimen/_20sdp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintEnd_toStartOf="@id/buttonSort"
