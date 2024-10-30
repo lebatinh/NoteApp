@@ -74,34 +74,19 @@ class NoteFragment : Fragment(), MenuProvider {
             },
             onDelete = {
                 noteViewModel.delete(it)
-            },
-            hideCreated = hideCreated
+            }
         )
+        hideCreated = sharedPreferences.getBoolean("hideCreated", false)
+        noteAdapter.setHideCreated(hideCreated)
 
         binding.rcvNote.layoutManager = LinearLayoutManager(requireContext())
         binding.rcvNote.adapter = noteAdapter
 
         noteViewModel.allNote.observe(viewLifecycleOwner) { notes ->
             notes.let {
-//                val noteItems = notes.map { note ->
-//                    NoteWithCategories(note, emptyList())
-//                }
                 noteAdapter.updateListNote(notes)
             }
         }
-
-        // Lấy danh sách các category cho từng note
-//        noteViewModel.allNote.observe(viewLifecycleOwner) { notes ->
-//            notes.forEach { note ->
-//                noteViewModel.getAllCategoryOfNote(note.id)
-//                    .observe(viewLifecycleOwner) { categories ->
-//                        val noteItems = notes.map { noteItem ->
-//                            NoteItem.NoteWithCategories(noteItem, categories)
-//                        }
-//                        noteAdapter.updateListNote(noteItems)
-//                    }
-//            }
-//        }
 
         val menuHost: MenuHost = requireActivity()
         menuHost.addMenuProvider(this, viewLifecycleOwner, Lifecycle.State.RESUMED)
@@ -274,6 +259,7 @@ class NoteFragment : Fragment(), MenuProvider {
                     hideCreated = false
                 }
             }
+            editor.putBoolean("hideCreated", hideCreated)
             editor.apply() // Lưu thay đổi
 
             // Gọi hàm sắp xếp

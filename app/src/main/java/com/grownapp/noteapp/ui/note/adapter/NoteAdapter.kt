@@ -11,7 +11,7 @@ import com.grownapp.noteapp.ui.note.dao.Note
 class NoteAdapter(
     private val onClickNote: (Note) -> Unit,
     private val onDelete: (Note) -> Unit,
-    private val hideCreated: (Boolean) = false
+    private var hideCreated: (Boolean) = false
 ) : RecyclerView.Adapter<NoteAdapter.NoteViewHolder>() {
 
     private var noteList = listOf<Note>()
@@ -20,8 +20,8 @@ class NoteAdapter(
         fun bind(note: Note) {
             title.text = if (note.title.isNullOrEmpty()) "Untitled" else note.title
             content.text = note.note
-            timeCreated.text = "Last edit: ${note.timeLastEdit}"
-            timeLastEdit.text = "Created: ${note.timeCreate}"
+            timeLastEdit.text = "Last edit: ${note.timeLastEdit}"
+            timeCreated.text = "Created: ${note.timeCreate}"
 
             itemView.setOnClickListener {
                 onClickNote(note)
@@ -32,12 +32,12 @@ class NoteAdapter(
                 true
             }
 
-            if (hideCreated){
-                timeLastEdit.visibility = View.VISIBLE
+            if (hideCreated) {
                 timeCreated.visibility = View.GONE
-            }else{
-                timeLastEdit.visibility = View.GONE
+                timeLastEdit.visibility = View.VISIBLE
+            } else {
                 timeCreated.visibility = View.VISIBLE
+                timeLastEdit.visibility = View.GONE
             }
         }
 
@@ -62,6 +62,11 @@ class NoteAdapter(
     fun updateListNote(newListNote: List<Note>) {
         noteList = newListNote
         notifyDataSetChanged()
+    }
+
+    fun setHideCreated(hide: Boolean) {
+        hideCreated = hide
+        notifyDataSetChanged() // Cập nhật lại UI khi giá trị hideCreated thay đổi
     }
 
     // TODO: khi tìm kiếm thì cập nhật ui của noteItem
