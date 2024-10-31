@@ -1,13 +1,13 @@
-package com.grownapp.dao
+package com.grownapp.noteapp.ui.note.dao
 
 import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.TypeConverters
+import com.grownapp.noteapp.ui.Converter
 import com.grownapp.noteapp.ui.categories.dao.Category
 import com.grownapp.noteapp.ui.categories.dao.CategoryDao
-import com.grownapp.noteapp.ui.note.dao.Note
-import com.grownapp.noteapp.ui.note.dao.NoteDao
 import com.grownapp.noteapp.ui.note_category.NoteCategoryCrossRef
 
 @Database(
@@ -15,6 +15,7 @@ import com.grownapp.noteapp.ui.note_category.NoteCategoryCrossRef
     version = 1,
     exportSchema = false
 )
+@TypeConverters(Converter::class)
 abstract class NoteDatabase : RoomDatabase() {
     abstract fun noteDao(): NoteDao
     abstract fun categoryDao(): CategoryDao

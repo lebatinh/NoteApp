@@ -5,7 +5,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
-import com.grownapp.dao.NoteDatabase
+import com.grownapp.noteapp.ui.note.dao.NoteDatabase
 import com.grownapp.noteapp.ReturnResult
 import com.grownapp.noteapp.ui.categories.dao.Category
 import com.grownapp.noteapp.ui.categories.dao.CategoryRepository

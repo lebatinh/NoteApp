@@ -92,4 +92,9 @@
     <string name="select_all">Select All</string>
     <string name="drawer_open">drawer open</string>
     <string name="drawer_close">drawer close</string>
+    <string name="opacity_100">Opacity (100%):</string>
+    <string name="remove_the_color">REMOVE THE COLOR</string>
+    <string name="select_color">Select color</string>
+    <string name="text_size_18">Text size 18</string>
+    <string name="set_default_18">SET DEFAULT (18)</string>
 </resources>

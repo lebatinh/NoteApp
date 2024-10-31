@@ -3,6 +3,7 @@
     android:height="@dimen/_24sdp"
     android:autoMirrored="true"
     android:viewportWidth="32"
+    android:tint="@color/textTopBar"
     android:viewportHeight="32">
 
     <path

@@ -2,6 +2,7 @@ package com.grownapp.noteapp.ui.note
 
 import android.content.Context
 import android.content.SharedPreferences
+import android.graphics.drawable.Drawable
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.Menu
@@ -25,8 +26,10 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
+import androidx.navigation.NavController
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.google.android.material.navigation.NavigationView
 import com.grownapp.noteapp.R
 import com.grownapp.noteapp.databinding.FragmentNoteBinding
 import com.grownapp.noteapp.ui.note.adapter.NoteAdapter
@@ -83,12 +86,12 @@ class NoteFragment : Fragment(), MenuProvider {
                 if (onLongClick.value == true) {
                     noteSelected.add(note)
                     onLongClick.value = true
-                    updateToolbarTitle()
+//                    updateToolbarTitle()
                 } else {
                     onLongClick.value = true
                     noteSelected.clear()
                     noteSelected.add(note)
-                    updateToolbarTitle()
+//                    updateToolbarTitle()
                 }
             },
             hideCreated = true
@@ -144,33 +147,33 @@ class NoteFragment : Fragment(), MenuProvider {
         toolbar.title = "${noteSelected.size}"
         toolbar.setNavigationIcon(R.drawable.back)
         toolbar.setNavigationOnClickListener {
-            exitLongClickMode()
+//            exitLongClickMode()
         }
     }
 
-    //TODO: Xem lại thanh toolbar cập nhật cho đúng
-    private fun exitLongClickMode() {
-        onLongClick.value = false
-        noteSelected.clear()
-        val toolbar =
-            requireActivity().findViewById<androidx.appcompat.widget.Toolbar>(R.id.toolbar)
-        toolbar.title = getString(R.string.app_name)
-        toolbar.navigationIcon = null
-
-        (activity as AppCompatActivity).supportActionBar?.setDisplayHomeAsUpEnabled(true)
-
-        val drawerToggle = ActionBarDrawerToggle(
-            requireActivity(),
-            requireActivity().findViewById(R.id.drawer_layout),
-            toolbar,
-            R.string.drawer_open,
-            R.string.drawer_close
-        )
-        requireActivity().findViewById<DrawerLayout>(R.id.drawer_layout)?.addDrawerListener(drawerToggle)
-        drawerToggle.syncState()
-
-        requireActivity().invalidateOptionsMenu()
-    }
+//    //TODO: Xem lại thanh toolbar cập nhật cho đúng
+//    private fun exitLongClickMode() {
+//        onLongClick.value = false
+//        noteSelected.clear()
+//        val toolbar =
+//            requireActivity().findViewById<androidx.appcompat.widget.Toolbar>(R.id.toolbar)
+//        toolbar.title = getString(R.string.app_name)
+//        toolbar.navigationIcon = Drawable.createFromPath(R.drawable.menu.toString())
+//
+//        (activity as AppCompatActivity).supportActionBar?.setDisplayHomeAsUpEnabled(true)
+//
+////        val drawerToggle = ActionBarDrawerToggle(
+////            requireActivity(),
+////            requireActivity().findViewById(R.id.drawer_layout),
+////            toolbar,
+////            R.string.drawer_open,
+////            R.string.drawer_close
+////        )
+////        requireActivity().findViewById<DrawerLayout>(R.id.drawer_layout)?.addDrawerListener(drawerToggle)
+////        drawerToggle.syncState()
+//
+//        requireActivity().invalidateOptionsMenu()
+//    }
 
     private fun createNewNote() {
         viewLifecycleOwner.lifecycleScope.launch {
@@ -193,14 +196,14 @@ class NoteFragment : Fragment(), MenuProvider {
     }
 
     override fun onCreateMenu(menu: Menu, menuInflater: MenuInflater) {
-        menu.clear()
-        if (onLongClick.value == true) {
-            menuInflater.inflate(R.menu.menu_note_longclick, menu)
-            updateToolbarTitle()
-        } else {
+//        menu.clear()
+//        if (onLongClick.value == true) {
+//            menuInflater.inflate(R.menu.menu_note_longclick, menu)
+//            updateToolbarTitle()
+//        } else {
             menuInflater.inflate(R.menu.menu_note, menu)
-            exitLongClickMode()
-        }
+//            exitLongClickMode()
+//        }
     }
 
     override fun onMenuItemSelected(menuItem: MenuItem): Boolean {
@@ -245,12 +248,12 @@ class NoteFragment : Fragment(), MenuProvider {
             }
 
             R.id.item_delete -> {
-//                        noteViewModel.delete(note)
-                exitLongClickMode()
+//                noteViewModel.delete(note)
+//                exitLongClickMode()
                 return true
             }
 
-            R.id.item_more -> {
+            R.id.item_more_click -> {
                 return true
             }
         }

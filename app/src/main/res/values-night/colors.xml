@@ -27,4 +27,9 @@
     <color name="textHide">#4D4D4D</color>
 
     <color name="backgroundDivider">#282828</color>
+    <color name="backgroundPickColorDialog">#424242</color>
+    <color name="backgroundSeekbar">#8B9F75</color>
+    <color name="backgroundRemoveColor">#5A595B</color>
+    <color name="backgroundIconRemoveColor">#EAEAEA</color>
+    <color name="backgroundIconChecked">#4F5944</color>
 </resources>
