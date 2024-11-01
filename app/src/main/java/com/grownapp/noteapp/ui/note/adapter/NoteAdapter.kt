@@ -21,7 +21,7 @@ class NoteAdapter(
         @SuppressLint("SetTextI18n")
         fun bind(note: Note) {
             title.text = if (note.title.isNullOrEmpty()) "Untitled" else note.title
-            content.text = note.note
+//            content.text = note.note?.let { stripFormatting(it) }
             noteTime.text =
                 if (hideCreated) "Last edit: ${note.timeLastEdit}" else "Created: ${note.timeCreate}"
 
