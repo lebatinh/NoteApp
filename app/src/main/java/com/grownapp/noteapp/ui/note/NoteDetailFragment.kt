@@ -4,18 +4,10 @@ import android.app.AlertDialog
 import android.content.Context
 import android.content.SharedPreferences
 import android.graphics.Color
-import android.graphics.Typeface
 import android.os.Bundle
 import android.text.Editable
-import android.text.Spannable
 import android.text.SpannableStringBuilder
 import android.text.TextWatcher
-import android.text.style.AbsoluteSizeSpan
-import android.text.style.BackgroundColorSpan
-import android.text.style.ForegroundColorSpan
-import android.text.style.StrikethroughSpan
-import android.text.style.StyleSpan
-import android.text.style.UnderlineSpan
 import android.util.Log
 import android.view.Gravity
 import android.view.LayoutInflater
@@ -39,12 +31,10 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.google.gson.Gson
 import com.grownapp.noteapp.R
 import com.grownapp.noteapp.databinding.FragmentNoteDetailBinding
 import com.grownapp.noteapp.ui.Format
 import com.grownapp.noteapp.ui.FormattedText
-import com.grownapp.noteapp.ui.TextSegment
 import com.grownapp.noteapp.ui.categories.CategoriesViewModel
 import com.grownapp.noteapp.ui.categories.dao.Category
 import com.grownapp.noteapp.ui.note.adapter.CategoryForNoteAdapter
@@ -64,13 +54,8 @@ class NoteDetailFragment : Fragment(), MenuProvider {
     private var noteId: Int = 0
     private var category: String? = null
 
-    private var isBold = false
-    private var isItalic = false
-    private var isUnderline = false
-    private var isStrikethrough = false
-    private var backgroundColor: Int? = null
-    private var textColor: Int? = null
-    private var fontSize = 18f
+    private val formattedText = FormattedText()
+    private var currentFormat = Format()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -81,8 +66,11 @@ class NoteDetailFragment : Fragment(), MenuProvider {
         sharedPreferences =
             requireContext().getSharedPreferences("app_preferences", Context.MODE_PRIVATE)
 
-        backgroundColor = ContextCompat.getColor(requireContext(), R.color.transparent)
-        textColor = ContextCompat.getColor(requireContext(), R.color.text)
+        currentFormat =
+            currentFormat.copy(
+                backgroundColor = ContextCompat.getColor(requireContext(), R.color.transparent),
+                textColor = ContextCompat.getColor(requireContext(), R.color.text)
+            )
     }
 
     override fun onCreateView(
@@ -102,7 +90,8 @@ class NoteDetailFragment : Fragment(), MenuProvider {
         noteViewModel.getNoteById(noteId).observe(viewLifecycleOwner) { note ->
             note?.let {
                 binding.edtTitle.setText(it.title)
-                binding.edtNote.setText(it.note)
+                formattedText.fromJSON(it.note ?: "")
+                binding.edtNote.text = formattedText.toSpannable()
             }
         }
 
@@ -111,218 +100,8 @@ class NoteDetailFragment : Fragment(), MenuProvider {
         if (isShowFormattingBar) {
             showFormattingBar()
         }
-
-//        val textWatcher = object : TextWatcher {
-//            private var isFormattingEnable = false
-//            private var lastStart = 0
-//            private var lastEnd = 0
-//
-//            // màu sắc mặc định
-//            val backgroundColorDefault =
-//                ContextCompat.getColor(requireContext(), R.color.transparent)
-//            val textColorDefault = ContextCompat.getColor(requireContext(), R.color.text)
-//
-//            // Định dạng mặc định
-//            private val firstFormat =
-//                Format(backgroundColor = backgroundColorDefault, textColor = textColorDefault)
-//            private var currentFormat = firstFormat
-//
-//            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {
-//                if (!isFormattingEnable) {
-//                    lastStart = start
-//                    lastEnd = start + count
-//                    Log.d("beforeTextChanged", "lastStart: $lastStart, lastEnd: $lastEnd")
-//                }
-//            }
-//
-//            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
-//                if (isFormattingEnable || s == null) return
-//
-//                val newFormat = Format(
-//                    isBold = isBold,
-//                    isItalic = isItalic,
-//                    isUnderline = isUnderline,
-//                    isStrikethrough = isStrikethrough,
-//                    backgroundColor = backgroundColor,
-//                    textColor = textColor,
-//                    fontSize = fontSize
-//                )
-//
-//                if (newFormat != currentFormat) {
-//                    isFormattingEnable = true
-//
-//                    // Cắt văn bản và thêm vào với định dạng mới
-//                    val editableText = binding.edtNote.text as Editable
-//                    var startString = start
-//                    val endString = startString + count
-//                    val textToFormat = s.subSequence(startString, endString).toString()
-//
-//                    val formattedText = applyFormatting(textToFormat, startString, endString)
-//                    editableText.replace(startString, endString, formattedText, 0, editableText.length)
-//
-//                    currentFormat = newFormat
-//                    lastStart = startString + formattedText.length // Cập nhật lastStart cho vị trí mới
-//
-//                    // Đặt lại vị trí cuối cùng
-//                    lastStart = editableText.length
-//                    isFormattingEnable = false
-//                }
-//            }
-//
-//            override fun afterTextChanged(p0: Editable?) {}
-//
-//        }
-//
-//        binding.edtNote.addTextChangedListener(textWatcher)
-
         return root
     }
-
-//    private fun applyFormatting(text: String, start: Int, end: Int): SpannableStringBuilder {
-//        val spannableText = SpannableStringBuilder(text)
-//
-//        if (isBold) {
-//            spannableText.setSpan(
-//                StyleSpan(Typeface.BOLD),
-//                start,
-//                end,
-//                Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
-//            )
-//        }
-//        if (isItalic) {
-//            spannableText.setSpan(
-//                StyleSpan(Typeface.ITALIC),
-//                start,
-//                end,
-//                Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
-//            )
-//        }
-//        if (isUnderline) {
-//            spannableText.setSpan(
-//                UnderlineSpan(),
-//                start,
-//                end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
-//            )
-//        }
-//        if (isStrikethrough) {
-//            spannableText.setSpan(
-//                StrikethroughSpan(),
-//                start,
-//                end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
-//            )
-//        }
-//        if (backgroundColor != null) {
-//            spannableText.setSpan(
-//                BackgroundColorSpan(backgroundColor!!),
-//                start,
-//                end,
-//                Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
-//            )
-//        }
-//        if (textColor != null) {
-//            spannableText.setSpan(
-//                ForegroundColorSpan(textColor!!),
-//                start,
-//                end,
-//                Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
-//            )
-//        }
-//        if (fontSize != 18f) {
-//            spannableText.setSpan(
-//                AbsoluteSizeSpan(fontSize.toInt()),
-//                start,
-//                end,
-//                Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
-//            )
-//        }
-//
-//        return spannableText
-//    }
-//
-//    private fun applyFormattedText(formattedTextJson: String): SpannableStringBuilder {
-//        val formattedText = Gson().fromJson(formattedTextJson, FormattedText::class.java)
-//        val spannableBuilder = SpannableStringBuilder()
-//
-//        for (segment in formattedText.segments) {
-//            val start = spannableBuilder.length
-//            spannableBuilder.append(segment.text)
-//            val end = spannableBuilder.length
-//
-//            segment.format.let { format ->
-//                if (format.isBold == true) {
-//                    spannableBuilder.setSpan(
-//                        StyleSpan(Typeface.BOLD), start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
-//                    )
-//                }
-//                if (format.isItalic == true) {
-//                    spannableBuilder.setSpan(
-//                        StyleSpan(Typeface.ITALIC), start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
-//                    )
-//                }
-//                if (format.isUnderline == true) {
-//                    spannableBuilder.setSpan(
-//                        UnderlineSpan(), start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
-//                    )
-//                }
-//                if (format.isStrikethrough == true) {
-//                    spannableBuilder.setSpan(
-//                        StrikethroughSpan(), start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
-//                    )
-//                }
-//                format.textColor?.let {
-//                    spannableBuilder.setSpan(
-//                        ForegroundColorSpan(it), start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
-//                    )
-//                }
-//                format.backgroundColor?.let {
-//                    spannableBuilder.setSpan(
-//                        BackgroundColorSpan(it), start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
-//                    )
-//                }
-//                format.fontSize?.let {
-//                    spannableBuilder.setSpan(
-//                        AbsoluteSizeSpan(it.toInt()), start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
-//                    )
-//                }
-//            }
-//        }
-//
-//        return spannableBuilder
-//    }
-
-//    private fun getFormattedText(): FormattedText {
-//        val spannable = binding.edtNote.text as Spannable
-//        val segments = mutableListOf<TextSegment>()
-//
-//        var i = 0
-//        while (i < spannable.length) {
-//            val nextSpanEnd = spannable.nextSpanTransition(i, spannable.length, Any::class.java)
-//            val text = spannable.subSequence(i, nextSpanEnd).toString()
-//
-//            val format = Format(
-//                isBold = spannable.getSpans(i, nextSpanEnd, StyleSpan::class.java)
-//                    .any { it.style == Typeface.BOLD },
-//                isItalic = spannable.getSpans(i, nextSpanEnd, StyleSpan::class.java)
-//                    .any { it.style == Typeface.ITALIC },
-//                isUnderline = spannable.getSpans(i, nextSpanEnd, UnderlineSpan::class.java)
-//                    .isNotEmpty(),
-//                isStrikethrough = spannable.getSpans(i, nextSpanEnd, StrikethroughSpan::class.java)
-//                    .isNotEmpty(),
-//                textColor = spannable.getSpans(i, nextSpanEnd, ForegroundColorSpan::class.java)
-//                    .firstOrNull()?.foregroundColor,
-//                backgroundColor = spannable.getSpans(
-//                    i, nextSpanEnd, BackgroundColorSpan::class.java
-//                ).firstOrNull()?.backgroundColor,
-//                fontSize = spannable.getSpans(i, nextSpanEnd, AbsoluteSizeSpan::class.java)
-//                    .firstOrNull()?.size?.toFloat()
-//            )
-//
-//            segments.add(TextSegment(text, format))
-//            i = nextSpanEnd
-//        }
-//
-//        return FormattedText(segments)
-//    }
 
     override fun onPause() {
         super.onPause()
@@ -332,6 +111,57 @@ class NoteDetailFragment : Fragment(), MenuProvider {
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null
+    }
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        Log.d("FragmentLifecycle", "Gán TextWatcher cho edtNote")
+
+        var isUpdating = false
+        var previousFormat = currentFormat.copy()
+        var startPos = 0
+
+        binding.edtNote.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {
+                // Không cần cập nhật gì ở đây
+            }
+
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                if (isUpdating || count == 0) return
+
+                // Lấy đoạn văn bản mới thêm vào
+                val newText = s?.substring(start, start + count) ?: ""
+
+                // Kiểm tra và áp dụng định dạng cho đoạn văn bản trước đó nếu có thay đổi
+                if (previousFormat != currentFormat) {
+                    if (startPos < start) {
+                        formattedText.applyFormat(
+                            binding.edtNote.editableText,
+                            previousFormat,
+                            startPos,
+                            start
+                        )
+                    }
+                    // Cập nhật vị trí bắt đầu cho đoạn định dạng mới
+                    startPos = start
+                    previousFormat = currentFormat.copy() // Cập nhật sau khi áp dụng định dạng
+                }
+
+                // Tạo một spannable mới với định dạng hiện tại cho ký tự mới thêm vào
+                val newSpannable = SpannableStringBuilder(newText)
+                if (newText.isNotEmpty()) {
+                    formattedText.applyFormat(newSpannable, currentFormat, 0, newText.length)
+                }
+
+                isUpdating = true
+                // Chèn văn bản mới với định dạng vào vị trí hiện tại
+                binding.edtNote.editableText.replace(start, start + count, newSpannable)
+                // Không cần cập nhật lại selection nếu chỉ cập nhật đoạn
+                isUpdating = false
+            }
+
+            override fun afterTextChanged(s: Editable?) {}
+        })
     }
 
     override fun onCreateMenu(menu: Menu, menuInflater: MenuInflater) {
@@ -357,12 +187,10 @@ class NoteDetailFragment : Fragment(), MenuProvider {
     }
 
     private fun saveNote() {
-//        val formattedText = getFormattedText()
         val updateNote = Note().copy(
             noteId = noteId,
             title = binding.edtTitle.text.toString(),
-            note = binding.edtNote.text.toString()
-//            note = Gson().toJson(formattedText).toString()
+            note = formattedText.toJSON()
         )
 
         noteViewModel.insert(updateNote) {}
@@ -499,23 +327,27 @@ class NoteDetailFragment : Fragment(), MenuProvider {
         val colorUncheck = ContextCompat.getColor(requireContext(), R.color.background)
         val colorChecked = ContextCompat.getColor(requireContext(), R.color.backgroundIconChecked)
         binding.bold.setOnClickListener {
-            isBold = !isBold
-            binding.bold.setBackgroundColor(if (!isBold) colorUncheck else colorChecked)
+            currentFormat = currentFormat.copy(isBold = !currentFormat.isBold!!)
+            binding.bold.setBackgroundColor(if (!currentFormat.isBold!!) colorUncheck else colorChecked)
+            Log.d("isBold", currentFormat.isBold.toString())
         }
 
         binding.italic.setOnClickListener {
-            isItalic = !isItalic
-            binding.italic.setBackgroundColor(if (!isItalic) colorUncheck else colorChecked)
+            currentFormat = currentFormat.copy(isItalic = !currentFormat.isItalic!!)
+            binding.italic.setBackgroundColor(if (!currentFormat.isItalic!!) colorUncheck else colorChecked)
+            Log.d("isItalic", currentFormat.isItalic.toString())
         }
 
         binding.underline.setOnClickListener {
-            isUnderline = !isUnderline
-            binding.underline.setBackgroundColor(if (!isUnderline) colorUncheck else colorChecked)
+            currentFormat = currentFormat.copy(isUnderline = !currentFormat.isUnderline!!)
+            binding.underline.setBackgroundColor(if (!currentFormat.isUnderline!!) colorUncheck else colorChecked)
+            Log.d("isUnderline", currentFormat.isUnderline.toString())
         }
 
         binding.strikethrough.setOnClickListener {
-            isStrikethrough = !isStrikethrough
-            binding.strikethrough.setBackgroundColor(if (!isStrikethrough) colorUncheck else colorChecked)
+            currentFormat = currentFormat.copy(isStrikethrough = !currentFormat.isStrikethrough!!)
+            binding.strikethrough.setBackgroundColor(if (!currentFormat.isStrikethrough!!) colorUncheck else colorChecked)
+            Log.d("isStrikethrough", currentFormat.isStrikethrough.toString())
         }
 
         binding.fillColorBackground.setOnClickListener {
@@ -527,7 +359,7 @@ class NoteDetailFragment : Fragment(), MenuProvider {
         }
 
         binding.fontSize.setOnClickListener {
-            dialogPickTextSize(fontSize, colorChecked, colorUncheck)
+            dialogPickTextSize(currentFormat.fontSize!!, colorChecked, colorUncheck)
         }
     }
 
@@ -542,9 +374,9 @@ class NoteDetailFragment : Fragment(), MenuProvider {
         val dialog = AlertDialog.Builder(requireContext()).setView(dialogView).create()
 
         var s = size
-        sbTextSize.progress = fontSize.toInt()
-        tvTextSize.text = "Text size ${fontSize.toInt()}"
-        tvTextSize.textSize = fontSize
+        sbTextSize.progress = currentFormat.fontSize?.toInt() ?: 18
+        tvTextSize.text = "Text size ${currentFormat.fontSize?.toInt()}"
+        tvTextSize.textSize = currentFormat.fontSize!!
 
         sbTextSize.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
@@ -562,12 +394,13 @@ class NoteDetailFragment : Fragment(), MenuProvider {
             tvTextSize.textSize = 18f
             tvTextSize.text = getString(R.string.text_size_18)
             sbTextSize.setProgress(18, true)
-            fontSize = 18f
+            currentFormat = currentFormat.copy(fontSize = 18f)
         }
         tvOK.setOnClickListener {
-            fontSize = s
             binding.fontSize.setBackgroundColor(if (s == 18f) colorUncheck else colorChecked)
             dialog.dismiss()
+            currentFormat = currentFormat.copy(fontSize = s)
+            Log.d("fontSize", currentFormat.fontSize.toString())
         }
         tvCancel.setOnClickListener {
             dialog.dismiss()
@@ -677,7 +510,7 @@ class NoteDetailFragment : Fragment(), MenuProvider {
         )
 
         var colorFillBackground = ContextCompat.getColor(requireContext(), R.color.transparent)
-        var colorFillTextColor = ContextCompat.getColor(requireContext(), R.color.transparent)
+        var colorFillTextColor = ContextCompat.getColor(requireContext(), R.color.text)
         dialogView.viewTreeObserver.addOnGlobalLayoutListener(object :
             ViewTreeObserver.OnGlobalLayoutListener {
             override fun onGlobalLayout() {
@@ -739,10 +572,12 @@ class NoteDetailFragment : Fragment(), MenuProvider {
         tvOK.setOnClickListener {
             if (isBackground) {
                 binding.fillColorBackground.setBackgroundColor(colorFillBackground)
-                backgroundColor = colorFillBackground
+                currentFormat = currentFormat.copy(backgroundColor = colorFillBackground)
+                Log.d("backgroundColor", colorFillBackground.toString())
             } else {
                 binding.fillColorText.setBackgroundColor(colorFillTextColor)
-                textColor = colorFillTextColor
+                currentFormat = currentFormat.copy(textColor = colorFillTextColor)
+                Log.d("textColor", colorFillTextColor.toString())
             }
             dialog.dismiss()
         }
@@ -752,3 +587,5 @@ class NoteDetailFragment : Fragment(), MenuProvider {
         dialog.show()
     }
 }
+
+// TODO: lỗi cập nhật kiểu chữ tiếp theo không đúng, phải ấn cách mới cập nhật đúng
