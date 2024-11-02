@@ -1,7 +1,6 @@
 package com.grownapp.noteapp.ui
 
 import android.graphics.Typeface
-import android.text.Editable
 import android.text.Spannable
 import android.text.SpannableStringBuilder
 import android.text.style.AbsoluteSizeSpan
@@ -53,12 +52,11 @@ class FormattedText {
     }
 
     fun applyFormat(
-        spannable: Editable,
+        spannable: SpannableStringBuilder,
         format: Format,
         start: Int,
         end: Int
     ) {
-        if (start >= end) return
         if (format.isBold == true) spannable.setSpan(
             StyleSpan(Typeface.BOLD),
             start,

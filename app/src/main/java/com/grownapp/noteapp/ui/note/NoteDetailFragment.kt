@@ -35,11 +35,14 @@ import com.grownapp.noteapp.R
 import com.grownapp.noteapp.databinding.FragmentNoteDetailBinding
 import com.grownapp.noteapp.ui.Format
 import com.grownapp.noteapp.ui.FormattedText
+import com.grownapp.noteapp.ui.TextSegment
 import com.grownapp.noteapp.ui.categories.CategoriesViewModel
 import com.grownapp.noteapp.ui.categories.dao.Category
 import com.grownapp.noteapp.ui.note.adapter.CategoryForNoteAdapter
 import com.grownapp.noteapp.ui.note.dao.Note
 import com.grownapp.noteapp.ui.note_category.NoteCategoryCrossRef
+import org.json.JSONArray
+import org.json.JSONObject
 
 class NoteDetailFragment : Fragment(), MenuProvider {
 
@@ -56,6 +59,12 @@ class NoteDetailFragment : Fragment(), MenuProvider {
 
     private val formattedText = FormattedText()
     private var currentFormat = Format()
+
+    private var isUpdating = false
+    private var previousFormat = currentFormat.copy()
+    private var startPos = 0
+    private var endPos = 0
+    private val formattedSegments = mutableListOf<TextSegment>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -117,51 +126,52 @@ class NoteDetailFragment : Fragment(), MenuProvider {
         super.onViewCreated(view, savedInstanceState)
         Log.d("FragmentLifecycle", "Gán TextWatcher cho edtNote")
 
-        var isUpdating = false
-        var previousFormat = currentFormat.copy()
-        var startPos = 0
+        Log.d("startPos", "addTextChangedListener : $startPos")
+        Log.d("endPos", "addTextChangedListener : $endPos")
 
         binding.edtNote.addTextChangedListener(object : TextWatcher {
+            var lastPos = 0
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {
-                // Không cần cập nhật gì ở đây
+                lastPos = start + count
+                Log.d("start", "beforeTextChanged : $startPos / $start")
+                Log.d("end", "beforeTextChanged : $endPos + $count")
             }
 
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
-                if (isUpdating || count == 0) return
-
-                // Lấy đoạn văn bản mới thêm vào
-                val newText = s?.substring(start, start + count) ?: ""
-
-                // Kiểm tra và áp dụng định dạng cho đoạn văn bản trước đó nếu có thay đổi
-                if (previousFormat != currentFormat) {
-                    if (startPos < start) {
-                        formattedText.applyFormat(
-                            binding.edtNote.editableText,
-                            previousFormat,
-                            startPos,
-                            start
-                        )
-                    }
-                    // Cập nhật vị trí bắt đầu cho đoạn định dạng mới
-                    startPos = start
-                    previousFormat = currentFormat.copy() // Cập nhật sau khi áp dụng định dạng
+                if (start + count > lastPos) {
+                    // Chỉ áp dụng định dạng cho văn bản mới (phần được thêm vào)
+                    val spannable = s as SpannableStringBuilder
+                    formattedText.applyFormat(spannable, currentFormat, start, start + count)
                 }
-
-                // Tạo một spannable mới với định dạng hiện tại cho ký tự mới thêm vào
-                val newSpannable = SpannableStringBuilder(newText)
-                if (newText.isNotEmpty()) {
-                    formattedText.applyFormat(newSpannable, currentFormat, 0, newText.length)
-                }
-
-                isUpdating = true
-                // Chèn văn bản mới với định dạng vào vị trí hiện tại
-                binding.edtNote.editableText.replace(start, start + count, newSpannable)
-                // Không cần cập nhật lại selection nếu chỉ cập nhật đoạn
-                isUpdating = false
             }
 
-            override fun afterTextChanged(s: Editable?) {}
+            override fun afterTextChanged(s: Editable?) {
+                lastPos = binding.edtNote.selectionEnd
+            }
         })
+    }
+
+    private fun saveFormattedTextToJson(): String {
+        // Lưu tất cả các segment đã format thành JSON
+        val jsonArray = JSONArray()
+        formattedSegments.forEach { segment ->
+            val jsonObject = JSONObject().apply {
+                put("text", segment.text)
+                put("format", JSONObject().apply {
+                    put("isBold", segment.format.isBold)
+                    put("isItalic", segment.format.isItalic)
+                    put("isUnderline", segment.format.isUnderline)
+                    put("isStrikethrough", segment.format.isStrikethrough)
+                    put("backgroundColor", segment.format.backgroundColor)
+                    put("textColor", segment.format.textColor)
+                    put("fontSize", segment.format.fontSize)
+                })
+            }
+            jsonArray.put(jsonObject)
+        }
+        val formattedTextJson = jsonArray.toString()
+        return formattedTextJson
+        Log.d("FormattedText", "Saved JSON: $formattedTextJson")
     }
 
     override fun onCreateMenu(menu: Menu, menuInflater: MenuInflater) {
@@ -190,7 +200,7 @@ class NoteDetailFragment : Fragment(), MenuProvider {
         val updateNote = Note().copy(
             noteId = noteId,
             title = binding.edtTitle.text.toString(),
-            note = formattedText.toJSON()
+            note = saveFormattedTextToJson()
         )
 
         noteViewModel.insert(updateNote) {}
