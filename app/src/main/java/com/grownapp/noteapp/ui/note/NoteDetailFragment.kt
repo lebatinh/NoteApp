@@ -146,7 +146,7 @@ class NoteDetailFragment : Fragment(), MenuProvider {
                         )
                         if (segment.textColor != defautTextColor) spannable.setSpan(
                             ForegroundColorSpan(
-                                segment.textColor?: defautTextColor
+                                segment.textColor ?: defautTextColor
                             ), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
                         )
                         if (segment.textSize != 18f) spannable.setSpan(
@@ -559,21 +559,26 @@ class NoteDetailFragment : Fragment(), MenuProvider {
                 s?.let {
                     val endPos = editText.selectionEnd
                     if (startPos < endPos) {
-                    val newText = it.subSequence(startPos, endPos)
-                    // Áp dụng định dạng hiện tại cho đoạn văn bản mới
-                    formattedTextSegments.append(newText)
-                    Log.d("textchangedlistener", "$s-$newText-$formattedTextSegments")
-                    applyCurrentFormat(formattedTextSegments, startPos, endPos)
+                        val newText = it.subSequence(startPos, endPos)
+                        // Áp dụng định dạng hiện tại cho đoạn văn bản mới
+                        formattedTextSegments.append(newText)
+                        Log.d("textchangedlistener", "$s-$newText-$formattedTextSegments")
+                        applyCurrentFormat(formattedTextSegments, startPos, endPos)
 
-                    // Cập nhật lại EditText
-                    editText.removeTextChangedListener(this)  // Tạm ngừng TextWatcher
-                    editText.text =
-                        formattedTextSegments     // Cập nhật lại EditText với định dạng đã áp dụng
-                    editText.setSelection(formattedTextSegments.length) // Đặt con trỏ ở cuối văn bản
-                    editText.addTextChangedListener(this)     // Kích hoạt lại TextWatcher
+                        // Cập nhật lại EditText
+                        editText.removeTextChangedListener(this)  // Tạm ngừng TextWatcher
+                        editText.text =
+                            formattedTextSegments     // Cập nhật lại EditText với định dạng đã áp dụng
+                        editText.setSelection(formattedTextSegments.length) // Đặt con trỏ ở cuối văn bản
+                        editText.addTextChangedListener(this)     // Kích hoạt lại TextWatcher
 
-                    Log.d("textchangedlistener_later", "$s-$newText-$formattedTextSegments")
-                }}
+                        Log.d("textchangedlistener_later", "$s-$newText-$formattedTextSegments")
+                    }else{
+                        formattedTextSegments.delete(endPos, startPos)
+
+                        Log.d("textchangedlistener_delete", "$s-$startPos/$endPos-$formattedTextSegments")
+                    }
+                }
             }
         })
     }
@@ -659,13 +664,54 @@ class NoteDetailFragment : Fragment(), MenuProvider {
         for (segment in segments) {
             val end = start + segment.text.toString().length
 
-            if (segment.isBold == true) spannable.setSpan(StyleSpan(Typeface.BOLD), start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
-            if (segment.isItalic == true) spannable.setSpan(StyleSpan(Typeface.ITALIC), start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
-            if (segment.isUnderline == true) spannable.setSpan(UnderlineSpan(), start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
-            if (segment.isStrikethrough == true) spannable.setSpan(StrikethroughSpan(), start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
-            segment.backgroundColor?.let { spannable.setSpan(BackgroundColorSpan(it), start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE) }
-            segment.textColor?.let { spannable.setSpan(ForegroundColorSpan(it), start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE) }
-            segment.textSize?.let { spannable.setSpan(AbsoluteSizeSpan(it.toInt(), true), start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE) }
+            if (segment.isBold == true) spannable.setSpan(
+                StyleSpan(Typeface.BOLD),
+                start,
+                end,
+                Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
+            )
+            if (segment.isItalic == true) spannable.setSpan(
+                StyleSpan(Typeface.ITALIC),
+                start,
+                end,
+                Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
+            )
+            if (segment.isUnderline == true) spannable.setSpan(
+                UnderlineSpan(),
+                start,
+                end,
+                Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
+            )
+            if (segment.isStrikethrough == true) spannable.setSpan(
+                StrikethroughSpan(),
+                start,
+                end,
+                Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
+            )
+            segment.backgroundColor?.let {
+                spannable.setSpan(
+                    BackgroundColorSpan(it),
+                    start,
+                    end,
+                    Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
+                )
+            }
+            segment.textColor?.let {
+                spannable.setSpan(
+                    ForegroundColorSpan(it),
+                    start,
+                    end,
+                    Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
+                )
+            }
+            segment.textSize?.let {
+                spannable.setSpan(
+                    AbsoluteSizeSpan(it.toInt(), true),
+                    start,
+                    end,
+                    Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
+                )
+            }
 
             start = end // Cập nhật vị trí cho đoạn tiếp theo
         }
