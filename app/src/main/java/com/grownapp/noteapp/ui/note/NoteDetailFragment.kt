@@ -43,10 +43,6 @@ import androidx.recyclerview.widget.RecyclerView
 import com.google.gson.Gson
 import com.grownapp.noteapp.R
 import com.grownapp.noteapp.databinding.FragmentNoteDetailBinding
-import com.grownapp.noteapp.ui.ColorPicker
-import com.grownapp.noteapp.ui.NoteContent
-import com.grownapp.noteapp.ui.TextFormat
-import com.grownapp.noteapp.ui.TextSegment
 import com.grownapp.noteapp.ui.categories.CategoriesViewModel
 import com.grownapp.noteapp.ui.categories.dao.Category
 import com.grownapp.noteapp.ui.note.adapter.CategoryForNoteAdapter
@@ -157,6 +153,7 @@ class NoteDetailFragment : Fragment(), MenuProvider {
     private fun saveNote() {
         val noteContent = spannableToNoteContent(formattedTextSegments)
 
+        Log.d("noteContent", noteContent.toString())
         val updateNote = Note().copy(
             noteId = noteId,
             title = binding.edtTitle.text.toString(),
@@ -636,7 +633,6 @@ class NoteDetailFragment : Fragment(), MenuProvider {
         }
         return NoteContent(segments)
     }
-
 
     private fun noteContentToSpannable(noteContent: NoteContent): SpannableStringBuilder {
         val defautBackgroundColor = ContextCompat.getColor(requireContext(), R.color.transparent)

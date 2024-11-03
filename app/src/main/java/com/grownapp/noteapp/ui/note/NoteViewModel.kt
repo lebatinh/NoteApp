@@ -37,35 +37,6 @@ class NoteViewModel(application: Application) : AndroidViewModel(application) {
         allNoteWithoutCategory = repository.notesWithoutCategory
     }
 
-    fun insertFirstNote(sharedPreferences: SharedPreferences) {
-        val isFirstRun = sharedPreferences.getBoolean("isFirstRun", true)
-        val currentDateTime = Date()
-        val dateFormat = SimpleDateFormat("dd/MM/yyyy, hh:mm a", Locale.getDefault())
-        val time = dateFormat.format(currentDateTime)
-        if (isFirstRun) {
-            val firstNote = Note(
-                0,
-                "Hi, how are you? (tap to open)",
-                "Thank you for downloading Notepad Free. This is a welcome message.\n" +
-                        "You can delete this message by clicking Delete button in the top right corner.\n" +
-                        "You can revert any unwanted changes during note edition with the \"Undo\" and \"Redo\" buttons. Try to edit this text, and click the buttons in the top right corner.\n" +
-                        "Please check the main menu for additional functions, like Help screen, backup functions, or settings. It can be opened with the button in the top left corner of the main screen.\n" +
-                        "\n" +
-                        "Have a nice day.\n" +
-                        "☺\uFE0F",
-                time
-            )
-
-            viewModelScope.launch {
-                repository.insert(firstNote)
-            }
-            with(sharedPreferences.edit()) {
-                putBoolean("isFirstRun", false)
-                apply()
-            }
-        }
-    }
-
     fun insert(note: Note, callback: (Long) -> Unit) {
         val currentDateTime = Date()
         val dateFormat = SimpleDateFormat("dd/MM/yyyy, hh:mm a", Locale.getDefault())

@@ -1,6 +1,9 @@
 package com.grownapp.noteapp
 
 import android.os.Bundle
+import android.view.View
+import android.widget.ImageButton
+import android.widget.ImageView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.core.view.GravityCompat
@@ -15,11 +18,12 @@ import com.google.android.material.navigation.NavigationView
 import com.grownapp.noteapp.databinding.ActivityMainBinding
 import com.grownapp.noteapp.ui.categories.CategoriesViewModel
 import com.grownapp.noteapp.ui.categories.dao.Category
+import com.grownapp.noteapp.ui.note.NoteFragment
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var appBarConfiguration: AppBarConfiguration
-    private lateinit var binding: ActivityMainBinding
+    lateinit var binding: ActivityMainBinding
 
     private lateinit var categoriesViewModel: CategoriesViewModel
 
@@ -31,6 +35,26 @@ class MainActivity : AppCompatActivity() {
         setContentView(binding.root)
 
         setSupportActionBar(binding.appBarMain.toolbar)
+
+        val customToolbar = layoutInflater.inflate(R.layout.longclickitem_toolbar, null)
+        binding.appBarMain.customToolbar.addView(customToolbar)
+        binding.appBarMain.customToolbar.visibility = View.GONE
+        // Cài đặt các listener cho các nút trong custom_toolbar
+        customToolbar.findViewById<ImageView>(R.id.action_back).setOnClickListener {
+            hideCustomToolbar()
+        }
+
+        customToolbar.findViewById<ImageView>(R.id.action_select_all).setOnClickListener {
+
+        }
+
+        customToolbar.findViewById<ImageView>(R.id.action_delete).setOnClickListener {
+
+        }
+
+        customToolbar.findViewById<ImageView>(R.id.action_more).setOnClickListener {
+
+        }
 
         val drawerLayout: DrawerLayout = binding.drawerLayout
         val navView: NavigationView = binding.navView
@@ -53,6 +77,18 @@ class MainActivity : AppCompatActivity() {
         categoriesViewModel.allCategory.observe(this) { category ->
             loadCategoriesOnNavMenu(drawerLayout, navView, category)
         }
+
+        binding.appBarMain.customToolbar.visibility = View.GONE
+    }
+
+    fun showCustomToolbar() {
+        binding.appBarMain.customToolbar.visibility = View.VISIBLE
+        binding.appBarMain.toolbar.visibility = View.GONE
+    }
+
+    fun hideCustomToolbar() {
+        binding.appBarMain.customToolbar.visibility = View.GONE
+        binding.appBarMain.toolbar.visibility = View.VISIBLE
     }
 
     private fun loadCategoriesOnNavMenu(

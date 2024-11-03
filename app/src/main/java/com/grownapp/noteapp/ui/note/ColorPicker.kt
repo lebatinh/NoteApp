@@ -1,4 +1,4 @@
-package com.grownapp.noteapp.ui
+package com.grownapp.noteapp.ui.note
 
 class ColorPicker {
     val colors = arrayOf(

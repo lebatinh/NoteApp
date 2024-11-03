@@ -1,24 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
-<menu xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
-    tools:showIn="toolbar">
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
     <item
-        android:id="@+id/item_select_all"
-        android:icon="@drawable/select_all"
-        android:title="@string/select_all"
-        app:showAsAction="ifRoom|collapseActionView" />
+        android:id="@+id/export_notes_to_text_files"
+        android:title="@string/export_notes_to_text_files"/>
 
     <item
-        android:id="@+id/item_delete"
-        android:icon="@drawable/trash"
-        app:iconTint="@color/textTopBar"
-        android:title="@string/delete"
-        app:showAsAction="ifRoom" />
+        android:id="@+id/categorize"
+        android:title="@string/categorize" />
 
     <item
-        android:id="@+id/item_more_click"
-        android:icon="@drawable/more"
-        android:title="@string/more"
-        app:showAsAction="ifRoom" />
+        android:id="@+id/colorize"
+        android:title="@string/colorize"/>
 </menu>

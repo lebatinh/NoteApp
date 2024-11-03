@@ -16,6 +16,7 @@ class NoteAdapter(
 ) : RecyclerView.Adapter<NoteAdapter.NoteViewHolder>() {
 
     private var noteList = listOf<Note>()
+    private val selectedNotes: MutableSet<Note> = mutableSetOf()
 
     inner class NoteViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         @SuppressLint("SetTextI18n")
@@ -26,13 +27,18 @@ class NoteAdapter(
                 if (hideCreated) "Last edit: ${note.timeLastEdit}" else "Created: ${note.timeCreate}"
 
             itemView.setOnClickListener {
-                onClickNote(note)
+                if (selectedNotes.isNotEmpty()) {
+                    toggleSelection(note) // Chuyển đổi lựa chọn nếu đang ở chế độ chọn
+                } else {
+                    onClickNote(note)
+                }
             }
 
             itemView.setOnLongClickListener {
                 onLongClickNote(note)
                 true
             }
+            itemView.isSelected = selectedNotes.contains(note)
         }
 
         private val title: TextView = itemView.findViewById(R.id.noteTitle)
@@ -61,5 +67,25 @@ class NoteAdapter(
         notifyDataSetChanged()
     }
 
+    private fun toggleSelection(note: Note) {
+        if (selectedNotes.contains(note)) {
+            selectedNotes.remove(note)
+        } else {
+            selectedNotes.add(note)
+        }
+        notifyDataSetChanged()
+    }
+    fun clearSelection() {
+        selectedNotes.clear()
+        notifyDataSetChanged() // Cập nhật lại danh sách để ẩn lựa chọn
+    }
+    fun selectAllNotes() {
+        selectedNotes.clear()
+        selectedNotes.addAll(noteList) // Chọn tất cả ghi chú
+        notifyDataSetChanged() // Cập nhật lại danh sách
+    }
+    fun getAllNotes(): List<Note> {
+        return noteList // Trả về danh sách tất cả ghi chú
+    }
     // TODO: khi tìm kiếm thì cập nhật ui của noteItem
 }

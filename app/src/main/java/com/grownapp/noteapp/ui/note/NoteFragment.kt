@@ -2,8 +2,16 @@ package com.grownapp.noteapp.ui.note
 
 import android.content.Context
 import android.content.SharedPreferences
-import android.graphics.drawable.Drawable
+import android.graphics.Typeface
 import android.os.Bundle
+import android.text.SpannableStringBuilder
+import android.text.style.AbsoluteSizeSpan
+import android.text.style.BackgroundColorSpan
+import android.text.style.ForegroundColorSpan
+import android.text.style.StrikethroughSpan
+import android.text.style.StyleSpan
+import android.text.style.UnderlineSpan
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.Menu
 import android.view.MenuInflater
@@ -13,28 +21,31 @@ import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.RadioGroup
 import android.widget.TextView
-import androidx.appcompat.app.ActionBarDrawerToggle
+import android.widget.Toolbar
 import androidx.appcompat.app.AlertDialog
-import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.PopupMenu
 import androidx.appcompat.widget.SearchView
+import androidx.core.content.ContextCompat
 import androidx.core.view.MenuHost
 import androidx.core.view.MenuProvider
-import androidx.drawerlayout.widget.DrawerLayout
+import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
-import androidx.navigation.NavController
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
-import com.google.android.material.navigation.NavigationView
+import com.google.gson.Gson
+import com.grownapp.noteapp.MainActivity
 import com.grownapp.noteapp.R
 import com.grownapp.noteapp.databinding.FragmentNoteBinding
 import com.grownapp.noteapp.ui.note.adapter.NoteAdapter
 import com.grownapp.noteapp.ui.note.dao.Note
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import kotlin.math.atan2
 
 class NoteFragment : Fragment(), MenuProvider {
@@ -48,8 +59,10 @@ class NoteFragment : Fragment(), MenuProvider {
     private lateinit var sharedPreferences: SharedPreferences
     private var hideCreated = MutableLiveData(true)
 
-    private var onLongClick = MutableLiveData(false)
-    private var noteSelected = mutableListOf<Note>()
+    private lateinit var customToolbar: Toolbar
+    private val selectedNotes = mutableSetOf<Note>()
+    private var selectedNotesCount = selectedNotes.size
+    private var longClickMode = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -59,7 +72,6 @@ class NoteFragment : Fragment(), MenuProvider {
 
         sharedPreferences =
             requireContext().getSharedPreferences("app_preferences", Context.MODE_PRIVATE)
-        noteViewModel.insertFirstNote(sharedPreferences)
     }
 
     override fun onCreateView(
@@ -70,6 +82,7 @@ class NoteFragment : Fragment(), MenuProvider {
         _binding = FragmentNoteBinding.inflate(inflater, container, false)
         val root: View = binding.root
 
+        insertFirstNote(sharedPreferences)
         val isVisible = sharedPreferences.getBoolean("isVisible", true)
         if (isVisible) {
             binding.ctlInstruct.visibility = View.VISIBLE
@@ -79,20 +92,17 @@ class NoteFragment : Fragment(), MenuProvider {
 
         noteAdapter = NoteAdapter(
             onClickNote = {
-                val action = NoteFragmentDirections.actionNavNoteToNoteDetailFragment(it.noteId)
-                findNavController().navigate(action)
+                if (longClickMode){
+                    selectedNotes.add(it)
+                    selectedNotesCount = selectedNotes.size
+                }else{
+                    val action = NoteFragmentDirections.actionNavNoteToNoteDetailFragment(it.noteId)
+                    findNavController().navigate(action)
+                }
             },
             onLongClickNote = { note ->
-                if (onLongClick.value == true) {
-                    noteSelected.add(note)
-                    onLongClick.value = true
-//                    updateToolbarTitle()
-                } else {
-                    onLongClick.value = true
-                    noteSelected.clear()
-                    noteSelected.add(note)
-//                    updateToolbarTitle()
-                }
+                longClickMode = !longClickMode
+                handleNoteLongClick(note)
             },
             hideCreated = true
         )
@@ -125,7 +135,90 @@ class NoteFragment : Fragment(), MenuProvider {
         rotateArrowToCorner(binding.arrowImageView, screenWidth, screenHeight)
 
         sortBy()
+
         return root
+    }
+
+    private fun handleNoteLongClick(note: Note) {
+        val mainActivity = activity as MainActivity
+        mainActivity.showCustomToolbar()
+
+        if (!selectedNotes.contains(note)) {
+            selectedNotes.add(note) // Thêm vào danh sách đã chọn
+        }
+        showCustomToolbar()
+        updateSelectedCount()
+    }
+
+    private fun showCustomToolbar() {
+        val mainActivity = activity as MainActivity
+        mainActivity.binding.appBarMain.customToolbar.visibility = View.VISIBLE
+        mainActivity.binding.appBarMain.toolbar.visibility = View.GONE
+    }
+
+    fun hideCustomToolbar() {
+        val mainActivity = activity as MainActivity
+        mainActivity.binding.appBarMain.customToolbar.visibility = View.GONE
+        mainActivity.binding.appBarMain.toolbar.visibility = View.VISIBLE
+        mainActivity.hideCustomToolbar()
+        resetSelection()
+    }
+
+    private fun updateSelectedCount() {
+        val mainActivity = activity as MainActivity
+        val countTextView = mainActivity.binding.appBarMain.customToolbar.findViewById<TextView>(R.id.selected_count)
+        countTextView.text = "${selectedNotes.size}"
+    }
+
+    private fun resetSelection() {
+        val mainActivity = activity as MainActivity
+        selectedNotes.clear() // Xóa danh sách đã chọn
+        noteAdapter.clearSelection() // Giả sử bạn có phương thức để xóa lựa chọn trong adapter
+//        hideCustomToolbar()
+        mainActivity.hideCustomToolbar()
+    }
+
+    // Thêm các phương thức cho các nút trên custom_toolbar
+    fun selectAllNotes() {
+        selectedNotes.clear()
+        val allNotes = noteAdapter.getAllNotes() // Giả sử bạn có phương thức này
+        selectedNotes.addAll(allNotes)
+        noteAdapter.selectAllNotes() // Giả sử bạn có phương thức để chọn tất cả trong adapter
+        updateSelectedCount()
+    }
+
+    fun deleteSelectedNotes() {
+        // Logic xóa từng ghi chú đã chọn
+        selectedNotes.forEach { note ->
+            noteViewModel.delete(note) // Gọi phương thức xóa trong ViewModel
+        }
+        resetSelection() // Đặt lại lựa chọn sau khi xóa
+    }
+
+    // Các phương thức xử lý cho nút "Xem thêm"
+    fun showMoreOptions() {
+        val anchorView = requireActivity().findViewById<View>(R.id.action_more)
+        val popupMenu = PopupMenu(requireContext(), anchorView)
+        popupMenu.inflate(R.menu.menu_note_longclick)
+        popupMenu.setOnMenuItemClickListener { menuItem ->
+            when (menuItem.itemId) {
+                R.id.export_notes_to_text_files -> {
+
+                    true
+                }
+                R.id.categorize -> {
+
+                    true
+                }
+                R.id.colorize -> {
+
+                    true
+                }
+                // Thêm các tùy chọn khác nếu cần
+                else -> false
+            }
+        }
+        popupMenu.show()
     }
 
     private fun rotateArrowToCorner(arrowImageView: ImageView, cornerX: Float, cornerY: Float) {
@@ -141,39 +234,47 @@ class NoteFragment : Fragment(), MenuProvider {
         arrowImageView.rotation = angle.toFloat()
     }
 
-    private fun updateToolbarTitle() {
-        val toolbar =
-            requireActivity().findViewById<androidx.appcompat.widget.Toolbar>(R.id.toolbar)
-        toolbar.title = "${noteSelected.size}"
-        toolbar.setNavigationIcon(R.drawable.back)
-        toolbar.setNavigationOnClickListener {
-//            exitLongClickMode()
+    private fun insertFirstNote(sharedPreferences: SharedPreferences) {
+        val isFirstRun = sharedPreferences.getBoolean("isFirstRun", true)
+        val currentDateTime = Date()
+        val dateFormat = SimpleDateFormat("dd/MM/yyyy, hh:mm a", Locale.getDefault())
+        val time = dateFormat.format(currentDateTime)
+
+        if (isFirstRun) {
+            // Tạo một SpannableStringBuilder với đoạn văn bản bạn muốn
+            val text = """
+            Thank you for downloading Notepad Free. This is a welcome message.
+            You can delete this message by clicking Delete button in the top right corner.
+            You can revert any unwanted changes during note edition with the "Undo" and "Redo" buttons. Try to edit this text, and click the buttons in the top right corner.
+            Please check the main menu for additional functions, like Help screen, backup functions, or settings. It can be opened with the button in the top left corner of the main screen.
+            Have a nice day.
+            ☺️
+        """.trimIndent()
+
+            // Tạo SpannableStringBuilder
+            val spannableText = SpannableStringBuilder(text)
+
+            // Chuyển đổi spannable thành NoteContent
+            val noteContent = spannableToNoteContent(spannableText)
+
+            // Tạo đối tượng Note để lưu vào database
+            val firstNote = Note(
+                noteId = 0,
+                title = "Hi, how are you? (tap to open)",
+                note = Gson().toJson(noteContent), // Chuyển đổi NoteContent thành JSON
+                time
+            )
+
+            // Lưu vào ViewModel
+            noteViewModel.insert(firstNote) {}
+
+            // Cập nhật trạng thái isFirstRun
+            with(sharedPreferences.edit()) {
+                putBoolean("isFirstRun", false)
+                apply()
+            }
         }
     }
-
-//    //TODO: Xem lại thanh toolbar cập nhật cho đúng
-//    private fun exitLongClickMode() {
-//        onLongClick.value = false
-//        noteSelected.clear()
-//        val toolbar =
-//            requireActivity().findViewById<androidx.appcompat.widget.Toolbar>(R.id.toolbar)
-//        toolbar.title = getString(R.string.app_name)
-//        toolbar.navigationIcon = Drawable.createFromPath(R.drawable.menu.toString())
-//
-//        (activity as AppCompatActivity).supportActionBar?.setDisplayHomeAsUpEnabled(true)
-//
-////        val drawerToggle = ActionBarDrawerToggle(
-////            requireActivity(),
-////            requireActivity().findViewById(R.id.drawer_layout),
-////            toolbar,
-////            R.string.drawer_open,
-////            R.string.drawer_close
-////        )
-////        requireActivity().findViewById<DrawerLayout>(R.id.drawer_layout)?.addDrawerListener(drawerToggle)
-////        drawerToggle.syncState()
-//
-//        requireActivity().invalidateOptionsMenu()
-//    }
 
     private fun createNewNote() {
         viewLifecycleOwner.lifecycleScope.launch {
@@ -196,14 +297,7 @@ class NoteFragment : Fragment(), MenuProvider {
     }
 
     override fun onCreateMenu(menu: Menu, menuInflater: MenuInflater) {
-//        menu.clear()
-//        if (onLongClick.value == true) {
-//            menuInflater.inflate(R.menu.menu_note_longclick, menu)
-//            updateToolbarTitle()
-//        } else {
-            menuInflater.inflate(R.menu.menu_note, menu)
-//            exitLongClickMode()
-//        }
+        menuInflater.inflate(R.menu.menu_note, menu)
     }
 
     override fun onMenuItemSelected(menuItem: MenuItem): Boolean {
@@ -240,20 +334,6 @@ class NoteFragment : Fragment(), MenuProvider {
 
             R.id.item_more -> {
                 showPopupMenuMore()
-                return true
-            }
-
-            R.id.item_select_all -> {
-                return true
-            }
-
-            R.id.item_delete -> {
-//                noteViewModel.delete(note)
-//                exitLongClickMode()
-                return true
-            }
-
-            R.id.item_more_click -> {
                 return true
             }
         }
@@ -390,5 +470,57 @@ class NoteFragment : Fragment(), MenuProvider {
                 // Xử lý tùy chọn "color" nếu cần
             }
         }
+    }
+
+    private fun spannableToNoteContent(spannable: SpannableStringBuilder): NoteContent {
+        val defaultBackgroundColor = ContextCompat.getColor(requireContext(), R.color.transparent)
+        val defaultTextColor = ContextCompat.getColor(requireContext(), R.color.text)
+        val segments = mutableListOf<TextSegment>()
+        var start = 0
+
+        // Lặp qua từng ký tự trong spannable
+        while (start < spannable.length) {
+            val end = spannable.nextSpanTransition(start, spannable.length, Any::class.java)
+            val text = spannable.subSequence(start, end).toString()
+
+            // Lấy các định dạng hiện có
+            val isBold = spannable.getSpans(start, end, StyleSpan::class.java)
+                .any { it.style == Typeface.BOLD }
+            val isItalic = spannable.getSpans(start, end, StyleSpan::class.java)
+                .any { it.style == Typeface.ITALIC }
+            val isUnderline = spannable.getSpans(start, end, UnderlineSpan::class.java).isNotEmpty()
+            val isStrikethrough =
+                spannable.getSpans(start, end, StrikethroughSpan::class.java).isNotEmpty()
+
+            // Lấy backgroundColor và textColor
+            val backgroundColor = spannable.getSpans(start, end, BackgroundColorSpan::class.java)
+                .firstOrNull()?.backgroundColor ?: defaultBackgroundColor
+            val textColor = spannable.getSpans(start, end, ForegroundColorSpan::class.java)
+                .firstOrNull()?.foregroundColor ?: defaultTextColor
+            val textSize = spannable.getSpans(start, end, AbsoluteSizeSpan::class.java)
+                .firstOrNull()?.size?.toFloat() ?: 18f
+
+            // Thêm vào danh sách TextSegment
+            segments.add(
+                TextSegment(
+                    text,
+                    isBold,
+                    isItalic,
+                    isUnderline,
+                    isStrikethrough,
+                    backgroundColor,
+                    textColor,
+                    textSize
+                )
+            )
+
+            // Cập nhật start cho lần lặp tiếp theo
+            start = end
+            Log.d(
+                "SpanInfo",
+                "Text: $text, isBold: $isBold, isItalic: $isItalic, isUnderline: $isUnderline, isStrikethrough: $isStrikethrough, background: $backgroundColor, textcolor: $textColor, textsize: $textSize"
+            )
+        }
+        return NoteContent(segments)
     }
 }
