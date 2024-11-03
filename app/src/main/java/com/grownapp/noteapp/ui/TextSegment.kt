@@ -10,5 +10,15 @@ data class TextSegment(
     val isStrikethrough: Boolean? = false,
     val backgroundColor: Int? = Color.TRANSPARENT,
     val textColor: Int? = Color.BLACK,
-    val fontSize: Float = 18f
+    val textSize: Float? = 18f
+)
+
+data class TextFormat(
+    var isBold: Boolean = false,
+    var isItalic: Boolean = false,
+    var isUnderline: Boolean = false,
+    var isStrikethrough: Boolean = false,
+    var backgroundColor: Int = 0,
+    var textColor: Int = 0,
+    var textSize: Float = 18f
 )
