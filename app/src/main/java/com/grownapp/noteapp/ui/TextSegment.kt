@@ -2,6 +2,10 @@ package com.grownapp.noteapp.ui
 
 import android.graphics.Color
 
+data class NoteContent(
+    val segments: List<TextSegment> // Danh sách các đoạn văn bản đã định dạng
+)
+
 data class TextSegment(
     var text: String? = null,
     val isBold: Boolean? = false,

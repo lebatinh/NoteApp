@@ -7,7 +7,6 @@ import android.graphics.Color
 import android.graphics.Typeface
 import android.os.Bundle
 import android.text.Editable
-import android.text.Spannable
 import android.text.SpannableStringBuilder
 import android.text.Spanned
 import android.text.TextWatcher
@@ -41,10 +40,11 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.grownapp.noteapp.FormatConverter
+import com.google.gson.Gson
 import com.grownapp.noteapp.R
 import com.grownapp.noteapp.databinding.FragmentNoteDetailBinding
 import com.grownapp.noteapp.ui.ColorPicker
+import com.grownapp.noteapp.ui.NoteContent
 import com.grownapp.noteapp.ui.TextFormat
 import com.grownapp.noteapp.ui.TextSegment
 import com.grownapp.noteapp.ui.categories.CategoriesViewModel
@@ -101,67 +101,14 @@ class NoteDetailFragment : Fragment(), MenuProvider {
         noteViewModel.getNoteById(noteId).observe(viewLifecycleOwner) { note ->
             note?.let {
                 binding.edtTitle.setText(it.title)
-                val defautBackgroundColor = ContextCompat.getColor(requireContext(), R.color.transparent)
-                val defautTextColor = ContextCompat.getColor(requireContext(), R.color.text)
-                val n = note.note
 
-                if (!n.isNullOrEmpty()) {
-                    val segments = FormatConverter().convertJsonToSegments(n)
-
-                    val spannable = SpannableStringBuilder()
-                    for (segment in segments) {
-                        val start = spannable.length
-                        spannable.append(segment.text)
-                        val end = spannable.length
-
-                        // Áp dụng định dạng
-                        if (segment.isBold == true) spannable.setSpan(
-                            StyleSpan(Typeface.BOLD),
-                            start,
-                            end,
-                            Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
-                        )
-                        if (segment.isItalic == true) spannable.setSpan(
-                            StyleSpan(Typeface.ITALIC),
-                            start,
-                            end,
-                            Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
-                        )
-                        if (segment.isUnderline == true) spannable.setSpan(
-                            UnderlineSpan(),
-                            start,
-                            end,
-                            Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
-                        )
-                        if (segment.isStrikethrough == true) spannable.setSpan(
-                            StrikethroughSpan(),
-                            start,
-                            end,
-                            Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
-                        )
-                        if (segment.backgroundColor != defautBackgroundColor) spannable.setSpan(
-                            BackgroundColorSpan(
-                                currentFormat.backgroundColor
-                            ), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
-                        )
-                        if (segment.textColor != defautTextColor) spannable.setSpan(
-                            ForegroundColorSpan(
-                                segment.textColor ?: defautTextColor
-                            ), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
-                        )
-                        if (segment.textSize != 18f) spannable.setSpan(
-                            AbsoluteSizeSpan(currentFormat.textSize.toInt()),
-                            start,
-                            end,
-                            Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
-                        )
-                    }
-
-                    // Gán nội dung với định dạng vào EditText
-                    binding.edtNote.text = spannable
+                if (it.note != null) {
+                    val noteContent = Gson().fromJson(note.note!!, NoteContent::class.java)
+                    binding.edtNote.text = noteContentToSpannable(noteContent)
+                    formattedTextSegments = noteContentToSpannable(noteContent)
                 }
-
             }
+
         }
 
         val isShowFormattingBar = sharedPreferences.getBoolean("isShowFormattingBar", false)
@@ -208,14 +155,12 @@ class NoteDetailFragment : Fragment(), MenuProvider {
     }
 
     private fun saveNote() {
-        val textSegments =
-            FormatConverter().extractTextSegments()  // Hàm này sẽ chuyển formattedTextSegments thành List<TextSegment>
-        val json = FormatConverter().convertSegmentsToJson(textSegments)
+        val noteContent = spannableToNoteContent(formattedTextSegments)
 
         val updateNote = Note().copy(
             noteId = noteId,
             title = binding.edtTitle.text.toString(),
-            note = json
+            note = Gson().toJson(noteContent)
         )
 
         noteViewModel.insert(updateNote) {}
@@ -573,10 +518,13 @@ class NoteDetailFragment : Fragment(), MenuProvider {
                         editText.addTextChangedListener(this)     // Kích hoạt lại TextWatcher
 
                         Log.d("textchangedlistener_later", "$s-$newText-$formattedTextSegments")
-                    }else{
+                    } else {
                         formattedTextSegments.delete(endPos, startPos)
 
-                        Log.d("textchangedlistener_delete", "$s-$startPos/$endPos-$formattedTextSegments")
+                        Log.d(
+                            "textchangedlistener_delete",
+                            "$s-$startPos/$endPos-$formattedTextSegments"
+                        )
                     }
                 }
             }
@@ -630,90 +578,127 @@ class NoteDetailFragment : Fragment(), MenuProvider {
             end,
             Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
         )
+        Log.d(
+            "current",
+            "Text: $text, isBold: ${currentFormat.isBold}, isItalic: ${currentFormat.isItalic}, isUnderline: ${currentFormat.isUnderline}, isStrikethrough: ${currentFormat.isStrikethrough}, background: ${currentFormat.backgroundColor}, textcolor: ${currentFormat.textColor}, textsize: ${currentFormat.textSize}"
+        )
+
     }
 
-    fun extractTextSegmentsFromSpannable(spannable: SpannableStringBuilder): List<TextSegment> {
+    private fun spannableToNoteContent(spannable: SpannableStringBuilder): NoteContent {
+        val defaultBackgroundColor = ContextCompat.getColor(requireContext(), R.color.transparent)
+        val defaultTextColor = ContextCompat.getColor(requireContext(), R.color.text)
         val segments = mutableListOf<TextSegment>()
         var start = 0
 
+        // Lặp qua từng ký tự trong spannable
         while (start < spannable.length) {
             val end = spannable.nextSpanTransition(start, spannable.length, Any::class.java)
             val text = spannable.subSequence(start, end).toString()
 
             // Lấy các định dạng hiện có
-            val isBold = spannable.getSpans(start, end, StyleSpan::class.java).any { it.style == Typeface.BOLD }
-            val isItalic = spannable.getSpans(start, end, StyleSpan::class.java).any { it.style == Typeface.ITALIC }
+            val isBold = spannable.getSpans(start, end, StyleSpan::class.java)
+                .any { it.style == Typeface.BOLD }
+            val isItalic = spannable.getSpans(start, end, StyleSpan::class.java)
+                .any { it.style == Typeface.ITALIC }
             val isUnderline = spannable.getSpans(start, end, UnderlineSpan::class.java).isNotEmpty()
-            val isStrikethrough = spannable.getSpans(start, end, UnderlineSpan::class.java).isNotEmpty()
+            val isStrikethrough =
+                spannable.getSpans(start, end, StrikethroughSpan::class.java).isNotEmpty()
 
-            val backgroundColor = spannable.getSpans(start, end, BackgroundColorSpan::class.java).firstOrNull()?.backgroundColor
-            val textColor = spannable.getSpans(start, end, ForegroundColorSpan::class.java).firstOrNull()?.foregroundColor
-            val textSize = spannable.getSpans(start, end, AbsoluteSizeSpan::class.java).firstOrNull()?.size?.toFloat()
+            // Lấy backgroundColor và textColor
+            val backgroundColor = spannable.getSpans(start, end, BackgroundColorSpan::class.java)
+                .firstOrNull()?.backgroundColor ?: defaultBackgroundColor
+            val textColor = spannable.getSpans(start, end, ForegroundColorSpan::class.java)
+                .firstOrNull()?.foregroundColor ?: defaultTextColor
+            val textSize = spannable.getSpans(start, end, AbsoluteSizeSpan::class.java)
+                .firstOrNull()?.size?.toFloat() ?: 18f
 
             // Thêm vào danh sách TextSegment
-            segments.add(TextSegment(text, isBold, isItalic, isUnderline, isStrikethrough, backgroundColor, textColor, textSize))
-            start = end
-        }
+            segments.add(
+                TextSegment(
+                    text,
+                    isBold,
+                    isItalic,
+                    isUnderline,
+                    isStrikethrough,
+                    backgroundColor,
+                    textColor,
+                    textSize
+                )
+            )
 
-        return segments
+            // Cập nhật start cho lần lặp tiếp theo
+            start = end
+            Log.d(
+                "SpanInfo",
+                "Text: $text, isBold: $isBold, isItalic: $isItalic, isUnderline: $isUnderline, isStrikethrough: $isStrikethrough, background: $backgroundColor, textcolor: $textColor, textsize: $textSize"
+            )
+        }
+        return NoteContent(segments)
     }
 
-    fun applySegmentsToSpannable(spannable: SpannableStringBuilder) {
-        val segments = mutableListOf<TextSegment>()
-        var start = 0
-        for (segment in segments) {
-            val end = start + segment.text.toString().length
 
-            if (segment.isBold == true) spannable.setSpan(
-                StyleSpan(Typeface.BOLD),
-                start,
-                end,
-                Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
-            )
-            if (segment.isItalic == true) spannable.setSpan(
-                StyleSpan(Typeface.ITALIC),
-                start,
-                end,
-                Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
-            )
-            if (segment.isUnderline == true) spannable.setSpan(
-                UnderlineSpan(),
-                start,
-                end,
-                Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
-            )
-            if (segment.isStrikethrough == true) spannable.setSpan(
-                StrikethroughSpan(),
-                start,
-                end,
-                Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
-            )
-            segment.backgroundColor?.let {
-                spannable.setSpan(
-                    BackgroundColorSpan(it),
-                    start,
-                    end,
-                    Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
-                )
-            }
-            segment.textColor?.let {
-                spannable.setSpan(
-                    ForegroundColorSpan(it),
-                    start,
-                    end,
-                    Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
-                )
-            }
-            segment.textSize?.let {
-                spannable.setSpan(
-                    AbsoluteSizeSpan(it.toInt(), true),
-                    start,
-                    end,
-                    Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
-                )
-            }
+    private fun noteContentToSpannable(noteContent: NoteContent): SpannableStringBuilder {
+        val defautBackgroundColor = ContextCompat.getColor(requireContext(), R.color.transparent)
+        val defautTextColor = ContextCompat.getColor(requireContext(), R.color.text)
+        val spannable = SpannableStringBuilder()
 
-            start = end // Cập nhật vị trí cho đoạn tiếp theo
+        for (segment in noteContent.segments) {
+            val start = spannable.length
+            spannable.append(segment.text)
+            val end = spannable.length
+
+            segment.apply {
+                if (isBold == true) spannable.setSpan(
+                    StyleSpan(Typeface.BOLD),
+                    start,
+                    end,
+                    Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+                )
+                if (isItalic == true) spannable.setSpan(
+                    StyleSpan(Typeface.ITALIC),
+                    start,
+                    end,
+                    Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+                )
+                if (isUnderline == true) spannable.setSpan(
+                    UnderlineSpan(),
+                    start,
+                    end,
+                    Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+                )
+                if (isStrikethrough == true) spannable.setSpan(
+                    StrikethroughSpan(),
+                    start,
+                    end,
+                    Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+                )
+                backgroundColor.let {
+                    spannable.setSpan(
+                        BackgroundColorSpan(it ?: defautBackgroundColor),
+                        start,
+                        end,
+                        Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+                    )
+                }
+                textColor.let {
+                    spannable.setSpan(
+                        ForegroundColorSpan(it ?: defautTextColor),
+                        start,
+                        end,
+                        Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+                    )
+                }
+                textSize.let {
+                    spannable.setSpan(
+                        AbsoluteSizeSpan(it?.toInt() ?: 18),
+                        start,
+                        end,
+                        Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+                    )
+                }
+            }
         }
+        return spannable
     }
 }
