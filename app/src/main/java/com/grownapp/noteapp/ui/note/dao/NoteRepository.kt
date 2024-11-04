@@ -30,7 +30,7 @@ class NoteRepository(
 
     val notesWithoutCategory: LiveData<List<Note>> = noteDao.getNotesWithoutCategory()
 
-    suspend fun delete(note: Note) = noteDao.delete(note)
+    suspend fun delete(noteId: Int) = noteDao.delete(noteId)
 
     fun getNotesByCategory(categoryId: Int): LiveData<List<NoteWithCategories>> {
         return noteDao.getNotesByCategory(categoryId)

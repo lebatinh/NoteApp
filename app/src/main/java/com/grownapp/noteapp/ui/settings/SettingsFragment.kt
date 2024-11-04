@@ -17,12 +17,9 @@ class SettingsFragment : Fragment() {
 
     private val binding get() = _binding!!
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-    }
-
     override fun onCreateView(
-        inflater: LayoutInflater, container: ViewGroup?,
+        inflater: LayoutInflater,
+        container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
         _binding = FragmentSettingsBinding.inflate(inflater, container, false)
@@ -41,16 +38,12 @@ class SettingsFragment : Fragment() {
     }
 
     private fun showThemeDialog() {
-        val inflater = layoutInflater
-        val dialogView = inflater.inflate(R.layout.menu_theme, null)
-
-        val dialog = AlertDialog.Builder(requireContext())
-            .setView(dialogView)
-            .create()
+        val dialogView = layoutInflater.inflate(R.layout.menu_theme, null)
 
         val rdgTheme = dialogView.findViewById<RadioGroup>(R.id.rdgTheme)
         val buttonCancel = dialogView.findViewById<Button>(R.id.buttonCancel)
 
+        val dialog = AlertDialog.Builder(requireContext()).setView(dialogView).create()
         buttonCancel.setOnClickListener {
             dialog.dismiss()
         }
@@ -81,4 +74,8 @@ class SettingsFragment : Fragment() {
         dialog.show()
     }
 
+    override fun onDestroyView() {
+        super.onDestroyView()
+        _binding = null
+    }
 }

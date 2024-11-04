@@ -7,6 +7,7 @@ import android.graphics.Color
 import android.graphics.Typeface
 import android.os.Bundle
 import android.text.Editable
+import android.text.InputFilter
 import android.text.SpannableStringBuilder
 import android.text.Spanned
 import android.text.TextWatcher
@@ -38,6 +39,7 @@ import androidx.core.view.MenuProvider
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ViewModelProvider
+import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.gson.Gson
@@ -48,6 +50,7 @@ import com.grownapp.noteapp.ui.categories.dao.Category
 import com.grownapp.noteapp.ui.note.adapter.CategoryForNoteAdapter
 import com.grownapp.noteapp.ui.note.dao.Note
 import com.grownapp.noteapp.ui.note_category.NoteCategoryCrossRef
+import java.util.Stack
 
 class NoteDetailFragment : Fragment(), MenuProvider {
 
@@ -63,8 +66,11 @@ class NoteDetailFragment : Fragment(), MenuProvider {
     private var category: String? = null
     private var formattedTextSegments = SpannableStringBuilder()
 
-    private var currentFormat = TextFormat()
+    private var noteHistoryStack: Stack<SpannableStringBuilder> = Stack()
+    private val redoStack: Stack<SpannableStringBuilder> = Stack()
+    private lateinit var initialState: SpannableStringBuilder
 
+    private var currentFormat = TextFormat()
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -102,7 +108,11 @@ class NoteDetailFragment : Fragment(), MenuProvider {
                     val noteContent = Gson().fromJson(note.note!!, NoteContent::class.java)
                     binding.edtNote.text = noteContentToSpannable(noteContent)
                     formattedTextSegments = noteContentToSpannable(noteContent)
+
+                    initialState = SpannableStringBuilder(noteContentToSpannable(noteContent))
+                    noteHistoryStack.push(initialState)
                 }
+                requireActivity().invalidateOptionsMenu()
             }
 
         }
@@ -114,6 +124,7 @@ class NoteDetailFragment : Fragment(), MenuProvider {
         }
 
         applyFormatting(binding.edtNote)
+
         return root
     }
 
@@ -127,11 +138,19 @@ class NoteDetailFragment : Fragment(), MenuProvider {
         _binding = null
     }
 
+    //    @Deprecated("Deprecated in Java")
+//    override fun onPrepareOptionsMenu(menu: Menu) {
+//        super.onPrepareOptionsMenu(menu)
+//        val undo = menu.findItem(R.id.item_undo)
+//        val redo = menu.findItem(R.id.redo)
+//        val undoAll = menu.findItem(R.id.undo_all)
+//
+//        undo.isEnabled = noteHistoryStack.size > 1
+//        redo.isEnabled = redoStack.isNotEmpty()
+//        undoAll.isEnabled = noteHistoryStack.size > 1
+//    }
     override fun onCreateMenu(menu: Menu, menuInflater: MenuInflater) {
         menuInflater.inflate(R.menu.menu_note_detail, menu)
-        val isShowFormattingBar = sharedPreferences.getBoolean("isShowFormattingBar", false)
-//        menu.findItem(R.id.show_formatting_bar).isEnabled = !isShowFormattingBar
-        //TODO
     }
 
     override fun onMenuItemSelected(menuItem: MenuItem): Boolean {
@@ -141,7 +160,18 @@ class NoteDetailFragment : Fragment(), MenuProvider {
                 return true
             }
 
-            R.id.item_undo -> {}
+            R.id.item_undo -> {
+                if (noteHistoryStack.size > 1) {
+                    redoStack.push(noteHistoryStack.pop()) // Lưu trạng thái hiện tại vào redoStack
+                    binding.edtNote.text = noteHistoryStack.peek()
+                    binding.edtNote.setSelection(noteHistoryStack.peek().length)
+                    requireActivity().invalidateOptionsMenu()
+                    menuItem.isEnabled = true
+                } else {
+                    menuItem.isEnabled = false
+                }
+            }
+
             R.id.item_more -> {
                 showPopupMenuMore()
                 return true
@@ -174,10 +204,23 @@ class NoteDetailFragment : Fragment(), MenuProvider {
         popupMenu.setOnMenuItemClickListener { menuItem ->
             when (menuItem.itemId) {
                 R.id.redo -> {
+                    if (redoStack.isNotEmpty()) {
+                        noteHistoryStack.push(redoStack.pop()) // Chuyển trạng thái từ redoStack về noteHistoryStack
+                        binding.edtNote.text = noteHistoryStack.peek()
+                        binding.edtNote.setSelection(noteHistoryStack.peek().length)
+                        requireActivity().invalidateOptionsMenu()
+                    }
                     true
                 }
 
                 R.id.undo_all -> {
+                    if (noteHistoryStack.size > 1) {
+                        binding.edtNote.text = SpannableStringBuilder(initialState)
+                        noteHistoryStack.clear() // Clear the stack
+                        redoStack.clear()
+                        binding.edtNote.setSelection(initialState.length)
+                        requireActivity().invalidateOptionsMenu() // Cập nhật trạng thái nút sau khi undo tất cả
+                    }
                     true
                 }
 
@@ -186,6 +229,7 @@ class NoteDetailFragment : Fragment(), MenuProvider {
                 }
 
                 R.id.delete -> {
+                    showDialogDelete()
                     true
                 }
 
@@ -235,6 +279,30 @@ class NoteDetailFragment : Fragment(), MenuProvider {
 
         // Hiển thị PopupMenu
         popupMenu.show()
+    }
+
+    private fun showDialogDelete() {
+        val dialogView = layoutInflater.inflate(R.layout.delete_dialog, null)
+        val deleteLog = dialogView.findViewById<TextView>(R.id.delete_log)
+        val btnDelete = dialogView.findViewById<TextView>(R.id.btnDelete)
+        val btnCancel = dialogView.findViewById<TextView>(R.id.btnCancel)
+
+        val dialog = AlertDialog.Builder(requireContext()).setView(dialogView).create()
+        noteViewModel.getNoteById(noteId).observe(viewLifecycleOwner) { note ->
+            deleteLog.text = "The '${note.title ?: note.note?.substring(0, 20)?: "Untitled" }' note will be deleted.\nAre you sure?"
+        }
+
+        btnCancel.setOnClickListener {
+            dialog.dismiss()
+        }
+
+        btnDelete.setOnClickListener {
+            noteViewModel.delete(noteId)
+            Toast.makeText(requireContext(), "deleted ${noteId}", Toast.LENGTH_SHORT).show()
+            findNavController().navigate(R.id.action_noteDetailFragment_to_nav_note)
+            dialog.dismiss()
+        }
+        dialog.show()
     }
 
     private fun showCategorizeDialog(noteId: Int?) {
@@ -490,7 +558,7 @@ class NoteDetailFragment : Fragment(), MenuProvider {
     private fun applyFormatting(editText: EditText) {
         editText.addTextChangedListener(object : TextWatcher {
             var startPos = 0
-
+            var previousText: String = ""
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {
                 startPos = editText.selectionStart
             }
@@ -522,6 +590,13 @@ class NoteDetailFragment : Fragment(), MenuProvider {
                             "textchangedlistener_delete",
                             "$s-$startPos/$endPos-$formattedTextSegments"
                         )
+                    }
+
+                    val currentText = s.toString()
+                    if (currentText != previousText) {
+                        noteHistoryStack.push(SpannableStringBuilder(currentText))
+                        redoStack.clear() // Clear redo stack on new input
+                        requireActivity().invalidateOptionsMenu() // Update button states
                     }
                 }
             }

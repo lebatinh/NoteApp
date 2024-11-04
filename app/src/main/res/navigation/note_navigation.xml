@@ -87,6 +87,10 @@
         <argument
             android:name="id"
             app:argType="integer" />
+        <action
+            android:id="@+id/action_noteDetailFragment_to_nav_note"
+            app:destination="@id/nav_note"
+            app:popUpTo="@id/nav_note" />
     </fragment>
     <fragment
         android:id="@+id/passwordSettingsFragment"

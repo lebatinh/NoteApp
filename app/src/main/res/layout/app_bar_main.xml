@@ -13,16 +13,11 @@
 
         <androidx.appcompat.widget.Toolbar
             android:id="@+id/toolbar"
+            android:background="@color/topBarBackgroundLight"
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
             app:popupTheme="@style/Theme.NoteApp.PopupOverlay" />
 
-        <androidx.appcompat.widget.Toolbar
-            android:id="@+id/custom_toolbar"
-            android:layout_width="match_parent"
-            android:layout_height="?attr/actionBarSize"
-            android:visibility="gone"
-            app:popupTheme="@style/Theme.NoteApp.PopupOverlay" />
     </com.google.android.material.appbar.AppBarLayout>
 
     <include layout="@layout/content_main" />

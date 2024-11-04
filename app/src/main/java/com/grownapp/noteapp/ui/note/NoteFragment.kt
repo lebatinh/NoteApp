@@ -21,14 +21,12 @@ import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.RadioGroup
 import android.widget.TextView
-import android.widget.Toolbar
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.widget.PopupMenu
 import androidx.appcompat.widget.SearchView
 import androidx.core.content.ContextCompat
 import androidx.core.view.MenuHost
 import androidx.core.view.MenuProvider
-import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.MutableLiveData
@@ -37,7 +35,6 @@ import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.gson.Gson
-import com.grownapp.noteapp.MainActivity
 import com.grownapp.noteapp.R
 import com.grownapp.noteapp.databinding.FragmentNoteBinding
 import com.grownapp.noteapp.ui.note.adapter.NoteAdapter
@@ -59,8 +56,7 @@ class NoteFragment : Fragment(), MenuProvider {
     private lateinit var sharedPreferences: SharedPreferences
     private var hideCreated = MutableLiveData(true)
 
-    private var longClickMode = false
-
+    private var currentMenuProvider: MenuProvider? = null
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -89,8 +85,8 @@ class NoteFragment : Fragment(), MenuProvider {
 
         noteAdapter = NoteAdapter(
             onClickNote = {
-                    val action = NoteFragmentDirections.actionNavNoteToNoteDetailFragment(it.noteId)
-                    findNavController().navigate(action)
+                val action = NoteFragmentDirections.actionNavNoteToNoteDetailFragment(it.noteId)
+                findNavController().navigate(action)
 
             },
             onLongClickNote = { note ->

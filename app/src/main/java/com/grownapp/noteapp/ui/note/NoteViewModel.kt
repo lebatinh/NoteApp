@@ -2,6 +2,7 @@ package com.grownapp.noteapp.ui.note
 
 import android.app.Application
 import android.content.SharedPreferences
+import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
@@ -29,6 +30,13 @@ class NoteViewModel(application: Application) : AndroidViewModel(application) {
     val noteId: LiveData<Int?> get() = _noteId
 
     private val _returnResult = MutableLiveData<ReturnResult>()
+
+//    private val _isLongClickEnabled = MutableLiveData(false)
+//    val isLongClickEnabled: LiveData<Boolean> get() = _isLongClickEnabled
+//
+//    fun setLongClickEnabled(enabled: Boolean) {
+//        _isLongClickEnabled.value = enabled
+//    }
 
     init {
         val noteDao = NoteDatabase.getDatabase(application).noteDao()
@@ -80,10 +88,10 @@ class NoteViewModel(application: Application) : AndroidViewModel(application) {
         repository.deleteCategoriesForNote(noteId)
     }
 
-    fun delete(note: Note) {
+    fun delete(noteId: Int) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                repository.delete(note)
+                repository.delete(noteId)
                 _returnResult.postValue(ReturnResult.Success)
             } catch (e: Exception) {
                 _returnResult.postValue(ReturnResult.Error("Xóa thất bại! Hãy thử lại"))

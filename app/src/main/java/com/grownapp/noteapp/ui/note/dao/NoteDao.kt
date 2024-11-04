@@ -19,8 +19,8 @@ interface NoteDao {
     @Query("UPDATE note SET title = :title, note = :content, timeLastEdit = :updatedTime WHERE noteId = :noteId")
     suspend fun update(noteId: Int, title: String, content: String, updatedTime: String)
 
-    @Delete
-    suspend fun delete(note: Note)
+    @Query("DELETE FROM note WHERE noteId = :noteId")
+    suspend fun delete(noteId: Int)
 
     @Query("SELECT * FROM note")
     fun getAllNote(): LiveData<List<Note>>
