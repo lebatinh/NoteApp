@@ -59,9 +59,6 @@ class NoteFragment : Fragment(), MenuProvider {
     private lateinit var sharedPreferences: SharedPreferences
     private var hideCreated = MutableLiveData(true)
 
-    private lateinit var customToolbar: Toolbar
-    private val selectedNotes = mutableSetOf<Note>()
-    private var selectedNotesCount = selectedNotes.size
     private var longClickMode = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -92,17 +89,12 @@ class NoteFragment : Fragment(), MenuProvider {
 
         noteAdapter = NoteAdapter(
             onClickNote = {
-                if (longClickMode){
-                    selectedNotes.add(it)
-                    selectedNotesCount = selectedNotes.size
-                }else{
                     val action = NoteFragmentDirections.actionNavNoteToNoteDetailFragment(it.noteId)
                     findNavController().navigate(action)
-                }
+
             },
             onLongClickNote = { note ->
-                longClickMode = !longClickMode
-                handleNoteLongClick(note)
+
             },
             hideCreated = true
         )
@@ -110,9 +102,6 @@ class NoteFragment : Fragment(), MenuProvider {
         binding.rcvNote.layoutManager = LinearLayoutManager(requireContext())
         binding.rcvNote.adapter = noteAdapter
 
-        hideCreated.observe(viewLifecycleOwner) {
-            noteAdapter.updateHideCreated(it)
-        }
         noteViewModel.allNote.observe(viewLifecycleOwner) { notes ->
             notes.let {
                 noteAdapter.updateListNote(notes)
@@ -139,88 +128,6 @@ class NoteFragment : Fragment(), MenuProvider {
         return root
     }
 
-    private fun handleNoteLongClick(note: Note) {
-        val mainActivity = activity as MainActivity
-        mainActivity.showCustomToolbar()
-
-        if (!selectedNotes.contains(note)) {
-            selectedNotes.add(note) // Thêm vào danh sách đã chọn
-        }
-        showCustomToolbar()
-        updateSelectedCount()
-    }
-
-    private fun showCustomToolbar() {
-        val mainActivity = activity as MainActivity
-        mainActivity.binding.appBarMain.customToolbar.visibility = View.VISIBLE
-        mainActivity.binding.appBarMain.toolbar.visibility = View.GONE
-    }
-
-    fun hideCustomToolbar() {
-        val mainActivity = activity as MainActivity
-        mainActivity.binding.appBarMain.customToolbar.visibility = View.GONE
-        mainActivity.binding.appBarMain.toolbar.visibility = View.VISIBLE
-        mainActivity.hideCustomToolbar()
-        resetSelection()
-    }
-
-    private fun updateSelectedCount() {
-        val mainActivity = activity as MainActivity
-        val countTextView = mainActivity.binding.appBarMain.customToolbar.findViewById<TextView>(R.id.selected_count)
-        countTextView.text = "${selectedNotes.size}"
-    }
-
-    private fun resetSelection() {
-        val mainActivity = activity as MainActivity
-        selectedNotes.clear() // Xóa danh sách đã chọn
-        noteAdapter.clearSelection() // Giả sử bạn có phương thức để xóa lựa chọn trong adapter
-//        hideCustomToolbar()
-        mainActivity.hideCustomToolbar()
-    }
-
-    // Thêm các phương thức cho các nút trên custom_toolbar
-    fun selectAllNotes() {
-        selectedNotes.clear()
-        val allNotes = noteAdapter.getAllNotes() // Giả sử bạn có phương thức này
-        selectedNotes.addAll(allNotes)
-        noteAdapter.selectAllNotes() // Giả sử bạn có phương thức để chọn tất cả trong adapter
-        updateSelectedCount()
-    }
-
-    fun deleteSelectedNotes() {
-        // Logic xóa từng ghi chú đã chọn
-        selectedNotes.forEach { note ->
-            noteViewModel.delete(note) // Gọi phương thức xóa trong ViewModel
-        }
-        resetSelection() // Đặt lại lựa chọn sau khi xóa
-    }
-
-    // Các phương thức xử lý cho nút "Xem thêm"
-    fun showMoreOptions() {
-        val anchorView = requireActivity().findViewById<View>(R.id.action_more)
-        val popupMenu = PopupMenu(requireContext(), anchorView)
-        popupMenu.inflate(R.menu.menu_note_longclick)
-        popupMenu.setOnMenuItemClickListener { menuItem ->
-            when (menuItem.itemId) {
-                R.id.export_notes_to_text_files -> {
-
-                    true
-                }
-                R.id.categorize -> {
-
-                    true
-                }
-                R.id.colorize -> {
-
-                    true
-                }
-                // Thêm các tùy chọn khác nếu cần
-                else -> false
-            }
-        }
-        popupMenu.show()
-    }
-
     private fun rotateArrowToCorner(arrowImageView: ImageView, cornerX: Float, cornerY: Float) {
         val location = IntArray(2)
         arrowImageView.getLocationOnScreen(location)
@@ -234,6 +141,7 @@ class NoteFragment : Fragment(), MenuProvider {
         arrowImageView.rotation = angle.toFloat()
     }
 
+    // tạo note đầu tiên mặc định
     private fun insertFirstNote(sharedPreferences: SharedPreferences) {
         val isFirstRun = sharedPreferences.getBoolean("isFirstRun", true)
         val currentDateTime = Date()
@@ -241,7 +149,6 @@ class NoteFragment : Fragment(), MenuProvider {
         val time = dateFormat.format(currentDateTime)
 
         if (isFirstRun) {
-            // Tạo một SpannableStringBuilder với đoạn văn bản bạn muốn
             val text = """
             Thank you for downloading Notepad Free. This is a welcome message.
             You can delete this message by clicking Delete button in the top right corner.
@@ -251,22 +158,18 @@ class NoteFragment : Fragment(), MenuProvider {
             ☺️
         """.trimIndent()
 
-            // Tạo SpannableStringBuilder
             val spannableText = SpannableStringBuilder(text)
 
-            // Chuyển đổi spannable thành NoteContent
             val noteContent = spannableToNoteContent(spannableText)
 
-            // Tạo đối tượng Note để lưu vào database
             val firstNote = Note(
-                noteId = 0,
                 title = "Hi, how are you? (tap to open)",
-                note = Gson().toJson(noteContent), // Chuyển đổi NoteContent thành JSON
-                time
+                note = Gson().toJson(noteContent),
+                timeCreate = time
             )
 
             // Lưu vào ViewModel
-            noteViewModel.insert(firstNote) {}
+            noteViewModel.insertFirst(firstNote)
 
             // Cập nhật trạng thái isFirstRun
             with(sharedPreferences.edit()) {
@@ -467,7 +370,7 @@ class NoteFragment : Fragment(), MenuProvider {
                 .observe(viewLifecycleOwner, sortObserver)
 
             "color" -> {
-                // Xử lý tùy chọn "color" nếu cần
+                // Xử lý tùy chọn "color"
             }
         }
     }

@@ -52,7 +52,7 @@
         tools:layout="@layout/fragment_backup" />
     <fragment
         android:id="@+id/nav_trash"
-        android:name="com.grownapp.noteapp.ui.trash.TrashFragment"
+        android:name="com.grownapp.noteapp.ui.note.TrashFragment"
         android:label="@string/menu_trash"
         tools:layout="@layout/fragment_trash" />
     <fragment

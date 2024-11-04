@@ -133,4 +133,10 @@ class NoteRepository(
     fun sortedByCreatedTimeAscByCategory(categoryId: Int): LiveData<List<Note>> {
         return noteDao.sortedByCreatedTimeAscByCategory(categoryId)
     }
+
+    val allTrashNote: LiveData<List<Note>> = noteDao.getNoteOnTrash()
+
+    fun pushInTrash(onTrash: Boolean, noteId: Int) {
+        noteDao.pushInTrash(onTrash, noteId)
+    }
 }

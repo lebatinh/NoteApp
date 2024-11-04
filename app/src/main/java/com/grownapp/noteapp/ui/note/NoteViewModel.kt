@@ -23,6 +23,7 @@ class NoteViewModel(application: Application) : AndroidViewModel(application) {
     private val repository: NoteRepository
     val allNote: LiveData<List<Note>>
     val allNoteWithoutCategory: LiveData<List<Note>>
+    val allTrashNote: LiveData<List<Note>>
 
     private val _noteId = MutableLiveData<Int?>()
     val noteId: LiveData<Int?> get() = _noteId
@@ -35,8 +36,14 @@ class NoteViewModel(application: Application) : AndroidViewModel(application) {
         repository = NoteRepository(noteDao, categoryDao)
         allNote = repository.allNote
         allNoteWithoutCategory = repository.notesWithoutCategory
+        allTrashNote = repository.allTrashNote
     }
 
+    fun insertFirst(note: Note){
+        viewModelScope.launch {
+            repository.insert(note)
+        }
+    }
     fun insert(note: Note, callback: (Long) -> Unit) {
         val currentDateTime = Date()
         val dateFormat = SimpleDateFormat("dd/MM/yyyy, hh:mm a", Locale.getDefault())
@@ -188,5 +195,11 @@ class NoteViewModel(application: Application) : AndroidViewModel(application) {
 
     fun sortedByCreatedTimeAscByCategory(categoryId: Int): LiveData<List<Note>> {
         return repository.sortedByCreatedTimeAscByCategory(categoryId)
+    }
+
+    fun pushInTrash(onTrash: Boolean, noteId: Int){
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.pushInTrash(onTrash, noteId)
+        }
     }
 }

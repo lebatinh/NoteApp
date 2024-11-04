@@ -12,7 +12,8 @@ data class Note(
     val title: String? = null,
     val note: String? = null,
     var timeCreate: String? = null,
-    var timeLastEdit: String? = getCurrentTime()
+    var timeLastEdit: String? = getCurrentTime(),
+    var onTrash: Boolean? = false
 ){
     companion object{
         fun getCurrentTime():String{

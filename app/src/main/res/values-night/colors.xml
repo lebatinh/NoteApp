@@ -15,6 +15,12 @@
     <color name="endBackgroundBtnADD">#121212</color>
     <color name="backgroundTitleDialog">#C7C7C7</color>
 
+    <color name="topBackgroundColorLongClick">#131313</color>
+    <color name="bottomBackgroundColorLongClick">#1F1F1F</color>
+    <color name="topBackgroundColorTrashLongClick">#1F1F1E</color>
+    <color name="bottomBackgroundColorTrashLongClick">#82936F</color>
+    <color name="boder_long_clickNote">#595959</color>
+
     <color name="backgroundIndicator">#9B9B9B</color>
 
     <color name="border_stroke">#A48862</color>

@@ -371,7 +371,7 @@ class NoteListFragment : Fragment(), MenuProvider {
             }
 
             "color" -> {
-                // Xử lý tùy chọn "color" nếu cần
+                // Xử lý tùy chọn "color"
             }
         }
     }

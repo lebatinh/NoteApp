@@ -228,4 +228,10 @@ interface NoteDao {
     """
     )
     fun sortedByCreatedTimeAscByCategory(categoryId: Int): LiveData<List<Note>>
+
+    @Query("UPDATE note SET onTrash = :onTrash WHERE noteId = :noteId")
+    fun pushInTrash(onTrash: Boolean, noteId: Int)
+
+    @Query("SELECT * FROM note WHERE onTrash = 1")
+    fun getNoteOnTrash(): LiveData<List<Note>>
 }
