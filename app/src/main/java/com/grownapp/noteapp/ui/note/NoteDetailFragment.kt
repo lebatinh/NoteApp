@@ -7,7 +7,6 @@ import android.graphics.Color
 import android.graphics.Typeface
 import android.os.Bundle
 import android.text.Editable
-import android.text.InputFilter
 import android.text.SpannableStringBuilder
 import android.text.Spanned
 import android.text.TextWatcher
@@ -50,7 +49,6 @@ import com.grownapp.noteapp.ui.categories.dao.Category
 import com.grownapp.noteapp.ui.note.adapter.CategoryForNoteAdapter
 import com.grownapp.noteapp.ui.note.dao.Note
 import com.grownapp.noteapp.ui.note_category.NoteCategoryCrossRef
-import java.util.Stack
 
 class NoteDetailFragment : Fragment(), MenuProvider {
 
@@ -66,9 +64,7 @@ class NoteDetailFragment : Fragment(), MenuProvider {
     private var category: String? = null
     private var formattedTextSegments = SpannableStringBuilder()
 
-    private var noteHistoryStack: Stack<SpannableStringBuilder> = Stack()
-    private val redoStack: Stack<SpannableStringBuilder> = Stack()
-    private lateinit var initialState: SpannableStringBuilder
+    private val undoRedoManager = UndoRedoManager()
 
     private var currentFormat = TextFormat()
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -108,13 +104,15 @@ class NoteDetailFragment : Fragment(), MenuProvider {
                     val noteContent = Gson().fromJson(note.note!!, NoteContent::class.java)
                     binding.edtNote.text = noteContentToSpannable(noteContent)
                     formattedTextSegments = noteContentToSpannable(noteContent)
-
-                    initialState = SpannableStringBuilder(noteContentToSpannable(noteContent))
-                    noteHistoryStack.push(initialState)
+                } else {
+                    // Trường hợp `note` null hoặc không có nội dung
+                    binding.edtNote.text = SpannableStringBuilder("") // Đặt `edtNote` là chuỗi rỗng
+                    formattedTextSegments = SpannableStringBuilder("") // Đặt chuỗi định dạng là rỗng
                 }
+
+                undoRedoManager.addState(formattedTextSegments)
                 requireActivity().invalidateOptionsMenu()
             }
-
         }
 
         val isShowFormattingBar = sharedPreferences.getBoolean("isShowFormattingBar", false)
@@ -161,14 +159,10 @@ class NoteDetailFragment : Fragment(), MenuProvider {
             }
 
             R.id.item_undo -> {
-                if (noteHistoryStack.size > 1) {
-                    redoStack.push(noteHistoryStack.pop()) // Lưu trạng thái hiện tại vào redoStack
-                    binding.edtNote.text = noteHistoryStack.peek()
-                    binding.edtNote.setSelection(noteHistoryStack.peek().length)
-                    requireActivity().invalidateOptionsMenu()
-                    menuItem.isEnabled = true
-                } else {
-                    menuItem.isEnabled = false
+                val previousState = undoRedoManager.undo()
+                if (previousState != null) {
+                    binding.edtNote.text = previousState
+                    binding.edtNote.setSelection(previousState.length.coerceAtMost(previousState.length))
                 }
             }
 
@@ -204,22 +198,19 @@ class NoteDetailFragment : Fragment(), MenuProvider {
         popupMenu.setOnMenuItemClickListener { menuItem ->
             when (menuItem.itemId) {
                 R.id.redo -> {
-                    if (redoStack.isNotEmpty()) {
-                        noteHistoryStack.push(redoStack.pop()) // Chuyển trạng thái từ redoStack về noteHistoryStack
-                        binding.edtNote.text = noteHistoryStack.peek()
-                        binding.edtNote.setSelection(noteHistoryStack.peek().length)
-                        requireActivity().invalidateOptionsMenu()
+                    val previousState = undoRedoManager.redo()
+                    if (previousState != null) {
+                        binding.edtNote.text = previousState
+                        binding.edtNote.setSelection(previousState.length)
                     }
                     true
                 }
 
                 R.id.undo_all -> {
-                    if (noteHistoryStack.size > 1) {
-                        binding.edtNote.text = SpannableStringBuilder(initialState)
-                        noteHistoryStack.clear() // Clear the stack
-                        redoStack.clear()
-                        binding.edtNote.setSelection(initialState.length)
-                        requireActivity().invalidateOptionsMenu() // Cập nhật trạng thái nút sau khi undo tất cả
+                    val previousState = undoRedoManager.undoAll()
+                    if (previousState != null) {
+                        binding.edtNote.text = previousState
+                        binding.edtNote.setSelection(previousState.length)
                     }
                     true
                 }
@@ -289,7 +280,12 @@ class NoteDetailFragment : Fragment(), MenuProvider {
 
         val dialog = AlertDialog.Builder(requireContext()).setView(dialogView).create()
         noteViewModel.getNoteById(noteId).observe(viewLifecycleOwner) { note ->
-            deleteLog.text = "The '${note.title ?: note.note?.substring(0, 20)?: "Untitled" }' note will be deleted.\nAre you sure?"
+            deleteLog.text = "The '${
+                note.title ?: note.note?.substring(
+                    0,
+                    20
+                ) ?: "Untitled"
+            }' note will be deleted.\nAre you sure?"
         }
 
         btnCancel.setOnClickListener {
@@ -298,7 +294,7 @@ class NoteDetailFragment : Fragment(), MenuProvider {
 
         btnDelete.setOnClickListener {
             noteViewModel.delete(noteId)
-            Toast.makeText(requireContext(), "deleted ${noteId}", Toast.LENGTH_SHORT).show()
+            Toast.makeText(requireContext(), "deleted $noteId", Toast.LENGTH_SHORT).show()
             findNavController().navigate(R.id.action_noteDetailFragment_to_nav_note)
             dialog.dismiss()
         }
@@ -580,22 +576,33 @@ class NoteDetailFragment : Fragment(), MenuProvider {
                         editText.text =
                             formattedTextSegments     // Cập nhật lại EditText với định dạng đã áp dụng
                         editText.setSelection(formattedTextSegments.length) // Đặt con trỏ ở cuối văn bản
+
+                        undoRedoManager.addState(formattedTextSegments)
+
                         editText.addTextChangedListener(this)     // Kích hoạt lại TextWatcher
 
+                        Log.d("noteHistoryStack", "${undoRedoManager.history}")
                         Log.d("textchangedlistener_later", "$s-$newText-$formattedTextSegments")
-                    } else {
+                    } else if (endPos in 0..<startPos && startPos <= formattedTextSegments.length) {
                         formattedTextSegments.delete(endPos, startPos)
 
+                        undoRedoManager.addState(SpannableStringBuilder(formattedTextSegments))
+                        Log.d("noteHistoryStack", "$${undoRedoManager.history}")
                         Log.d(
                             "textchangedlistener_delete",
                             "$s-$startPos/$endPos-$formattedTextSegments"
                         )
                     }
+//                    else if (startPos < editText.text.length){
+//                        formattedTextSegments.insert(startPos, s)
+//                        editText.text = formattedTextSegments
+//                        editText.setSelection(startPos+s.length)
+//                        Log.d("InsertAtPosition", "$s/$startPos")
+//                        noteHistoryStack.push(SpannableStringBuilder(formattedTextSegments))
+//                    }
 
                     val currentText = s.toString()
                     if (currentText != previousText) {
-                        noteHistoryStack.push(SpannableStringBuilder(currentText))
-                        redoStack.clear() // Clear redo stack on new input
                         requireActivity().invalidateOptionsMenu() // Update button states
                     }
                 }
@@ -771,5 +778,21 @@ class NoteDetailFragment : Fragment(), MenuProvider {
             }
         }
         return spannable
+    }
+
+    // Hàm kiểm tra định dạng của đoạn mới với đoạn cuối trong stack
+    private fun isSameFormat(newFormat: TextFormat, lastFormat: TextFormat): Boolean {
+        return newFormat.isBold == lastFormat.isBold &&
+                newFormat.isItalic == lastFormat.isItalic &&
+                newFormat.isUnderline == lastFormat.isUnderline &&
+                newFormat.isStrikethrough == lastFormat.isStrikethrough &&
+                newFormat.backgroundColor == lastFormat.backgroundColor &&
+                newFormat.textColor == lastFormat.textColor &&
+                newFormat.textSize == lastFormat.textSize
+    }
+
+    private fun getCurrentFormat(): TextFormat {
+        // Lấy và trả về định dạng hiện tại từ trạng thái của người dùng
+        return currentFormat
     }
 }

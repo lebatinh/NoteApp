@@ -6,6 +6,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
 import android.widget.RadioGroup
+import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
@@ -41,7 +42,7 @@ class SettingsFragment : Fragment() {
         val dialogView = layoutInflater.inflate(R.layout.menu_theme, null)
 
         val rdgTheme = dialogView.findViewById<RadioGroup>(R.id.rdgTheme)
-        val buttonCancel = dialogView.findViewById<Button>(R.id.buttonCancel)
+        val buttonCancel = dialogView.findViewById<TextView>(R.id.buttonCancel)
 
         val dialog = AlertDialog.Builder(requireContext()).setView(dialogView).create()
         buttonCancel.setOnClickListener {
