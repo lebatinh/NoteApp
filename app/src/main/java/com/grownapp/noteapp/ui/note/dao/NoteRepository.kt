@@ -139,4 +139,12 @@ class NoteRepository(
     fun pushInTrash(onTrash: Boolean, noteId: Int) {
         noteDao.pushInTrash(onTrash, noteId)
     }
+
+    suspend fun restoreAllNote() {
+        noteDao.restoreAllNote()
+    }
+
+    suspend fun emptyTrash(){
+        noteDao.emptyTrash()
+    }
 }

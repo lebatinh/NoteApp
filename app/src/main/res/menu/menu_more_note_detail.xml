@@ -24,6 +24,7 @@
         android:id="@+id/search"
         app:showAsAction="never"
         android:orderInCategory="100"
+        app:actionViewClass="androidx.appcompat.widget.SearchView"
         android:title="@string/search" />
     <item
         android:id="@+id/export_to_a_text_files"

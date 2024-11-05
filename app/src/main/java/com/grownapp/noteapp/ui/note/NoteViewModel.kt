@@ -210,4 +210,12 @@ class NoteViewModel(application: Application) : AndroidViewModel(application) {
             repository.pushInTrash(onTrash, noteId)
         }
     }
+
+    fun restoreAllNote() = viewModelScope.launch(Dispatchers.IO) {
+        repository.restoreAllNote()
+    }
+
+    fun emptyTrash() = viewModelScope.launch {
+        repository.emptyTrash()
+    }
 }

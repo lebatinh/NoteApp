@@ -20,6 +20,7 @@ import android.widget.RadioGroup
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
+import androidx.appcompat.widget.PopupMenu
 import androidx.core.content.ContextCompat
 import androidx.core.view.MenuHost
 import androidx.core.view.MenuProvider
@@ -162,9 +163,70 @@ class TrashFragment : Fragment(), MenuProvider {
 
     override fun onMenuItemSelected(menuItem: MenuItem): Boolean {
         when (menuItem.itemId) {
-            R.id.item_more -> {}
+            R.id.item_more -> {
+                showMoreDialog()
+            }
         }
         return false
+    }
+
+    private fun showMoreDialog() {
+        val anchorView = requireActivity().findViewById<View>(R.id.item_more)
+
+        val popupMenu = PopupMenu(requireContext(), anchorView)
+
+        popupMenu.menuInflater.inflate(R.menu.trash_more, popupMenu.menu)
+
+        popupMenu.setOnMenuItemClickListener { menuItem ->
+            when (menuItem.itemId) {
+                R.id.undelete_all -> {
+                    restoreDialog(false)
+                    true
+                }
+
+                R.id.export_notes_to_text_files -> {
+                    true
+                }
+
+                R.id.empty_trash -> {
+                    restoreDialog(true)
+                    true
+                }
+
+                else -> false
+            }
+        }
+
+        // Hiển thị PopupMenu
+        popupMenu.show()
+    }
+
+    private fun restoreDialog(isEmptyTrash: Boolean) {
+        val dialogView = layoutInflater.inflate(R.layout.restore_dialog, null)
+        val tvRestore = dialogView.findViewById<TextView>(R.id.tvRestore)
+        val tvYes = dialogView.findViewById<TextView>(R.id.tvYes)
+        val tvNo = dialogView.findViewById<TextView>(R.id.tvNo)
+
+        val dialog = android.app.AlertDialog.Builder(requireContext()).setView(dialogView).create()
+
+        tvRestore.text =
+            if (isEmptyTrash) "Restore all notes?" else "All trashed notes will be deleted permanently. Are you sure that you want to delete all of the trashed notes?"
+
+        tvNo.setOnClickListener {
+            dialog.dismiss()
+        }
+
+        tvYes.setOnClickListener {
+            if (isEmptyTrash) {
+                noteViewModel.emptyTrash()
+                Toast.makeText(requireContext(), "Deleted notes", Toast.LENGTH_SHORT).show()
+            } else {
+                noteViewModel.restoreAllNote()
+                Toast.makeText(requireContext(), "Restored notes", Toast.LENGTH_SHORT).show()
+            }
+            dialog.dismiss()
+        }
+        dialog.show()
     }
 
     private fun noteContentToSpannable(noteContent: NoteContent): SpannableStringBuilder {

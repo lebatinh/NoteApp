@@ -21,7 +21,6 @@
             app:nullable="true"/>
     </action>
 
-
     <action
         android:id="@+id/action_global_nav_note"
         app:destination="@id/nav_note" />

@@ -38,4 +38,7 @@
     <color name="backgroundRemoveColor">#5A595B</color>
     <color name="backgroundIconRemoveColor">#EAEAEA</color>
     <color name="backgroundIconChecked">#4F5944</color>
+
+    <color name="searchHighlightTargetColor">#D3D32A</color>
+    <color name="searchHighlightColor">#A7FB82</color>
 </resources>

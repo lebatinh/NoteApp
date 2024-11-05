@@ -83,7 +83,7 @@ class NoteListFragment : Fragment(), MenuProvider {
                 NoteListFragmentDirections.actionNoteListFragmentToNoteDetailFragment(it.noteId)
             findNavController().navigate(action)
         }, onLongClickNote = {
-            noteViewModel.delete(it.noteId)
+//            noteViewModel.delete(it.noteId)
         })
 
         binding.rcvNoteList.layoutManager = LinearLayoutManager(requireContext())

@@ -234,4 +234,10 @@ interface NoteDao {
 
     @Query("SELECT * FROM note WHERE onTrash = 1")
     fun getNoteOnTrash(): LiveData<List<Note>>
+
+    @Query("UPDATE note SET onTrash = 0 WHERE onTrash = 1")
+    suspend fun restoreAllNote()
+
+    @Query("DELETE FROM note WHERE onTrash = 1")
+    suspend fun emptyTrash()
 }

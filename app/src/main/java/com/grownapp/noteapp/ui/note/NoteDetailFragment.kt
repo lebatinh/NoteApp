@@ -28,16 +28,25 @@ import android.view.ViewTreeObserver
 import android.widget.Button
 import android.widget.EditText
 import android.widget.GridLayout
+import android.widget.ImageView
 import android.widget.SeekBar
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.widget.PopupMenu
+import androidx.appcompat.widget.SearchView
+import androidx.appcompat.widget.Toolbar
 import androidx.core.content.ContextCompat
 import androidx.core.view.MenuHost
 import androidx.core.view.MenuProvider
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
+import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -49,6 +58,8 @@ import com.grownapp.noteapp.ui.categories.dao.Category
 import com.grownapp.noteapp.ui.note.adapter.CategoryForNoteAdapter
 import com.grownapp.noteapp.ui.note.dao.Note
 import com.grownapp.noteapp.ui.note_category.NoteCategoryCrossRef
+import kotlinx.coroutines.launch
+
 
 class NoteDetailFragment : Fragment(), MenuProvider {
 
@@ -67,6 +78,8 @@ class NoteDetailFragment : Fragment(), MenuProvider {
     private var currentFormat = TextFormat()
 
     private var isOnTrash = true
+    private var isShowSearch = false
+    private val menuHost: MenuHost = requireActivity()
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -89,7 +102,7 @@ class NoteDetailFragment : Fragment(), MenuProvider {
         _binding = FragmentNoteDetailBinding.inflate(inflater, container, false)
         val root: View = binding.root
 
-        val menuHost: MenuHost = requireActivity()
+
         menuHost.addMenuProvider(this, viewLifecycleOwner, Lifecycle.State.RESUMED)
 
         arguments?.let {
@@ -134,9 +147,27 @@ class NoteDetailFragment : Fragment(), MenuProvider {
 
     override fun onDestroyView() {
         super.onDestroyView()
+        menuHost.removeMenuProvider()
+        // https://stackoverflow.com/questions/57512327/navigation-component-illegalstateexception-fragment-not-associated-with-a-fragm
         _binding = null
     }
 
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+
+        requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner,
+            object : OnBackPressedCallback(true) {
+                override fun handleOnBackPressed() {
+                    if (isShowSearch) {
+                        isShowSearch = false
+                        toggleSearchToolbar(false)
+                    } else {
+                        isEnabled = false
+                        requireActivity().onBackPressed()
+                    }
+                }
+            })
+    }
     override fun onCreateMenu(menu: Menu, menuInflater: MenuInflater) {
         menuInflater.inflate(R.menu.menu_note_detail, menu)
     }
@@ -216,6 +247,9 @@ class NoteDetailFragment : Fragment(), MenuProvider {
                 }
 
                 R.id.search -> {
+                    isShowSearch = true
+                    menuItem.isVisible = !isShowSearch
+                    toggleSearchToolbar(isShowSearch)
                     true
                 }
 
@@ -261,6 +295,150 @@ class NoteDetailFragment : Fragment(), MenuProvider {
 
         // Hiển thị PopupMenu
         popupMenu.show()
+    }
+
+    private fun toggleSearchToolbar(isVisible: Boolean) {
+        val toolbar = requireActivity().findViewById<Toolbar>(R.id.toolbar)
+        val btnSave = toolbar.findViewById<View>(R.id.item_save)
+        val btnUndo = toolbar.findViewById<View>(R.id.item_undo)
+
+        if (isVisible) {
+            btnSave?.visibility = View.GONE
+            btnUndo?.visibility = View.GONE
+
+            val layoutParams = Toolbar.LayoutParams(
+                Toolbar.LayoutParams.MATCH_PARENT,
+                Toolbar.LayoutParams.WRAP_CONTENT
+            )
+
+            val searchLayout = layoutInflater.inflate(R.layout.custom_search_toolbar, toolbar, false)
+
+            val searchCountView = searchLayout.findViewById<TextView>(R.id.searchCount)
+            val btnPrev = searchLayout.findViewById<ImageView>(R.id.imgArrowUp)
+            val btnNext = searchLayout.findViewById<ImageView>(R.id.imgArrowDown)
+            val search = searchLayout.findViewById<SearchView>(R.id.search)
+
+            toolbar.setNavigationIcon(R.drawable.back)
+            toolbar.setNavigationOnClickListener {
+                toggleSearchToolbar(false)
+
+                searchCountView?.visibility = View.GONE
+                btnPrev?.visibility = View.GONE
+                btnNext?.visibility = View.GONE
+                search?.visibility = View.GONE
+            }
+            toolbar.addView(searchLayout, layoutParams)
+
+            // Cài đặt listener cho `SearchView`
+            search.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
+                override fun onQueryTextSubmit(query: String?): Boolean {
+                    query?.let {
+                        searchKeyword(it)
+                    }
+                    return false
+                }
+
+                override fun onQueryTextChange(newText: String?): Boolean {
+                    newText?.let {
+                        searchKeyword(it)
+                    }
+                    return false
+                }
+            })
+            btnPrev.setOnClickListener {
+                highlightPreviousResult()
+            }
+            btnNext.setOnClickListener {
+                highlightNextResult()
+            }
+        } else {
+            btnSave?.visibility = View.VISIBLE
+            btnUndo?.visibility = View.VISIBLE
+
+            val searchLayout = toolbar.findViewById<View>(R.id.custom_search_toolbar) // Tìm kiếm layout
+            if (searchLayout != null) {
+                toolbar.removeView(searchLayout) // Xóa searchLayout
+            }
+
+            toolbar.setNavigationIcon(R.drawable.back)
+            toolbar.setNavigationOnClickListener {
+
+                // nếu dùng thì k dùng back và menu điều hướng đc
+//                view?.post {
+//                    Navigation.findNavController(requireView()).navigate(R.id.action_noteDetailFragment_to_nav_note)
+//                }
+//                lifecycleScope.launchWhenResumed {
+//                    findNavController().navigate(R.id.action_noteDetailFragment_to_nav_note)
+//                }
+//                lifecycle.addObserver(LifecycleEventObserver { lifecycleOwner: LifecycleOwner?, event: Lifecycle.Event ->
+//                    if (event.targetState == Lifecycle.State.RESUMED) {
+//                        NavHostFragment.findNavController(this@NoteDetailFragment)
+//                            .navigateUp()
+//                    }
+//                } as LifecycleEventObserver)
+                lifecycleScope.launch{
+                    repeatOnLifecycle(Lifecycle.State.RESUMED) {
+                        // Your code that runs when the lifecycle is at least RESUMED
+                        findNavController().navigate(R.id.action_noteDetailFragment_to_nav_note)
+                    }
+                }
+            }
+
+            clearSearchHighlights()
+        }
+    }
+
+    // Hàm tìm kiếm từ khóa và cập nhật vị trí
+    private fun searchKeyword(query: String) {
+        val searchLayout = layoutInflater.inflate(R.layout.custom_search_toolbar, null)
+        val searchCountView = searchLayout.findViewById<TextView>(R.id.searchCount)
+        // Lấy nội dung văn bản từ edtNote
+        val text = binding.edtNote.text.toString()
+        // Xóa highlight cũ
+        clearSearchHighlights()
+
+        // Tìm tất cả vị trí của từ khóa
+        val pattern = Regex(query, RegexOption.IGNORE_CASE)
+        val matches = pattern.findAll(text).map { it.range }.toList()
+
+        // Hiển thị số lượng tìm thấy
+        searchCountView.text = "1/${matches.size}"
+
+        // Tô màu cho từ khóa tìm thấy
+        highlightMatches(matches)
+    }
+
+    // Hàm tô màu kết quả tìm kiếm
+    private fun highlightMatches(matches: List<IntRange>) {
+        val spannable = SpannableStringBuilder(binding.edtNote.text)
+        val highlightColor =
+            ContextCompat.getColor(requireContext(), R.color.searchHighlightColor)
+
+        for (range in matches) {
+            spannable.setSpan(
+                BackgroundColorSpan(highlightColor),
+                range.first,
+                range.last + 1,
+                Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+            )
+        }
+
+        binding.edtNote.text = spannable
+    }
+
+    // Hàm xóa highlight khi thoát tìm kiếm
+    private fun clearSearchHighlights() {
+        binding.edtNote.text = SpannableStringBuilder(binding.edtNote.text.toString())
+    }
+
+    // Hàm di chuyển đến kết quả trước đó
+    private fun highlightPreviousResult() {
+        // Xử lý logic di chuyển đến kết quả trước đó
+    }
+
+    // Hàm di chuyển đến kết quả tiếp theo
+    private fun highlightNextResult() {
+        // Xử lý logic di chuyển đến kết quả tiếp theo
     }
 
     private fun showDialogDelete() {
