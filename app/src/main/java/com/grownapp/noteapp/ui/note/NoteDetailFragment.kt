@@ -66,7 +66,7 @@ class NoteDetailFragment : Fragment(), MenuProvider {
     private val undoRedoManager = UndoRedoManager()
     private var currentFormat = TextFormat()
 
-    private var isOnTrash = false
+    private var isOnTrash = true
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -76,7 +76,7 @@ class NoteDetailFragment : Fragment(), MenuProvider {
         sharedPreferences =
             requireContext().getSharedPreferences("app_preferences", Context.MODE_PRIVATE)
 
-        isOnTrash = sharedPreferences.getBoolean("isOnTrash", false)
+        isOnTrash = sharedPreferences.getBoolean("isOnTrash", true)
         currentFormat = currentFormat.copy(
             backgroundColor = ContextCompat.getColor(requireContext(), R.color.transparent),
             textColor = ContextCompat.getColor(requireContext(), R.color.text)

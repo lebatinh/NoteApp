@@ -56,7 +56,7 @@ class NoteFragment : Fragment(), MenuProvider {
     private lateinit var sharedPreferences: SharedPreferences
     private var hideCreated = MutableLiveData(true)
 
-    private var isOnTrash = false
+    private var isOnTrash = true
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -77,7 +77,7 @@ class NoteFragment : Fragment(), MenuProvider {
 
         insertFirstNote(sharedPreferences)
         val isVisible = sharedPreferences.getBoolean("isVisible", true)
-        isOnTrash = sharedPreferences.getBoolean("isOnTrash", false)
+        isOnTrash = sharedPreferences.getBoolean("isOnTrash", true)
         if (isVisible) {
             binding.ctlInstruct.visibility = View.VISIBLE
         } else {
