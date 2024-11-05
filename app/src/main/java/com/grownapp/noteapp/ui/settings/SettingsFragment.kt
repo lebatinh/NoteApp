@@ -1,10 +1,12 @@
 package com.grownapp.noteapp.ui.settings
 
+import android.content.Context
+import android.content.SharedPreferences
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.Button
 import android.widget.RadioGroup
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
@@ -17,6 +19,15 @@ class SettingsFragment : Fragment() {
     private var _binding: FragmentSettingsBinding? = null
 
     private val binding get() = _binding!!
+
+    private lateinit var sharedPreferences: SharedPreferences
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+
+        sharedPreferences =
+            requireContext().getSharedPreferences("app_preferences", Context.MODE_PRIVATE)
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -33,6 +44,16 @@ class SettingsFragment : Fragment() {
         binding.tvPasswordSetting.setOnClickListener {
             val action = SettingsFragmentDirections.actionNavSettingsToPasswordSettingsFragment()
             findNavController().navigate(action)
+        }
+
+        val editor = sharedPreferences.edit()
+
+        val isOnTrash = sharedPreferences.getBoolean("isOnTrash", true)
+        binding.swTrash.isChecked = isOnTrash
+
+        binding.swTrash.setOnCheckedChangeListener { _, checked ->
+            editor.putBoolean("isOnTrash", checked).apply()
+            binding.swTrash.isChecked = checked
         }
 
         return root

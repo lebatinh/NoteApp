@@ -63,10 +63,10 @@ class NoteDetailFragment : Fragment(), MenuProvider {
     private var noteId: Int = 0
     private var category: String? = null
     private var formattedTextSegments = SpannableStringBuilder()
-
     private val undoRedoManager = UndoRedoManager()
-
     private var currentFormat = TextFormat()
+
+    private var isOnTrash = false
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -76,6 +76,7 @@ class NoteDetailFragment : Fragment(), MenuProvider {
         sharedPreferences =
             requireContext().getSharedPreferences("app_preferences", Context.MODE_PRIVATE)
 
+        isOnTrash = sharedPreferences.getBoolean("isOnTrash", false)
         currentFormat = currentFormat.copy(
             backgroundColor = ContextCompat.getColor(requireContext(), R.color.transparent),
             textColor = ContextCompat.getColor(requireContext(), R.color.text)
@@ -280,12 +281,22 @@ class NoteDetailFragment : Fragment(), MenuProvider {
 
         val dialog = AlertDialog.Builder(requireContext()).setView(dialogView).create()
         noteViewModel.getNoteById(noteId).observe(viewLifecycleOwner) { note ->
-            deleteLog.text = "The '${
-                note.title ?: note.note?.substring(
-                    0,
-                    20
-                ) ?: "Untitled"
-            }' note will be deleted.\nAre you sure?"
+            if (isOnTrash){
+                deleteLog.text = "The '${
+                    note.title ?: note.note?.substring(
+                        0,
+                        20
+                    ) ?: "Untitled"
+                }' note will be deleted.\nAre you sure?"
+            }else{
+                deleteLog.text = "The note will be deleted permanently!\n" +
+                        "Are you sure that you want to delete the '${
+                    note.title ?: note.note?.substring(
+                        0,
+                        20
+                    ) ?: "Untitled"
+                }' note?"
+            }
         }
 
         btnCancel.setOnClickListener {
@@ -293,7 +304,13 @@ class NoteDetailFragment : Fragment(), MenuProvider {
         }
 
         btnDelete.setOnClickListener {
-            noteViewModel.delete(noteId)
+            if (isOnTrash){
+                noteViewModel.pushInTrash(true, noteId)
+                val editor = sharedPreferences.edit()
+                editor.putBoolean("isOnTrash", true).apply()
+            }else{
+                noteViewModel.delete(noteId)
+            }
             Toast.makeText(requireContext(), "deleted $noteId", Toast.LENGTH_SHORT).show()
             findNavController().navigate(R.id.action_noteDetailFragment_to_nav_note)
             dialog.dismiss()
