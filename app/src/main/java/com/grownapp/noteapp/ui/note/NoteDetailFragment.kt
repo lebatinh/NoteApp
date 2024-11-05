@@ -108,7 +108,8 @@ class NoteDetailFragment : Fragment(), MenuProvider {
                 } else {
                     // Trường hợp `note` null hoặc không có nội dung
                     binding.edtNote.text = SpannableStringBuilder("") // Đặt `edtNote` là chuỗi rỗng
-                    formattedTextSegments = SpannableStringBuilder("") // Đặt chuỗi định dạng là rỗng
+                    formattedTextSegments =
+                        SpannableStringBuilder("") // Đặt chuỗi định dạng là rỗng
                 }
 
                 undoRedoManager.addState(formattedTextSegments)
@@ -123,7 +124,6 @@ class NoteDetailFragment : Fragment(), MenuProvider {
         }
 
         applyFormatting(binding.edtNote)
-
         return root
     }
 
@@ -137,17 +137,6 @@ class NoteDetailFragment : Fragment(), MenuProvider {
         _binding = null
     }
 
-    //    @Deprecated("Deprecated in Java")
-//    override fun onPrepareOptionsMenu(menu: Menu) {
-//        super.onPrepareOptionsMenu(menu)
-//        val undo = menu.findItem(R.id.item_undo)
-//        val redo = menu.findItem(R.id.redo)
-//        val undoAll = menu.findItem(R.id.undo_all)
-//
-//        undo.isEnabled = noteHistoryStack.size > 1
-//        redo.isEnabled = redoStack.isNotEmpty()
-//        undoAll.isEnabled = noteHistoryStack.size > 1
-//    }
     override fun onCreateMenu(menu: Menu, menuInflater: MenuInflater) {
         menuInflater.inflate(R.menu.menu_note_detail, menu)
     }
@@ -176,7 +165,8 @@ class NoteDetailFragment : Fragment(), MenuProvider {
     }
 
     private fun saveNote() {
-        val noteContent = spannableToNoteContent(formattedTextSegments)
+        val spannableText = binding.edtNote.text as SpannableStringBuilder
+        val noteContent = spannableToNoteContent(spannableText)
 
         Log.d("noteContent", noteContent.toString())
         val updateNote = Note().copy(
@@ -281,21 +271,25 @@ class NoteDetailFragment : Fragment(), MenuProvider {
 
         val dialog = AlertDialog.Builder(requireContext()).setView(dialogView).create()
         noteViewModel.getNoteById(noteId).observe(viewLifecycleOwner) { note ->
-            if (isOnTrash){
-                deleteLog.text = "The '${
+            if (isOnTrash) {
+                "The '${
                     note.title ?: note.note?.substring(
                         0,
                         20
                     ) ?: "Untitled"
-                }' note will be deleted.\nAre you sure?"
-            }else{
-                deleteLog.text = "The note will be deleted permanently!\n" +
+                }' note will be deleted.\nAre you sure?".also { deleteLog.text = it }
+            } else {
+                deleteLog.text = buildString {
+                    append("The note will be deleted permanently!\n")
+                    append(
                         "Are you sure that you want to delete the '${
-                    note.title ?: note.note?.substring(
-                        0,
-                        20
-                    ) ?: "Untitled"
-                }' note?"
+                            note.title ?: note.note?.substring(
+                                0,
+                                20
+                            ) ?: "Untitled"
+                        }' note?"
+                    )
+                }
             }
         }
 
@@ -304,11 +298,11 @@ class NoteDetailFragment : Fragment(), MenuProvider {
         }
 
         btnDelete.setOnClickListener {
-            if (isOnTrash){
+            if (isOnTrash) {
                 noteViewModel.pushInTrash(true, noteId)
                 val editor = sharedPreferences.edit()
                 editor.putBoolean("isOnTrash", true).apply()
-            }else{
+            } else {
                 noteViewModel.delete(noteId)
             }
             Toast.makeText(requireContext(), "deleted $noteId", Toast.LENGTH_SHORT).show()
@@ -423,30 +417,72 @@ class NoteDetailFragment : Fragment(), MenuProvider {
 
         val dialog = AlertDialog.Builder(requireContext()).setView(dialogView).create()
 
-        btnRemoveColor.setOnClickListener {
-            tvColor.setBackgroundColor(
-                ContextCompat.getColor(
-                    requireContext(), R.color.backgroundPickColorDialog
-                )
-            )
-        }
-        "Opacity (${sbPercentOpacity.progress}%)".also { tvOpacity.text = it }
+        var backgroundColor = currentFormat.backgroundColor
+        var textColor = currentFormat.textColor
 
+        var colorFillBackground = backgroundColor
+        var colorFillTextColor = textColor
+        var alpha: Int
+
+        if (isBackground) {
+            alpha = Color.alpha(backgroundColor)
+            sbPercentOpacity.progress = (alpha * 100 / 255)
+            tvColor.setBackgroundColor(backgroundColor)
+        } else {
+            alpha = Color.alpha(textColor)
+            sbPercentOpacity.progress = (alpha * 100 / 255)
+            tvColor.setTextColor(textColor)
+        }
+
+        btnRemoveColor.setOnClickListener {
+            if (isBackground) {
+                tvColor.setBackgroundColor(
+                    ContextCompat.getColor(
+                        requireContext(), R.color.transparent
+                    )
+                )
+            } else {
+                tvColor.setTextColor(
+                    ContextCompat.getColor(
+                        requireContext(), R.color.text
+                    )
+                )
+            }
+
+        }
+
+        "Opacity (${sbPercentOpacity.progress}%)".also { tvOpacity.text = it }
         sbPercentOpacity.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
                 "Opacity (${progress}%)".also { tvOpacity.text = it }
+                alpha = (progress * 255 / 100)
+
+                if (isBackground) {
+                    val colorWithOpacity = Color.argb(
+                        alpha,
+                        Color.red(backgroundColor),
+                        Color.green(backgroundColor),
+                        Color.blue(backgroundColor)
+                    )
+                    tvColor.setBackgroundColor(colorWithOpacity)
+                    colorFillBackground = colorWithOpacity
+                } else {
+                    val colorWithOpacity = Color.argb(
+                        alpha,
+                        Color.red(textColor),
+                        Color.green(textColor),
+                        Color.blue(textColor)
+                    )
+                    tvColor.setTextColor(colorWithOpacity)
+                    colorFillTextColor = colorWithOpacity
+                }
+
             }
 
-            override fun onStartTrackingTouch(seekBar: SeekBar?) {
-            }
-
-            override fun onStopTrackingTouch(seekBar: SeekBar?) {
-            }
-
+            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
+            override fun onStopTrackingTouch(seekBar: SeekBar?) {}
         })
 
-        var colorFillBackground = ContextCompat.getColor(requireContext(), R.color.transparent)
-        var colorFillTextColor = ContextCompat.getColor(requireContext(), R.color.text)
         dialogView.viewTreeObserver.addOnGlobalLayoutListener(object :
             ViewTreeObserver.OnGlobalLayoutListener {
             override fun onGlobalLayout() {
@@ -463,41 +499,42 @@ class NoteDetailFragment : Fragment(), MenuProvider {
                         }
                         gravity = Gravity.CENTER
                         text = null
-                        textSize = 18f
+                        textSize = 30f
                     }
                     colorView.setOnClickListener {
+                        val parseColor = Color.parseColor(color)
                         if (isBackground) {
-                            tvColor.setBackgroundColor(Color.parseColor(color))
+                            backgroundColor = parseColor
 
-                            colorFillBackground = Color.parseColor(color)
-
-                            for (i in 0 until gridlayoutColor.childCount) {
-                                (gridlayoutColor.getChildAt(i) as? TextView)?.text = null
-                            }
-
-                            colorView.text = "+"
-
-                            colorView.setTextColor(
-                                ContextCompat.getColor(
-                                    requireContext(), R.color.backgroundPickColorDialog
-                                )
+                            colorFillBackground = Color.argb(
+                                alpha,
+                                Color.red(parseColor),
+                                Color.green(parseColor),
+                                Color.blue(parseColor)
                             )
+                            tvColor.setBackgroundColor(colorFillBackground)
                         } else {
-                            tvColor.setTextColor(Color.parseColor(color))
-
-                            colorFillTextColor = Color.parseColor(color)
-                            for (i in 0 until gridlayoutColor.childCount) {
-                                (gridlayoutColor.getChildAt(i) as? TextView)?.text = null
-                            }
-
-                            colorView.text = "+"
-
-                            colorView.setTextColor(
-                                ContextCompat.getColor(
-                                    requireContext(), R.color.backgroundPickColorDialog
-                                )
+                            textColor = parseColor
+                            colorFillTextColor = Color.argb(
+                                alpha,
+                                Color.red(parseColor),
+                                Color.green(parseColor),
+                                Color.blue(parseColor)
                             )
+                            tvColor.setTextColor(colorFillTextColor)
                         }
+
+                        for (i in 0 until gridlayoutColor.childCount) {
+                            (gridlayoutColor.getChildAt(i) as? TextView)?.text = null
+                        }
+
+                        "+".also { colorView.text = it }
+
+                        colorView.setTextColor(
+                            ContextCompat.getColor(
+                                requireContext(), R.color.backgroundPickColorDialog
+                            )
+                        )
                     }
 
                     gridlayoutColor.addView(colorView)
@@ -570,57 +607,52 @@ class NoteDetailFragment : Fragment(), MenuProvider {
 
     private fun applyFormatting(editText: EditText) {
         editText.addTextChangedListener(object : TextWatcher {
-            var startPos = 0
-            var previousText: String = ""
+            private var startPos = 0
+            private var endPos = 0
+            private var isUpdating = false  // Để tránh vòng lặp
+
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {
-                startPos = editText.selectionStart
+                // Lưu vị trí bắt đầu và kết thúc để sử dụng trong afterTextChanged
+                startPos = start
+                endPos = start + count
             }
 
-            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                // Không thực hiện gì trong onTextChanged để tránh vòng lặp
+            }
 
             override fun afterTextChanged(s: Editable?) {
+                if (isUpdating) return  // Tránh vòng lặp
+
                 s?.let {
-                    val endPos = editText.selectionEnd
-                    if (startPos < endPos) {
-                        val newText = it.subSequence(startPos, endPos)
-                        // Áp dụng định dạng hiện tại cho đoạn văn bản mới
-                        formattedTextSegments.append(newText)
-                        Log.d("textchangedlistener", "$s-$newText-$formattedTextSegments")
-                        applyCurrentFormat(formattedTextSegments, startPos, endPos)
+                    val currentCursorPos = editText.selectionEnd
+                    if (startPos < currentCursorPos) {  // Khi người dùng chèn văn bản mới
+                        // Tạm dừng TextWatcher trong quá trình cập nhật
+                        isUpdating = true
 
-                        // Cập nhật lại EditText
-                        editText.removeTextChangedListener(this)  // Tạm ngừng TextWatcher
-                        editText.text =
-                            formattedTextSegments     // Cập nhật lại EditText với định dạng đã áp dụng
-                        editText.setSelection(formattedTextSegments.length) // Đặt con trỏ ở cuối văn bản
+                        // Tạo một SpannableStringBuilder từ văn bản hiện tại để áp dụng định dạng
+                        val spannable = SpannableStringBuilder(it)
+                        applyCurrentFormat(
+                            spannable,
+                            startPos,
+                            currentCursorPos
+                        )  // Áp dụng định dạng cho đoạn mới
 
-                        undoRedoManager.addState(formattedTextSegments)
+                        // Cập nhật EditText với Spannable mà không thay đổi toàn bộ văn bản
+                        editText.text = spannable
 
-                        editText.addTextChangedListener(this)     // Kích hoạt lại TextWatcher
+                        // Đặt lại con trỏ tại vị trí chính xác
+                        editText.setSelection(currentCursorPos)
 
-                        Log.d("noteHistoryStack", "${undoRedoManager.history}")
-                        Log.d("textchangedlistener_later", "$s-$newText-$formattedTextSegments")
-                    } else if (endPos in 0..<startPos && startPos <= formattedTextSegments.length) {
-                        formattedTextSegments.delete(endPos, startPos)
+                        // Cập nhật trạng thái undo/redo
+                        undoRedoManager.addState(SpannableStringBuilder(spannable))
 
-                        undoRedoManager.addState(SpannableStringBuilder(formattedTextSegments))
-                        Log.d("noteHistoryStack", "$${undoRedoManager.history}")
-                        Log.d(
-                            "textchangedlistener_delete",
-                            "$s-$startPos/$endPos-$formattedTextSegments"
-                        )
-                    }
-//                    else if (startPos < editText.text.length){
-//                        formattedTextSegments.insert(startPos, s)
-//                        editText.text = formattedTextSegments
-//                        editText.setSelection(startPos+s.length)
-//                        Log.d("InsertAtPosition", "$s/$startPos")
-//                        noteHistoryStack.push(SpannableStringBuilder(formattedTextSegments))
-//                    }
-
-                    val currentText = s.toString()
-                    if (currentText != previousText) {
-                        requireActivity().invalidateOptionsMenu() // Update button states
+                        // Kích hoạt lại TextWatcher sau khi cập nhật xong
+                        isUpdating = false
+                    } else if (currentCursorPos < startPos && startPos <= it.length) {
+                        // Xóa đoạn văn bản giữa `startPos` và `endPos`
+                        it.delete(currentCursorPos, startPos)
+                        undoRedoManager.addState(SpannableStringBuilder(it))
                     }
                 }
             }
@@ -629,10 +661,9 @@ class NoteDetailFragment : Fragment(), MenuProvider {
 
     // Hàm mở rộng cho TextSegment để áp dụng định dạng vào Editable
     private fun applyCurrentFormat(text: SpannableStringBuilder, start: Int, end: Int) {
+        if (start >= end) return
         val defautBackgroundColor = ContextCompat.getColor(requireContext(), R.color.transparent)
         val defautTextColor = ContextCompat.getColor(requireContext(), R.color.text)
-
-        if (start >= end) return
 
         if (currentFormat.isBold) text.setSpan(
             StyleSpan(Typeface.BOLD),
@@ -678,7 +709,6 @@ class NoteDetailFragment : Fragment(), MenuProvider {
             "current",
             "Text: $text, isBold: ${currentFormat.isBold}, isItalic: ${currentFormat.isItalic}, isUnderline: ${currentFormat.isUnderline}, isStrikethrough: ${currentFormat.isStrikethrough}, background: ${currentFormat.backgroundColor}, textcolor: ${currentFormat.textColor}, textsize: ${currentFormat.textSize}"
         )
-
     }
 
     private fun spannableToNoteContent(spannable: SpannableStringBuilder): NoteContent {
@@ -795,6 +825,48 @@ class NoteDetailFragment : Fragment(), MenuProvider {
             }
         }
         return spannable
+    }
+
+    private fun updateCurrentFormatFromCursorPosition() {
+        val cursorPosition = binding.edtNote.selectionStart
+        if (cursorPosition > 0) {
+            val spannable = binding.edtNote.text as SpannableStringBuilder
+
+            // Lấy định dạng ở vị trí ngay trước con trỏ
+            val boldSpans =
+                spannable.getSpans(cursorPosition - 1, cursorPosition, StyleSpan::class.java)
+            val colorSpans = spannable.getSpans(
+                cursorPosition - 1,
+                cursorPosition,
+                ForegroundColorSpan::class.java
+            )
+            val backgroundColorSpans = spannable.getSpans(
+                cursorPosition - 1,
+                cursorPosition,
+                BackgroundColorSpan::class.java
+            )
+            val underlineSpans =
+                spannable.getSpans(cursorPosition - 1, cursorPosition, UnderlineSpan::class.java)
+            val strikethroughSpans = spannable.getSpans(
+                cursorPosition - 1,
+                cursorPosition,
+                StrikethroughSpan::class.java
+            )
+            val sizeSpans =
+                spannable.getSpans(cursorPosition - 1, cursorPosition, AbsoluteSizeSpan::class.java)
+
+            // Đặt lại currentFormat với các thuộc tính lấy được
+            currentFormat = currentFormat.copy(
+                isBold = boldSpans.isNotEmpty() && boldSpans[0].style == Typeface.BOLD,
+                isItalic = boldSpans.isNotEmpty() && boldSpans[0].style == Typeface.ITALIC,
+                isUnderline = underlineSpans.isNotEmpty(),
+                isStrikethrough = strikethroughSpans.isNotEmpty(),
+                textColor = colorSpans.firstOrNull()?.foregroundColor ?: currentFormat.textColor,
+                backgroundColor = backgroundColorSpans.firstOrNull()?.backgroundColor
+                    ?: currentFormat.backgroundColor,
+                textSize = (sizeSpans.firstOrNull()?.size ?: currentFormat.textSize) as Float
+            )
+        }
     }
 
     // Hàm kiểm tra định dạng của đoạn mới với đoạn cuối trong stack
