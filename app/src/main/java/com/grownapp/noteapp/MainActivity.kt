@@ -1,10 +1,13 @@
 package com.grownapp.noteapp
 
 import android.os.Bundle
+import android.view.Menu
 import android.view.View
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.widget.Toolbar
 import androidx.core.content.ContextCompat
 import androidx.core.view.GravityCompat
+import androidx.core.view.children
 import androidx.drawerlayout.widget.DrawerLayout
 import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.findNavController
@@ -21,11 +24,11 @@ import com.grownapp.noteapp.ui.note.NoteViewModel
 class MainActivity : AppCompatActivity() {
 
     private lateinit var appBarConfiguration: AppBarConfiguration
-    lateinit var binding: ActivityMainBinding
+    private lateinit var binding: ActivityMainBinding
 
     private lateinit var categoriesViewModel: CategoriesViewModel
     private lateinit var noteViewModel: NoteViewModel
-    private var isNoteDetailVisible = false
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -56,30 +59,6 @@ class MainActivity : AppCompatActivity() {
         categoriesViewModel.allCategory.observe(this) { category ->
             loadCategoriesOnNavMenu(drawerLayout, navView, category)
         }
-
-//        noteViewModel.isLongClickEnabled.observe(this){ isLongClick ->
-//            if (isLongClick){
-//                hideToolbar()
-//            }else{
-//                showToolbar()
-//            }
-//        }
-    }
-    // Phương thức để ẩn Toolbar
-    fun hideToolbar() {
-        supportActionBar?.hide()
-        isNoteDetailVisible = true
-    }
-
-    // Phương thức để hiện Toolbar
-    fun showToolbar() {
-        supportActionBar?.show()
-        isNoteDetailVisible = false
-    }
-
-    fun onReturnFromDetail() {
-        isNoteDetailVisible = false
-        showToolbar()
     }
 
     private fun loadCategoriesOnNavMenu(
@@ -87,11 +66,9 @@ class MainActivity : AppCompatActivity() {
         navView: NavigationView,
         categories: List<Category>
     ) {
-        val navController = findNavController(R.id.nav_host_fragment_content_main)
         val menu = navView.menu
+        val navController = findNavController(R.id.nav_host_fragment_content_main)
         val categoryGroup = menu.findItem(R.id.nav_categories_placeholder).subMenu
-
-
         categoryGroup?.clear()
 
         if (categories.isNotEmpty()) {
@@ -142,4 +119,26 @@ class MainActivity : AppCompatActivity() {
         }
         return navController.navigateUp(appBarConfiguration) || super.onSupportNavigateUp()
     }
+
+    override fun onResume() {
+        super.onResume()
+        invalidateOptionsMenu()
+        val navController = findNavController(R.id.nav_host_fragment_content_main)
+        setupActionBarWithNavController(navController, appBarConfiguration)
+        binding.navView.setupWithNavController(navController)
+    }
+
+    fun setupDefaultToolbar() {
+        val toolbar = findViewById<Toolbar>(R.id.toolbar) // Đảm bảo bạn đang dùng đúng ID của Toolbar
+        setSupportActionBar(toolbar)
+
+        // Thiết lập lại NavController
+        val navController = findNavController(R.id.nav_host_fragment_content_main)
+        setupActionBarWithNavController(navController, appBarConfiguration)
+        binding.navView.setupWithNavController(navController)
+        // Xóa các item tùy chỉnh nếu có
+        toolbar.menu.clear()
+        invalidateOptionsMenu() // Cập nhật lại menu để hiển thị các item mặc định
+    }
+
 }

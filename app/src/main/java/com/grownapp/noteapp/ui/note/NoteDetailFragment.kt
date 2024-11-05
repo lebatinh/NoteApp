@@ -37,20 +37,15 @@ import androidx.appcompat.widget.PopupMenu
 import androidx.appcompat.widget.SearchView
 import androidx.appcompat.widget.Toolbar
 import androidx.core.content.ContextCompat
-import androidx.core.view.MenuHost
 import androidx.core.view.MenuProvider
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
-import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ViewModelProvider
-import androidx.lifecycle.lifecycleScope
-import androidx.lifecycle.repeatOnLifecycle
-import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.gson.Gson
+import com.grownapp.noteapp.MainActivity
 import com.grownapp.noteapp.R
 import com.grownapp.noteapp.databinding.FragmentNoteDetailBinding
 import com.grownapp.noteapp.ui.categories.CategoriesViewModel
@@ -58,7 +53,6 @@ import com.grownapp.noteapp.ui.categories.dao.Category
 import com.grownapp.noteapp.ui.note.adapter.CategoryForNoteAdapter
 import com.grownapp.noteapp.ui.note.dao.Note
 import com.grownapp.noteapp.ui.note_category.NoteCategoryCrossRef
-import kotlinx.coroutines.launch
 
 
 class NoteDetailFragment : Fragment(), MenuProvider {
@@ -79,7 +73,6 @@ class NoteDetailFragment : Fragment(), MenuProvider {
 
     private var isOnTrash = true
     private var isShowSearch = false
-    private val menuHost: MenuHost = requireActivity()
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -101,9 +94,6 @@ class NoteDetailFragment : Fragment(), MenuProvider {
     ): View {
         _binding = FragmentNoteDetailBinding.inflate(inflater, container, false)
         val root: View = binding.root
-
-
-        menuHost.addMenuProvider(this, viewLifecycleOwner, Lifecycle.State.RESUMED)
 
         arguments?.let {
             noteId = NoteDetailFragmentArgs.fromBundle(it).id
@@ -137,6 +127,16 @@ class NoteDetailFragment : Fragment(), MenuProvider {
         }
 
         applyFormatting(binding.edtNote)
+
+        val toolbar = requireActivity().findViewById<Toolbar>(R.id.toolbar)
+        toolbar.setNavigationIcon(R.drawable.back)
+        toolbar.setNavigationOnClickListener {
+            // nếu dùng thì k dùng back và menu điều hướng đc
+            view?.let {
+                findNavController().navigateUp()
+            }
+        }
+
         return root
     }
 
@@ -147,8 +147,7 @@ class NoteDetailFragment : Fragment(), MenuProvider {
 
     override fun onDestroyView() {
         super.onDestroyView()
-        menuHost.removeMenuProvider()
-        // https://stackoverflow.com/questions/57512327/navigation-component-illegalstateexception-fragment-not-associated-with-a-fragm
+        (activity as MainActivity).setupDefaultToolbar()
         _binding = null
     }
 
@@ -167,8 +166,13 @@ class NoteDetailFragment : Fragment(), MenuProvider {
                     }
                 }
             })
+
+        requireActivity().addMenuProvider(this, viewLifecycleOwner, Lifecycle.State.RESUMED)
+        requireActivity().invalidateOptionsMenu()
     }
+
     override fun onCreateMenu(menu: Menu, menuInflater: MenuInflater) {
+        menu.clear()
         menuInflater.inflate(R.menu.menu_note_detail, menu)
     }
 
@@ -311,7 +315,8 @@ class NoteDetailFragment : Fragment(), MenuProvider {
                 Toolbar.LayoutParams.WRAP_CONTENT
             )
 
-            val searchLayout = layoutInflater.inflate(R.layout.custom_search_toolbar, toolbar, false)
+            val searchLayout =
+                layoutInflater.inflate(R.layout.custom_search_toolbar, toolbar, false)
 
             val searchCountView = searchLayout.findViewById<TextView>(R.id.searchCount)
             val btnPrev = searchLayout.findViewById<ImageView>(R.id.imgArrowUp)
@@ -355,32 +360,17 @@ class NoteDetailFragment : Fragment(), MenuProvider {
             btnSave?.visibility = View.VISIBLE
             btnUndo?.visibility = View.VISIBLE
 
-            val searchLayout = toolbar.findViewById<View>(R.id.custom_search_toolbar) // Tìm kiếm layout
+            val searchLayout =
+                toolbar.findViewById<View>(R.id.custom_search_toolbar) // Tìm kiếm layout
             if (searchLayout != null) {
                 toolbar.removeView(searchLayout) // Xóa searchLayout
             }
 
             toolbar.setNavigationIcon(R.drawable.back)
             toolbar.setNavigationOnClickListener {
-
                 // nếu dùng thì k dùng back và menu điều hướng đc
-//                view?.post {
-//                    Navigation.findNavController(requireView()).navigate(R.id.action_noteDetailFragment_to_nav_note)
-//                }
-//                lifecycleScope.launchWhenResumed {
-//                    findNavController().navigate(R.id.action_noteDetailFragment_to_nav_note)
-//                }
-//                lifecycle.addObserver(LifecycleEventObserver { lifecycleOwner: LifecycleOwner?, event: Lifecycle.Event ->
-//                    if (event.targetState == Lifecycle.State.RESUMED) {
-//                        NavHostFragment.findNavController(this@NoteDetailFragment)
-//                            .navigateUp()
-//                    }
-//                } as LifecycleEventObserver)
-                lifecycleScope.launch{
-                    repeatOnLifecycle(Lifecycle.State.RESUMED) {
-                        // Your code that runs when the lifecycle is at least RESUMED
-                        findNavController().navigate(R.id.action_noteDetailFragment_to_nav_note)
-                    }
+                view?.let {
+                    findNavController().navigateUp()
                 }
             }
 
