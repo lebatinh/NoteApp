@@ -3,19 +3,22 @@ package com.grownapp.noteapp.ui.note
 import android.content.Context
 import android.content.SharedPreferences
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.Menu
 import android.view.MenuInflater
 import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
-import android.widget.Button
 import android.widget.ImageView
 import android.widget.RadioGroup
+import android.widget.TextView
+import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.PopupMenu
 import androidx.appcompat.widget.SearchView
+import androidx.appcompat.widget.Toolbar
 import androidx.core.view.MenuHost
 import androidx.core.view.MenuProvider
 import androidx.fragment.app.Fragment
@@ -23,8 +26,13 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
+import com.grownapp.noteapp.MainActivity
 import com.grownapp.noteapp.R
 import com.grownapp.noteapp.databinding.FragmentNoteListBinding
+import com.grownapp.noteapp.ui.categories.CategoriesViewModel
+import com.grownapp.noteapp.ui.categories.dao.Category
+import com.grownapp.noteapp.ui.note.adapter.CategoryForNoteAdapter
 import com.grownapp.noteapp.ui.note.adapter.NoteAdapter
 import com.grownapp.noteapp.ui.note.dao.Note
 import com.grownapp.noteapp.ui.note_category.NoteCategoryCrossRef
@@ -37,18 +45,24 @@ class NoteListFragment : Fragment(), MenuProvider {
     private val binding get() = _binding!!
 
     private lateinit var noteViewModel: NoteViewModel
+    private lateinit var categoryViewModel: CategoriesViewModel
     private lateinit var noteAdapter: NoteAdapter
     private lateinit var sharedPreferences: SharedPreferences
     private var categoryId: Int? = null
     private var hideCreated: Boolean = false
-
+    private lateinit var listNoteSelected: MutableList<Note>
+    private var isEditMode = false
+    private var isOnTrash = true
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         noteViewModel = ViewModelProvider(this)[NoteViewModel::class.java]
 
+        categoryViewModel =
+            ViewModelProvider(this)[CategoriesViewModel::class.java]
         sharedPreferences =
             requireContext().getSharedPreferences("app_preferences", Context.MODE_PRIVATE)
+        listNoteSelected = mutableListOf()
     }
 
     override fun onCreateView(
@@ -59,6 +73,7 @@ class NoteListFragment : Fragment(), MenuProvider {
         val root: View = binding.root
 
         val isVisible = sharedPreferences.getBoolean("isVisible", true)
+        isOnTrash = sharedPreferences.getBoolean("isOnTrash", true)
         if (isVisible) {
             binding.ctlInstruct.visibility = View.VISIBLE
         } else {
@@ -83,8 +98,11 @@ class NoteListFragment : Fragment(), MenuProvider {
                 NoteListFragmentDirections.actionNoteListFragmentToNoteDetailFragment(it.noteId)
             findNavController().navigate(action)
         }, onLongClickNote = {
-//            noteViewModel.delete(it.noteId)
-        })
+            startEditMode(it, !isEditMode)
+        },
+            listNoteSelectedAdapter = listNoteSelected,
+            updateCountCallback = { updateCountNoteSeleted() }
+        )
 
         binding.rcvNoteList.layoutManager = LinearLayoutManager(requireContext())
         binding.rcvNoteList.adapter = noteAdapter
@@ -113,6 +131,90 @@ class NoteListFragment : Fragment(), MenuProvider {
         }
     }
 
+    private fun updateCountNoteSeleted() {
+        val toolbar = requireActivity().findViewById<Toolbar>(R.id.toolbar)
+        val tvCountSeleted = toolbar?.findViewById<TextView>(R.id.tvCountSeleted)
+        tvCountSeleted?.text = listNoteSelected.size.toString()
+    }
+
+    private fun startEditMode(note: Note, isVisible: Boolean) {
+        isEditMode = isVisible
+        val toolbar = requireActivity().findViewById<Toolbar>(R.id.toolbar)
+        val btnSearch = toolbar.findViewById<View>(R.id.item_search)
+        val item_sort = toolbar.findViewById<View>(R.id.item_sort)
+        val item_more = toolbar.findViewById<View>(R.id.item_more)
+
+        if (isVisible) {
+            btnSearch?.visibility = View.GONE
+            item_sort?.visibility = View.GONE
+            item_more?.visibility = View.GONE
+
+            val layoutParams = Toolbar.LayoutParams(
+                Toolbar.LayoutParams.MATCH_PARENT,
+                Toolbar.LayoutParams.WRAP_CONTENT
+            )
+
+            val noteLayout = layoutInflater.inflate(R.layout.custom_note_toolbar, toolbar, false)
+            toolbar.addView(noteLayout, layoutParams)
+
+            val tvCountSeleted = toolbar.findViewById<TextView>(R.id.tvCountSeleted)
+            val imgDelete = toolbar.findViewById<ImageView>(R.id.imgDelete)
+            val imgSelectAll = toolbar.findViewById<ImageView>(R.id.imgSelectAll)
+
+            Log.d("listNoteSelectedFragment", listNoteSelected.size.toString())
+            tvCountSeleted.text = listNoteSelected.size.toString()
+
+            toolbar.setNavigationIcon(R.drawable.back)
+            toolbar.setNavigationOnClickListener {
+                startEditMode(note, false)
+                noteAdapter.exitEditMode()
+                tvCountSeleted?.visibility = View.GONE
+                imgDelete?.visibility = View.GONE
+                imgSelectAll?.visibility = View.GONE
+                toolbar.title = "Notepad Free"
+                toolbar.setNavigationIcon(R.drawable.nav)
+                toolbar.setNavigationOnClickListener {
+                    (activity as MainActivity).setupDefaultToolbar()
+                }
+            }
+            imgSelectAll.setOnClickListener {
+                if (listNoteSelected.isEmpty()) {
+                    noteViewModel.allNote.observe(viewLifecycleOwner) {
+                        listNoteSelected = it.toMutableList()
+                        noteAdapter.updateListNoteSelected(listNoteSelected)
+                        Log.d("TrashFragment", "imgSelectAll")
+                        Log.d("TrashFragment", listNoteSelected.size.toString())
+                    }
+                } else {
+                    listNoteSelected.clear()
+                    noteAdapter.updateListNoteSelected(listNoteSelected)
+                    Log.d("TrashFragment", "imgSelectAll")
+                    Log.d("TrashFragment", listNoteSelected.size.toString())
+                }
+                updateCountNoteSeleted()
+            }
+
+            imgDelete.setOnClickListener {
+                listNoteSelected.forEach {
+                    if (isOnTrash) {
+                        noteViewModel.pushInTrash(true, it.noteId)
+                    } else {
+                        noteViewModel.delete(it.noteId)
+                    }
+                }
+            }
+        } else {
+            btnSearch?.visibility = View.VISIBLE
+            item_sort?.visibility = View.VISIBLE
+            item_more?.visibility = View.VISIBLE
+
+            val noteLayout = toolbar.findViewById<View>(R.id.custom_note_toolbar)
+            if (noteLayout != null) {
+                toolbar.removeView(noteLayout)
+            }
+        }
+    }
+
     private fun addNote(categoryId: Int?) {
         noteViewModel.insert(Note()) { noteId ->
             if (categoryId != null) {
@@ -133,6 +235,7 @@ class NoteListFragment : Fragment(), MenuProvider {
     }
 
     override fun onCreateMenu(menu: Menu, menuInflater: MenuInflater) {
+        menu.clear()
         menuInflater.inflate(R.menu.menu_note, menu)
     }
 
@@ -189,7 +292,7 @@ class NoteListFragment : Fragment(), MenuProvider {
                 return true
             }
 
-            R.id.item_more -> {
+            R.id.item_more_note -> {
                 showPopupMenuMore()
                 return true
             }
@@ -219,8 +322,8 @@ class NoteListFragment : Fragment(), MenuProvider {
             .create()
 
         val rdgSort = dialogView.findViewById<RadioGroup>(R.id.rdgSort)
-        val buttonCancel = dialogView.findViewById<Button>(R.id.buttonCancel)
-        val buttonSort = dialogView.findViewById<Button>(R.id.buttonSort)
+        val buttonCancel = dialogView.findViewById<TextView>(R.id.buttonCancel)
+        val buttonSort = dialogView.findViewById<TextView>(R.id.buttonSort)
 
         buttonCancel.setOnClickListener {
             dialog.dismiss()
@@ -289,15 +392,21 @@ class NoteListFragment : Fragment(), MenuProvider {
     }
 
     private fun showPopupMenuMore() {
-        val anchorView = requireActivity().findViewById<View>(R.id.item_more)
+        val anchorView = requireActivity().findViewById<View>(R.id.item_more_note)
 
         val popupMenu = PopupMenu(requireContext(), anchorView)
 
-        popupMenu.menuInflater.inflate(R.menu.note_more, popupMenu.menu)
+        if (isEditMode) {
+            popupMenu.menuInflater.inflate(R.menu.menu_note_longclick, popupMenu.menu)
+        } else {
+            popupMenu.menuInflater.inflate(R.menu.note_more, popupMenu.menu)
+        }
 
         popupMenu.setOnMenuItemClickListener { menuItem ->
             when (menuItem.itemId) {
                 R.id.select_all_notes -> {
+                    startEditMode(Note(), true)
+                    noteAdapter.selectAllNotes()
                     true
                 }
 
@@ -308,7 +417,14 @@ class NoteListFragment : Fragment(), MenuProvider {
                 R.id.export_notes_to_text_files -> {
                     true
                 }
+                R.id.categorize -> {
+                    showCategorizeDialog()
+                    true
+                }
 
+                R.id.colorize -> {
+                    true
+                }
                 else -> false
             }
         }
@@ -316,7 +432,49 @@ class NoteListFragment : Fragment(), MenuProvider {
         // Hiển thị PopupMenu
         popupMenu.show()
     }
+    private fun showCategorizeDialog() {
+        val dialogView = layoutInflater.inflate(R.layout.category_list_dialog, null)
+        val categoryListView = dialogView.findViewById<RecyclerView>(R.id.rcvCategory)
+        val cancelButon = dialogView.findViewById<TextView>(R.id.btnCancel)
+        val okButton = dialogView.findViewById<TextView>(R.id.btnOk)
 
+        val categoryMutableList = mutableListOf<Category>()
+        val selectedCategory = mutableSetOf<Int>()
+
+        categoryListView.layoutManager = LinearLayoutManager(requireContext())
+
+        val categoryForNoteAdapter =
+            CategoryForNoteAdapter(categoryMutableList.toList(), selectedCategory)
+        categoryListView.adapter = categoryForNoteAdapter
+
+        if (listNoteSelected.isNotEmpty()) {
+            categoryViewModel.allCategory.observe(this) { categories ->
+                categoryMutableList.clear()
+                categoryMutableList.addAll(categories)
+                categoryForNoteAdapter.updateListCategory(categoryMutableList)
+            }
+        }
+        val dialog = AlertDialog.Builder(requireContext()).setView(dialogView).create()
+
+        cancelButon.setOnClickListener {
+            dialog.dismiss()
+        }
+
+        okButton.setOnClickListener {
+            if (listNoteSelected.isNotEmpty()) {
+                for (categoryId in selectedCategory) {
+                    listNoteSelected.forEach {
+                        val noteCategoryCrossRef =
+                            NoteCategoryCrossRef(noteId = it.noteId, categoryId = categoryId)
+                        noteViewModel.insertNoteCategoryCrossRef(noteCategoryCrossRef)
+                    }
+                }
+            }
+            Toast.makeText(requireContext(), "Update categories", Toast.LENGTH_SHORT).show()
+            dialog.dismiss()
+        }
+        dialog.show()
+    }
     private fun sortBy() {
         val sort = sharedPreferences.getString("sort", null)
         val sortObserver = { notes: List<Note> -> noteAdapter.updateListNote(notes) }

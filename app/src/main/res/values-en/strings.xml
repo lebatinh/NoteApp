@@ -103,4 +103,5 @@
     <string name="select_an_action_for_the_note">Select an action for the note</string>
     <string name="undelete">Undelete</string>
     <string name="yes">YES</string>
+    <string name="no">NO</string>
 </resources>

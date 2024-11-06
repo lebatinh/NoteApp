@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <stroke
+        android:width="@dimen/_2sdp"
+        android:color="@color/boder_long_clickNote"
+        android:dashWidth="@dimen/_10sdp"
+        android:dashGap="@dimen/_2sdp"/>
+    <corners android:radius="@dimen/_4sdp" />
+    <gradient
+        android:angle="270"
+        android:endColor="@color/bottomBackgroundColorLongClick"
+        android:startColor="@color/topBackgroundColorLongClick" />
+</shape>

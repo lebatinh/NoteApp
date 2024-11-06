@@ -2,6 +2,7 @@ package com.grownapp.noteapp.ui.note
 
 import android.content.Context
 import android.content.SharedPreferences
+import android.graphics.Color
 import android.graphics.Typeface
 import android.os.Bundle
 import android.text.SpannableStringBuilder
@@ -12,18 +13,25 @@ import android.text.style.StrikethroughSpan
 import android.text.style.StyleSpan
 import android.text.style.UnderlineSpan
 import android.util.Log
+import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.Menu
 import android.view.MenuInflater
 import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
+import android.view.ViewTreeObserver
+import android.widget.Button
+import android.widget.GridLayout
 import android.widget.ImageView
 import android.widget.RadioGroup
+import android.widget.SeekBar
 import android.widget.TextView
+import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.widget.PopupMenu
 import androidx.appcompat.widget.SearchView
+import androidx.appcompat.widget.Toolbar
 import androidx.core.content.ContextCompat
 import androidx.core.view.MenuHost
 import androidx.core.view.MenuProvider
@@ -34,11 +42,17 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.google.gson.Gson
+import com.grownapp.noteapp.MainActivity
 import com.grownapp.noteapp.R
 import com.grownapp.noteapp.databinding.FragmentNoteBinding
+import com.grownapp.noteapp.ui.categories.CategoriesViewModel
+import com.grownapp.noteapp.ui.categories.dao.Category
+import com.grownapp.noteapp.ui.note.adapter.CategoryForNoteAdapter
 import com.grownapp.noteapp.ui.note.adapter.NoteAdapter
 import com.grownapp.noteapp.ui.note.dao.Note
+import com.grownapp.noteapp.ui.note_category.NoteCategoryCrossRef
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -53,18 +67,24 @@ class NoteFragment : Fragment(), MenuProvider {
 
     private lateinit var noteAdapter: NoteAdapter
     private lateinit var noteViewModel: NoteViewModel
+    private lateinit var categoryViewModel: CategoriesViewModel
     private lateinit var sharedPreferences: SharedPreferences
     private var hideCreated = MutableLiveData(true)
 
     private var isOnTrash = true
+    private var isEditMode = false
+    private lateinit var listNoteSelected: MutableList<Note>
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         noteViewModel =
             ViewModelProvider(this)[NoteViewModel::class.java]
+        categoryViewModel =
+            ViewModelProvider(this)[CategoriesViewModel::class.java]
 
         sharedPreferences =
             requireContext().getSharedPreferences("app_preferences", Context.MODE_PRIVATE)
+        listNoteSelected = mutableListOf()
     }
 
     override fun onCreateView(
@@ -88,12 +108,14 @@ class NoteFragment : Fragment(), MenuProvider {
             onClickNote = {
                 val action = NoteFragmentDirections.actionNavNoteToNoteDetailFragment(it.noteId)
                 findNavController().navigate(action)
-
             },
             onLongClickNote = { note ->
-
+                isEditMode = true
+                startEditMode(note, true)
             },
-            hideCreated = true
+            hideCreated = true,
+            listNoteSelectedAdapter = listNoteSelected,
+            updateCountCallback = { updateCountNoteSeleted() }
         )
 
         binding.rcvNote.layoutManager = LinearLayoutManager(requireContext())
@@ -123,6 +145,92 @@ class NoteFragment : Fragment(), MenuProvider {
         sortBy()
 
         return root
+    }
+
+    private fun updateCountNoteSeleted() {
+        val toolbar = requireActivity().findViewById<Toolbar>(R.id.toolbar)
+        val tvCountSeleted = toolbar?.findViewById<TextView>(R.id.tvCountSeleted)
+        tvCountSeleted?.text = listNoteSelected.size.toString()
+        Log.d("listNoteSelectedFragment", listNoteSelected.size.toString())
+    }
+
+    private fun startEditMode(note: Note, isVisible: Boolean) {
+        isEditMode = isVisible
+        val toolbar = requireActivity().findViewById<Toolbar>(R.id.toolbar)
+        val btnSearch = toolbar.findViewById<View>(R.id.item_search)
+        val itemsort = toolbar.findViewById<View>(R.id.item_sort)
+        val itemmore = toolbar.findViewById<View>(R.id.item_more)
+
+        if (isVisible) {
+            btnSearch?.visibility = View.GONE
+            itemsort?.visibility = View.GONE
+            itemmore?.visibility = View.GONE
+
+            val layoutParams = Toolbar.LayoutParams(
+                Toolbar.LayoutParams.MATCH_PARENT,
+                Toolbar.LayoutParams.WRAP_CONTENT
+            )
+
+            val noteLayout = layoutInflater.inflate(R.layout.custom_note_toolbar, toolbar, false)
+            toolbar.addView(noteLayout, layoutParams)
+
+            val tvCountSeleted = toolbar.findViewById<TextView>(R.id.tvCountSeleted)
+            val imgDelete = toolbar.findViewById<ImageView>(R.id.imgDelete)
+            val imgSelectAll = toolbar.findViewById<ImageView>(R.id.imgSelectAll)
+
+            Log.d("listNoteSelectedFragment", listNoteSelected.size.toString())
+            tvCountSeleted.text = listNoteSelected.size.toString()
+
+            toolbar.setNavigationIcon(R.drawable.back)
+            toolbar.setNavigationOnClickListener {
+                startEditMode(note, false)
+                noteAdapter.exitEditMode()
+                tvCountSeleted?.visibility = View.GONE
+                imgDelete?.visibility = View.GONE
+                imgSelectAll?.visibility = View.GONE
+                toolbar.title = "Notepad Free"
+                toolbar.setNavigationIcon(R.drawable.nav)
+                toolbar.setNavigationOnClickListener {
+                    (activity as MainActivity).setupDefaultToolbar()
+                }
+            }
+
+            imgSelectAll.setOnClickListener {
+                if (listNoteSelected.isEmpty()) {
+                    noteViewModel.allNote.observe(viewLifecycleOwner) {
+                        listNoteSelected = it.toMutableList()
+                        noteAdapter.updateListNoteSelected(listNoteSelected)
+                        Log.d("TrashFragment", "imgSelectAll")
+                        Log.d("TrashFragment", listNoteSelected.size.toString())
+                    }
+                } else {
+                    listNoteSelected.clear()
+                    noteAdapter.updateListNoteSelected(listNoteSelected)
+                    Log.d("TrashFragment", "imgSelectAll")
+                    Log.d("TrashFragment", listNoteSelected.size.toString())
+                }
+                updateCountNoteSeleted()
+            }
+
+            imgDelete.setOnClickListener {
+                listNoteSelected.forEach {
+                    if (isOnTrash) {
+                        noteViewModel.pushInTrash(true, it.noteId)
+                    } else {
+                        noteViewModel.delete(it.noteId)
+                    }
+                }
+            }
+        } else {
+            btnSearch?.visibility = View.VISIBLE
+            itemsort?.visibility = View.VISIBLE
+            itemmore?.visibility = View.VISIBLE
+
+            val noteLayout = toolbar.findViewById<View>(R.id.custom_note_toolbar)
+            if (noteLayout != null) {
+                toolbar.removeView(noteLayout)
+            }
+        }
     }
 
     private fun rotateArrowToCorner(arrowImageView: ImageView, cornerX: Float, cornerY: Float) {
@@ -197,6 +305,7 @@ class NoteFragment : Fragment(), MenuProvider {
     }
 
     override fun onCreateMenu(menu: Menu, menuInflater: MenuInflater) {
+        menu.clear()
         menuInflater.inflate(R.menu.menu_note, menu)
     }
 
@@ -232,12 +341,175 @@ class NoteFragment : Fragment(), MenuProvider {
                 return true
             }
 
-            R.id.item_more -> {
+            R.id.item_more_note -> {
                 showPopupMenuMore()
                 return true
             }
         }
         return false
+    }
+
+    private fun showPopupMenuMore() {
+        val anchorView = requireActivity().findViewById<View>(R.id.item_more_note)
+
+        val popupMenu = PopupMenu(requireContext(), anchorView)
+
+        if (isEditMode) {
+            popupMenu.menuInflater.inflate(R.menu.menu_note_longclick, popupMenu.menu)
+        } else {
+            popupMenu.menuInflater.inflate(R.menu.note_more, popupMenu.menu)
+        }
+
+        popupMenu.setOnMenuItemClickListener { menuItem ->
+            when (menuItem.itemId) {
+                R.id.select_all_notes -> {
+                    startEditMode(Note(), true)
+                    noteAdapter.selectAllNotes()
+                    true
+                }
+
+                R.id.import_text_files -> {
+                    true
+                }
+
+                R.id.export_notes_to_text_files -> {
+                    true
+                }
+
+                R.id.categorize -> {
+                    showCategorizeDialog()
+                    true
+                }
+
+                R.id.colorize -> {
+                    dialogPickColor()
+                    true
+                }
+
+                else -> false
+            }
+        }
+
+        // Hiển thị PopupMenu
+        popupMenu.show()
+    }
+
+    private fun dialogPickColor() {
+        val dialogView = layoutInflater.inflate(R.layout.pick_color, null)
+        val tvColor = dialogView.findViewById<TextView>(R.id.tvColor)
+        val gridlayoutColor = dialogView.findViewById<GridLayout>(R.id.gridlayoutColor)
+        val btnRemoveColor = dialogView.findViewById<Button>(R.id.btnRemoveColor)
+        val tvOK = dialogView.findViewById<TextView>(R.id.tvOK)
+        val tvCancel = dialogView.findViewById<TextView>(R.id.tvCancel)
+
+        val dialog = AlertDialog.Builder(requireContext()).setView(dialogView).create()
+
+        var colorFillBackground = ContextCompat.getColor(requireContext(), R.color.transparent)
+        tvColor.setBackgroundColor(colorFillBackground)
+
+        btnRemoveColor.setOnClickListener {
+            colorFillBackground = ContextCompat.getColor(requireContext(), R.color.transparent)
+            tvColor.setBackgroundColor(colorFillBackground)
+        }
+
+        dialogView.viewTreeObserver.addOnGlobalLayoutListener(object :
+            ViewTreeObserver.OnGlobalLayoutListener {
+            override fun onGlobalLayout() {
+                val dialogWidth = dialogView.width
+                val itemWidth = dialogWidth / 6
+                gridlayoutColor.removeAllViews()
+
+                for (color in ColorPicker().colorBackgroundItem) {
+                    val colorView = TextView(requireContext()).apply {
+                        setBackgroundColor(Color.parseColor(color))
+                        layoutParams = GridLayout.LayoutParams().apply {
+                            width = itemWidth
+                            height = itemWidth
+                        }
+                        gravity = Gravity.CENTER
+                        text = null
+                        textSize = 30f
+                    }
+                    colorView.setOnClickListener {
+                        val parseColor = Color.parseColor(color)
+
+                        colorFillBackground = parseColor
+
+                        // Cập nhật `tvColor` với màu được chọn
+                        tvColor.setBackgroundColor(colorFillBackground)
+
+                        for (i in 0 until gridlayoutColor.childCount) {
+                            (gridlayoutColor.getChildAt(i) as? TextView)?.text = null
+                        }
+
+                        "+".also { colorView.text = it }
+
+                        colorView.setBackgroundColor(
+                            ContextCompat.getColor(
+                                requireContext(), R.color.backgroundPickColorDialog
+                            )
+                        )
+                    }
+
+                    gridlayoutColor.addView(colorView)
+                }
+                dialogView.viewTreeObserver.removeOnGlobalLayoutListener(this)
+            }
+        })
+        tvOK.setOnClickListener {
+            listNoteSelected.forEach {
+                noteViewModel.updateBackgroundColor(it.noteId, colorFillBackground)
+            }
+            dialog.dismiss()
+        }
+        tvCancel.setOnClickListener {
+            dialog.dismiss()
+        }
+        dialog.show()
+    }
+
+    private fun showCategorizeDialog() {
+        val dialogView = layoutInflater.inflate(R.layout.category_list_dialog, null)
+        val categoryListView = dialogView.findViewById<RecyclerView>(R.id.rcvCategory)
+        val cancelButon = dialogView.findViewById<TextView>(R.id.btnCancel)
+        val okButton = dialogView.findViewById<TextView>(R.id.btnOk)
+
+        val categoryMutableList = mutableListOf<Category>()
+        val selectedCategory = mutableSetOf<Int>()
+
+        categoryListView.layoutManager = LinearLayoutManager(requireContext())
+
+        val categoryForNoteAdapter =
+            CategoryForNoteAdapter(categoryMutableList.toList(), selectedCategory)
+        categoryListView.adapter = categoryForNoteAdapter
+
+        if (listNoteSelected.isNotEmpty()) {
+            categoryViewModel.allCategory.observe(this) { categories ->
+                categoryMutableList.clear()
+                categoryMutableList.addAll(categories)
+                categoryForNoteAdapter.updateListCategory(categoryMutableList)
+            }
+        }
+        val dialog = AlertDialog.Builder(requireContext()).setView(dialogView).create()
+
+        cancelButon.setOnClickListener {
+            dialog.dismiss()
+        }
+
+        okButton.setOnClickListener {
+            if (listNoteSelected.isNotEmpty()) {
+                for (categoryId in selectedCategory) {
+                    listNoteSelected.forEach {
+                        val noteCategoryCrossRef =
+                            NoteCategoryCrossRef(noteId = it.noteId, categoryId = categoryId)
+                        noteViewModel.insertNoteCategoryCrossRef(noteCategoryCrossRef)
+                    }
+                }
+            }
+            Toast.makeText(requireContext(), "Update categories", Toast.LENGTH_SHORT).show()
+            dialog.dismiss()
+        }
+        dialog.show()
     }
 
     private fun showSortDialog() {
@@ -316,35 +588,6 @@ class NoteFragment : Fragment(), MenuProvider {
             dialog.dismiss()
         }
         dialog.show()
-    }
-
-    private fun showPopupMenuMore() {
-        val anchorView = requireActivity().findViewById<View>(R.id.item_more)
-
-        val popupMenu = PopupMenu(requireContext(), anchorView)
-
-        popupMenu.menuInflater.inflate(R.menu.note_more, popupMenu.menu)
-
-        popupMenu.setOnMenuItemClickListener { menuItem ->
-            when (menuItem.itemId) {
-                R.id.select_all_notes -> {
-                    true
-                }
-
-                R.id.import_text_files -> {
-                    true
-                }
-
-                R.id.export_notes_to_text_files -> {
-                    true
-                }
-
-                else -> false
-            }
-        }
-
-        // Hiển thị PopupMenu
-        popupMenu.show()
     }
 
     private fun sortBy() {

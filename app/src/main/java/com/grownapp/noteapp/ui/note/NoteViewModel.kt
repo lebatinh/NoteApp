@@ -218,4 +218,8 @@ class NoteViewModel(application: Application) : AndroidViewModel(application) {
     fun emptyTrash() = viewModelScope.launch {
         repository.emptyTrash()
     }
+
+    fun updateBackgroundColor(noteId: Int, backgroundColor: Int){
+        repository.updateBackgroundColor(noteId, backgroundColor)
+    }
 }

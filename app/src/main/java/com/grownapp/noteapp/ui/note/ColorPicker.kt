@@ -67,4 +67,32 @@ class ColorPicker {
         "#FF003A",
         "#FF001D"
     )
+    val colorBackgroundItem = arrayOf(
+        "#ffadad",
+        "#ffd6a5",
+        "#fdffb6",
+        "#caffbf",
+        "#9bf6ff",
+        "#a0c4ff",
+        "#bdb2ff",
+        "#ffc6ff",
+        "#fffffc",
+        "#d6e6ff",
+        "#d7f9f8",
+        "#ffffea",
+        "#fff0d4",
+        "#fbe0e0",
+        "#e5d4ef",
+        "#809bce",
+        "#95b8d1",
+        "#b8e0d4",
+        "#d6eadf",
+        "#eac4d5",
+        "#8a508f",
+        "#bc5090",
+        "#ff6361",
+        "#ff8531",
+        "#ffa600",
+        "#ffd380"
+    )
 }

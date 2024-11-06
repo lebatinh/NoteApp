@@ -25,10 +25,10 @@ interface NoteDao {
     @Query("SELECT * FROM note WHERE onTrash = 0")
     fun getAllNote(): LiveData<List<Note>>
 
-    @Query("SELECT * FROM note WHERE noteId = :id LIMIT 1")
+    @Query("SELECT * FROM note WHERE noteId = :id AND onTrash = 0 LIMIT 1")
     fun getNoteById(id: Int): LiveData<Note>
 
-    @Query("SELECT * FROM note WHERE title LIKE :searchQuery OR note LIKE :searchQuery")
+    @Query("SELECT * FROM note WHERE onTrash = 0 AND (title LIKE :searchQuery OR note LIKE :searchQuery)")
     fun searchNote(searchQuery: String): LiveData<List<Note>>
 
     @Query(
@@ -37,7 +37,7 @@ interface NoteDao {
     FROM note
     INNER JOIN note_category nc ON note.noteId = nc.noteId
     WHERE (note.title LIKE '%' || :searchQuery || '%' OR note.note LIKE '%' || :searchQuery || '%')
-      AND nc.categoryId = :categoryId
+      AND nc.categoryId = :categoryId AND onTrash = 0 
 """
     )
     fun searchNoteWithCategory(
@@ -49,7 +49,7 @@ interface NoteDao {
         """
     SELECT *
     FROM note
-    WHERE (title LIKE '%' || :searchQuery || '%' OR note LIKE '%' || :searchQuery || '%')
+    WHERE (title LIKE '%' || :searchQuery || '%' OR note LIKE '%' || :searchQuery || '%') AND onTrash = 0 
       AND NOT EXISTS (
           SELECT 1
           FROM note_category nc
@@ -71,7 +71,7 @@ interface NoteDao {
     fun getCategoryOfNote(noteId: Int): LiveData<List<Category>>
 
     @Transaction
-    @Query("SELECT * FROM Note WHERE noteId IN (SELECT noteId FROM note_category WHERE categoryId = :categoryId)")
+    @Query("SELECT * FROM note WHERE onTrash = 0 AND noteId IN (SELECT noteId FROM note_category WHERE categoryId = :categoryId)")
     fun getNotesByCategory(categoryId: Int): LiveData<List<NoteWithCategories>>
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
@@ -83,28 +83,28 @@ interface NoteDao {
     @Query(
         """
         SELECT * FROM Note 
-        WHERE noteId NOT IN (SELECT noteId FROM note_category)
+        WHERE onTrash = 0 AND noteId NOT IN (SELECT noteId FROM note_category)
     """
     )
     fun getNotesWithoutCategory(): LiveData<List<Note>>
 
     // all
-    @Query("SELECT * FROM Note ORDER BY timeLastEdit DESC")
+    @Query("SELECT * FROM Note WHERE onTrash = 0 ORDER BY timeLastEdit DESC ")
     fun sortedByUpdatedTimeDesc(): LiveData<List<Note>>
 
-    @Query("SELECT * FROM Note ORDER BY timeLastEdit ASC")
+    @Query("SELECT * FROM Note WHERE onTrash = 0 ORDER BY timeLastEdit ASC")
     fun sortedByUpdatedTimeAsc(): LiveData<List<Note>>
 
-    @Query("SELECT * FROM Note ORDER BY title DESC")
+    @Query("SELECT * FROM Note WHERE onTrash = 0 ORDER BY title DESC")
     fun sortedByTitleDesc(): LiveData<List<Note>>
 
-    @Query("SELECT * FROM Note ORDER BY title ASC")
+    @Query("SELECT * FROM Note WHERE onTrash = 0 ORDER BY title ASC")
     fun sortedByTitleAsc(): LiveData<List<Note>>
 
-    @Query("SELECT * FROM Note ORDER BY timeCreate DESC")
+    @Query("SELECT * FROM Note WHERE onTrash = 0 ORDER BY timeCreate DESC")
     fun sortedByCreatedTimeDesc(): LiveData<List<Note>>
 
-    @Query("SELECT * FROM Note ORDER BY timeCreate ASC")
+    @Query("SELECT * FROM Note WHERE onTrash = 0 ORDER BY timeCreate ASC")
     fun sortedByCreatedTimeAsc(): LiveData<List<Note>>
 
     // ko cateory
@@ -112,7 +112,7 @@ interface NoteDao {
     @Query(
         """
         SELECT * FROM Note 
-        WHERE noteId NOT IN (SELECT noteId FROM note_category) 
+        WHERE noteId NOT IN (SELECT noteId FROM note_category) AND onTrash = 0 
         ORDER BY timeLastEdit DESC
     """
     )
@@ -121,7 +121,7 @@ interface NoteDao {
     @Query(
         """
         SELECT * FROM Note 
-        WHERE noteId NOT IN (SELECT noteId FROM note_category) 
+        WHERE noteId NOT IN (SELECT noteId FROM note_category) AND onTrash = 0 
         ORDER BY timeLastEdit ASC
     """
     )
@@ -131,7 +131,7 @@ interface NoteDao {
     @Query(
         """
         SELECT * FROM Note 
-        WHERE noteId NOT IN (SELECT noteId FROM note_category) 
+        WHERE noteId NOT IN (SELECT noteId FROM note_category) AND onTrash = 0 
         ORDER BY title DESC
     """
     )
@@ -140,7 +140,7 @@ interface NoteDao {
     @Query(
         """
         SELECT * FROM Note 
-        WHERE noteId NOT IN (SELECT noteId FROM note_category) 
+        WHERE noteId NOT IN (SELECT noteId FROM note_category) AND onTrash = 0 
         ORDER BY title ASC
     """
     )
@@ -150,7 +150,7 @@ interface NoteDao {
     @Query(
         """
         SELECT * FROM Note 
-        WHERE noteId NOT IN (SELECT noteId FROM note_category) 
+        WHERE noteId NOT IN (SELECT noteId FROM note_category) AND onTrash = 0 
         ORDER BY timeCreate DESC
     """
     )
@@ -159,7 +159,7 @@ interface NoteDao {
     @Query(
         """
         SELECT * FROM Note 
-        WHERE noteId NOT IN (SELECT noteId FROM note_category) 
+        WHERE noteId NOT IN (SELECT noteId FROM note_category) AND onTrash = 0 
         ORDER BY timeCreate ASC
     """
     )
@@ -171,7 +171,7 @@ interface NoteDao {
         """
         SELECT Note.* FROM Note 
         INNER JOIN note_category ON Note.noteId = note_category.noteId 
-        WHERE note_category.categoryId = :categoryId 
+        WHERE note_category.categoryId = :categoryId AND onTrash = 0 
         ORDER BY timeLastEdit DESC
     """
     )
@@ -181,7 +181,7 @@ interface NoteDao {
         """
         SELECT Note.* FROM Note 
         INNER JOIN note_category ON Note.noteId = note_category.noteId 
-        WHERE note_category.categoryId = :categoryId 
+        WHERE note_category.categoryId = :categoryId AND onTrash = 0 
         ORDER BY timeLastEdit ASC
     """
     )
@@ -192,7 +192,7 @@ interface NoteDao {
         """
         SELECT Note.* FROM Note 
         INNER JOIN note_category ON Note.noteId = note_category.noteId 
-        WHERE note_category.categoryId = :categoryId 
+        WHERE note_category.categoryId = :categoryId AND onTrash = 0 
         ORDER BY title DESC
     """
     )
@@ -202,7 +202,7 @@ interface NoteDao {
         """
         SELECT Note.* FROM Note 
         INNER JOIN note_category ON Note.noteId = note_category.noteId 
-        WHERE note_category.categoryId = :categoryId 
+        WHERE note_category.categoryId = :categoryId AND onTrash = 0 
         ORDER BY title ASC
     """
     )
@@ -213,7 +213,7 @@ interface NoteDao {
         """
         SELECT Note.* FROM Note 
         INNER JOIN note_category ON Note.noteId = note_category.noteId 
-        WHERE note_category.categoryId = :categoryId 
+        WHERE note_category.categoryId = :categoryId AND onTrash = 0 
         ORDER BY timeCreate DESC
     """
     )
@@ -223,7 +223,7 @@ interface NoteDao {
         """
         SELECT Note.* FROM Note 
         INNER JOIN note_category ON Note.noteId = note_category.noteId 
-        WHERE note_category.categoryId = :categoryId 
+        WHERE note_category.categoryId = :categoryId AND onTrash = 0 
         ORDER BY timeCreate ASC
     """
     )
@@ -240,4 +240,7 @@ interface NoteDao {
 
     @Query("DELETE FROM note WHERE onTrash = 1")
     suspend fun emptyTrash()
+
+    @Query("UPDATE note SET backgroundColor = :backgroundColor WHERE noteId = :noteId")
+    fun updateBackgroundColor(noteId: Int, backgroundColor: Int)
 }

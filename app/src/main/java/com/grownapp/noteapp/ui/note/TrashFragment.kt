@@ -10,17 +10,20 @@ import android.text.style.ForegroundColorSpan
 import android.text.style.StrikethroughSpan
 import android.text.style.StyleSpan
 import android.text.style.UnderlineSpan
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.Menu
 import android.view.MenuInflater
 import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ImageView
 import android.widget.RadioGroup
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.widget.PopupMenu
+import androidx.appcompat.widget.Toolbar
 import androidx.core.content.ContextCompat
 import androidx.core.view.MenuHost
 import androidx.core.view.MenuProvider
@@ -29,6 +32,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.gson.Gson
+import com.grownapp.noteapp.MainActivity
 import com.grownapp.noteapp.R
 import com.grownapp.noteapp.databinding.FragmentTrashBinding
 import com.grownapp.noteapp.ui.note.adapter.NoteAdapter
@@ -42,10 +46,14 @@ class TrashFragment : Fragment(), MenuProvider {
     private lateinit var noteAdapter: NoteAdapter
     private lateinit var noteViewModel: NoteViewModel
 
+    private lateinit var listNoteSelected: MutableList<Note>
+
+    private var isEditMode = false
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         noteViewModel = ViewModelProvider(this)[NoteViewModel::class.java]
+        listNoteSelected = mutableListOf()
     }
 
     override fun onCreateView(
@@ -58,14 +66,17 @@ class TrashFragment : Fragment(), MenuProvider {
 
         val menuHost: MenuHost = requireActivity()
         menuHost.addMenuProvider(this, viewLifecycleOwner, Lifecycle.State.RESUMED)
+
         noteAdapter = NoteAdapter(
             onClickNote = {
                 dialogDeleteOrUndelete(it)
             },
             onLongClickNote = { note ->
-
+                startEditMode(note, !isEditMode)
             },
-            hideCreated = true
+            hideCreated = true,
+            listNoteSelectedAdapter = listNoteSelected,
+            updateCountCallback = { updateCountNoteSeleted() }
         )
 
         binding.rcvNoteTrash.layoutManager = LinearLayoutManager(requireContext())
@@ -77,6 +88,78 @@ class TrashFragment : Fragment(), MenuProvider {
             }
         }
         return root
+    }
+
+    private fun updateCountNoteSeleted() {
+        val toolbar = requireActivity().findViewById<Toolbar>(R.id.toolbar)
+        val tvCountSeletedTrash = toolbar?.findViewById<TextView>(R.id.tvCountSeletedTrash)
+        Log.d("listNoteSelectedTrash", listNoteSelected.toString())
+        tvCountSeletedTrash?.text = listNoteSelected.size.toString()
+    }
+
+    private fun startEditMode(note: Note, isVisible: Boolean) {
+        isEditMode = isVisible
+        val toolbar = requireActivity().findViewById<Toolbar>(R.id.toolbar)
+        Log.d("startEditMode", "isEditMode: $isEditMode")
+        if (isVisible) {
+            val layoutParams = Toolbar.LayoutParams(
+                Toolbar.LayoutParams.MATCH_PARENT,
+                Toolbar.LayoutParams.WRAP_CONTENT
+            )
+
+            val trashLayout = layoutInflater.inflate(R.layout.custom_trash_toolbar, toolbar, false)
+            toolbar.addView(trashLayout, layoutParams)
+
+            val tvCountSeletedTrash = toolbar.findViewById<TextView>(R.id.tvCountSeletedTrash)
+            val imgRestore = toolbar.findViewById<ImageView>(R.id.imgRestore)
+            val imgSelectAll = toolbar.findViewById<ImageView>(R.id.imgSelectAll)
+
+            Log.d("startEditMode", listNoteSelected.size.toString())
+            tvCountSeletedTrash.text = listNoteSelected.size.toString()
+
+            toolbar.setNavigationIcon(R.drawable.back)
+            toolbar.setNavigationOnClickListener {
+                startEditMode(note, false)
+                noteAdapter.exitEditMode()
+                tvCountSeletedTrash?.visibility = View.GONE
+                imgRestore?.visibility = View.GONE
+                imgSelectAll?.visibility = View.GONE
+                toolbar.title = "Trash"
+                toolbar.setNavigationIcon(R.drawable.nav)
+                toolbar.setNavigationOnClickListener {
+                    (activity as MainActivity).setupDefaultToolbar()
+                }
+            }
+
+            imgRestore.setOnClickListener {
+                restoreDialog(true)
+            }
+
+            imgSelectAll.setOnClickListener {
+                if (listNoteSelected.isEmpty()){
+                    noteViewModel.allTrashNote.observe(viewLifecycleOwner){
+                        listNoteSelected = it.toMutableList()
+                        noteAdapter.updateListNoteSelected(listNoteSelected)
+                        Log.d("TrashFragment", "imgSelectAll")
+                        Log.d("TrashFragment", listNoteSelected.size.toString())
+                    }
+                }else{
+                    listNoteSelected.clear()
+                    noteAdapter.updateListNoteSelected(listNoteSelected)
+                    Log.d("TrashFragment", "imgSelectAll")
+                    Log.d("TrashFragment", listNoteSelected.size.toString())
+                }
+                updateCountNoteSeleted()
+            }
+        } else {
+            Log.d("startEditMode", "Exiting Edit Mode")
+            val trashLayout = toolbar.findViewById<View>(R.id.custom_trash_toolbar)
+            if (trashLayout != null) {
+                toolbar.removeView(trashLayout)
+            }
+        }
+
+        requireActivity().invalidateOptionsMenu()
     }
 
     private fun dialogDeleteOrUndelete(note: Note) {
@@ -152,44 +235,92 @@ class TrashFragment : Fragment(), MenuProvider {
         dialog.show()
     }
 
+    private fun dialogDeleteSeleted() {
+        val dialogView = layoutInflater.inflate(R.layout.delete_dialog, null)
+        val deleteLog = dialogView.findViewById<TextView>(R.id.delete_log)
+        val btnDelete = dialogView.findViewById<TextView>(R.id.btnDelete)
+        val btnCancel = dialogView.findViewById<TextView>(R.id.btnCancel)
+
+        val dialog = android.app.AlertDialog.Builder(requireContext()).setView(dialogView).create()
+
+        deleteLog.text = buildString {
+            append(
+                "Are you sure that you want to delete the selected notes?\n"
+            )
+            append("The notes will be deleted permanently!")
+        }
+
+        btnCancel.setOnClickListener {
+            dialog.dismiss()
+        }
+
+        btnDelete.setOnClickListener {
+            for (note in listNoteSelected) {
+                noteViewModel.delete(note.noteId)
+            }
+            Toast.makeText(requireContext(), "Deleted notes", Toast.LENGTH_SHORT).show()
+            dialog.dismiss()
+        }
+        dialog.show()
+    }
+
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null
     }
 
     override fun onCreateMenu(menu: Menu, menuInflater: MenuInflater) {
-        menuInflater.inflate(R.menu.trash_more, menu)
+        menu.clear()
+
+        menuInflater.inflate(R.menu.menu_trash, menu)
+        Log.d("TrashFragment", isEditMode.toString())
     }
 
     override fun onMenuItemSelected(menuItem: MenuItem): Boolean {
         when (menuItem.itemId) {
-            R.id.item_more -> {
-                showMoreDialog()
+            R.id.item_more_trash -> {
+                showMoreDialog(isEditMode)
+                true
             }
         }
         return false
     }
 
-    private fun showMoreDialog() {
-        val anchorView = requireActivity().findViewById<View>(R.id.item_more)
+    private fun showMoreDialog(isEditMode: Boolean) {
+        val anchorView = requireActivity().findViewById<View>(R.id.item_more_trash)
 
         val popupMenu = PopupMenu(requireContext(), anchorView)
 
-        popupMenu.menuInflater.inflate(R.menu.trash_more, popupMenu.menu)
-
+        if (isEditMode) {
+            popupMenu.menuInflater.inflate(R.menu.trash_more_editmode, popupMenu.menu)
+        } else {
+            popupMenu.menuInflater.inflate(R.menu.trash_more, popupMenu.menu)
+        }
         popupMenu.setOnMenuItemClickListener { menuItem ->
             when (menuItem.itemId) {
                 R.id.undelete_all -> {
-                    restoreDialog(false)
+                    restoreDialog(true)
+                    Log.d("TrashFragment", "undelete_all")
                     true
                 }
 
-                R.id.export_notes_to_text_files -> {
+                R.id.export_notes_to_text_files_trash -> {
+                    Log.d("TrashFragment", "export_notes_to_text_files_trash")
                     true
                 }
 
                 R.id.empty_trash -> {
-                    restoreDialog(true)
+                    Log.d("TrashFragment", "empty_trash")
+                    restoreDialog(false)
+                    true
+                }
+
+                R.id.delete_trash -> {
+                    if (isEditMode) {
+                        dialogDeleteSeleted()
+                    }
+
+                    Log.d("TrashFragment", "delete_trash")
                     true
                 }
 
@@ -217,11 +348,15 @@ class TrashFragment : Fragment(), MenuProvider {
         }
 
         tvYes.setOnClickListener {
-            if (isEmptyTrash) {
-                noteViewModel.emptyTrash()
+            if (!isEmptyTrash) {
+                for (note in listNoteSelected){
+                    noteViewModel.emptyTrash()
+                }
                 Toast.makeText(requireContext(), "Deleted notes", Toast.LENGTH_SHORT).show()
             } else {
-                noteViewModel.restoreAllNote()
+                for (note in listNoteSelected){
+                    noteViewModel.restoreAllNote()
+                }
                 Toast.makeText(requireContext(), "Restored notes", Toast.LENGTH_SHORT).show()
             }
             dialog.dismiss()

@@ -147,4 +147,8 @@ class NoteRepository(
     suspend fun emptyTrash(){
         noteDao.emptyTrash()
     }
+
+    fun updateBackgroundColor(noteId: Int, backgroundColor: Int){
+        noteDao.updateBackgroundColor(noteId, backgroundColor)
+    }
 }

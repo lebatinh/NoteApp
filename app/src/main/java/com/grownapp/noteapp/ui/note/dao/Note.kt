@@ -13,7 +13,8 @@ data class Note(
     val note: String? = null,
     var timeCreate: String? = null,
     var timeLastEdit: String? = getCurrentTime(),
-    var onTrash: Boolean? = false
+    var onTrash: Boolean? = false,
+    var backgroundColor: Int? = 0
 ){
     companion object{
         fun getCurrentTime():String{
