@@ -14,7 +14,7 @@ data class Note(
     var timeCreate: String? = null,
     var timeLastEdit: String? = getCurrentTime(),
     var onTrash: Boolean? = false,
-    var backgroundColor: Int? = 0
+    var backgroundColor: Int? = null
 ){
     companion object{
         fun getCurrentTime():String{

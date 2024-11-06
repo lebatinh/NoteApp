@@ -616,7 +616,10 @@ class NoteDetailFragment : Fragment(), MenuProvider {
                     )
                 )
             }
-
+            for (i in 0 until gridlayoutColor.childCount) {
+                val childView = gridlayoutColor.getChildAt(i) as? TextView
+                childView?.text = null
+            }
         }
 
         "Opacity (${sbPercentOpacity.progress}%)".also { tvOpacity.text = it }

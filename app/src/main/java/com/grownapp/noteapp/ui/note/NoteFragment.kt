@@ -106,12 +106,23 @@ class NoteFragment : Fragment(), MenuProvider {
 
         noteAdapter = NoteAdapter(
             onClickNote = {
-                val action = NoteFragmentDirections.actionNavNoteToNoteDetailFragment(it.noteId)
-                findNavController().navigate(action)
+                if (!isEditMode) {
+                    // Chỉ thực hiện điều hướng khi không ở chế độ edit
+                    val action = NoteFragmentDirections.actionNavNoteToNoteDetailFragment(it.noteId)
+                    findNavController().navigate(action)
+                    Log.d("onClickNote", "không ở chế độ edit")
+                } else {
+                    // Nếu đang ở chế độ edit, không điều hướng mà chỉ log lại
+                    Log.d("onClickNote", "Chế độ edit - không điều hướng")
+                }
             },
             onLongClickNote = { note ->
-                isEditMode = true
-                startEditMode(note, true)
+                if (!isEditMode) {  // Chỉ bật chế độ edit nếu chưa ở chế độ edit
+                    isEditMode = true
+                    startEditMode(true)
+                    binding.fab.visibility = View.GONE
+                    Log.d("onClickNote", "Bắt đầu chế độ edit")
+                }
             },
             hideCreated = true,
             listNoteSelectedAdapter = listNoteSelected,
@@ -123,6 +134,9 @@ class NoteFragment : Fragment(), MenuProvider {
 
         noteViewModel.allNote.observe(viewLifecycleOwner) { notes ->
             notes.let {
+                notes.forEach { note ->
+                    Log.d("NoteColor", "NoteId: ${note.noteId}, Color: ${note.backgroundColor}")
+                }
                 noteAdapter.updateListNote(notes)
             }
         }
@@ -154,7 +168,7 @@ class NoteFragment : Fragment(), MenuProvider {
         Log.d("listNoteSelectedFragment", listNoteSelected.size.toString())
     }
 
-    private fun startEditMode(note: Note, isVisible: Boolean) {
+    private fun startEditMode(isVisible: Boolean) {
         isEditMode = isVisible
         val toolbar = requireActivity().findViewById<Toolbar>(R.id.toolbar)
         val btnSearch = toolbar.findViewById<View>(R.id.item_search)
@@ -183,8 +197,9 @@ class NoteFragment : Fragment(), MenuProvider {
 
             toolbar.setNavigationIcon(R.drawable.back)
             toolbar.setNavigationOnClickListener {
-                startEditMode(note, false)
+                startEditMode(false)
                 noteAdapter.exitEditMode()
+                binding.fab.visibility = View.VISIBLE
                 tvCountSeleted?.visibility = View.GONE
                 imgDelete?.visibility = View.GONE
                 imgSelectAll?.visibility = View.GONE
@@ -227,9 +242,7 @@ class NoteFragment : Fragment(), MenuProvider {
             itemmore?.visibility = View.VISIBLE
 
             val noteLayout = toolbar.findViewById<View>(R.id.custom_note_toolbar)
-            if (noteLayout != null) {
-                toolbar.removeView(noteLayout)
-            }
+            noteLayout?.let { toolbar.removeView(it) }
         }
     }
 
@@ -363,7 +376,8 @@ class NoteFragment : Fragment(), MenuProvider {
         popupMenu.setOnMenuItemClickListener { menuItem ->
             when (menuItem.itemId) {
                 R.id.select_all_notes -> {
-                    startEditMode(Note(), true)
+                    startEditMode(true)
+                    binding.fab.visibility = View.VISIBLE
                     noteAdapter.selectAllNotes()
                     true
                 }
@@ -398,18 +412,27 @@ class NoteFragment : Fragment(), MenuProvider {
         val dialogView = layoutInflater.inflate(R.layout.pick_color, null)
         val tvColor = dialogView.findViewById<TextView>(R.id.tvColor)
         val gridlayoutColor = dialogView.findViewById<GridLayout>(R.id.gridlayoutColor)
+        val tvOpacity = dialogView.findViewById<TextView>(R.id.tvOpacity)
+        val sbPercentOpacity = dialogView.findViewById<SeekBar>(R.id.sbPercentOpacity)
         val btnRemoveColor = dialogView.findViewById<Button>(R.id.btnRemoveColor)
         val tvOK = dialogView.findViewById<TextView>(R.id.tvOK)
         val tvCancel = dialogView.findViewById<TextView>(R.id.tvCancel)
 
         val dialog = AlertDialog.Builder(requireContext()).setView(dialogView).create()
 
+        tvOpacity.visibility = View.GONE
+        sbPercentOpacity.visibility = View.GONE
         var colorFillBackground = ContextCompat.getColor(requireContext(), R.color.transparent)
         tvColor.setBackgroundColor(colorFillBackground)
 
         btnRemoveColor.setOnClickListener {
             colorFillBackground = ContextCompat.getColor(requireContext(), R.color.transparent)
             tvColor.setBackgroundColor(colorFillBackground)
+
+            for (i in 0 until gridlayoutColor.childCount) {
+                val childView = gridlayoutColor.getChildAt(i) as? TextView
+                childView?.text = null
+            }
         }
 
         dialogView.viewTreeObserver.addOnGlobalLayoutListener(object :
@@ -439,16 +462,15 @@ class NoteFragment : Fragment(), MenuProvider {
                         tvColor.setBackgroundColor(colorFillBackground)
 
                         for (i in 0 until gridlayoutColor.childCount) {
-                            (gridlayoutColor.getChildAt(i) as? TextView)?.text = null
+                            val childView = gridlayoutColor.getChildAt(i) as? TextView
+                            childView?.text = null
+                            childView?.setBackgroundColor(Color.parseColor(ColorPicker().colorBackgroundItem[i]))
+
                         }
 
                         "+".also { colorView.text = it }
 
-                        colorView.setBackgroundColor(
-                            ContextCompat.getColor(
-                                requireContext(), R.color.backgroundPickColorDialog
-                            )
-                        )
+                        colorView.setBackgroundColor(parseColor)
                     }
 
                     gridlayoutColor.addView(colorView)
@@ -457,9 +479,12 @@ class NoteFragment : Fragment(), MenuProvider {
             }
         })
         tvOK.setOnClickListener {
-            listNoteSelected.forEach {
-                noteViewModel.updateBackgroundColor(it.noteId, colorFillBackground)
-            }
+            Log.d("updateBackgroundColor", listNoteSelected.size.toString())
+            noteViewModel.updateBackgroundColor(listNoteSelected.map { it.noteId }, colorFillBackground)
+            listNoteSelected.clear()
+            noteAdapter.exitEditMode()
+            isEditMode = false
+            startEditMode(false)
             dialog.dismiss()
         }
         tvCancel.setOnClickListener {

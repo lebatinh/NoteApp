@@ -241,6 +241,6 @@ interface NoteDao {
     @Query("DELETE FROM note WHERE onTrash = 1")
     suspend fun emptyTrash()
 
-    @Query("UPDATE note SET backgroundColor = :backgroundColor WHERE noteId = :noteId")
-    fun updateBackgroundColor(noteId: Int, backgroundColor: Int)
+    @Query("UPDATE note SET backgroundColor = :backgroundColor WHERE noteId IN (:noteIds)")
+    suspend fun updateBackgroundColor(noteIds: List<Int>, backgroundColor: Int)
 }
