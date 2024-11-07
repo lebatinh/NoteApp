@@ -107,7 +107,7 @@ interface NoteDao {
     @Query("SELECT * FROM Note WHERE onTrash = 0 ORDER BY timeCreate ASC")
     fun sortedByCreatedTimeAsc(): LiveData<List<Note>>
 
-    @Query("SELECT * FROM note ORDER BY backgroundColor ASC")
+    @Query("SELECT * FROM note WHERE onTrash = 0 ORDER BY backgroundColor ASC")
     fun sortedByColor(): LiveData<List<Note>>
 
     // ko cateory

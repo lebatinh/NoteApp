@@ -43,6 +43,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.google.gson.Gson
 import com.grownapp.noteapp.MainActivity
 import com.grownapp.noteapp.R
 import com.grownapp.noteapp.databinding.FragmentNoteBinding
@@ -53,6 +54,9 @@ import com.grownapp.noteapp.ui.note.adapter.NoteAdapter
 import com.grownapp.noteapp.ui.note.dao.Note
 import com.grownapp.noteapp.ui.note_category.NoteCategoryCrossRef
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import kotlin.math.atan2
 
 class NoteFragment : Fragment(), MenuProvider {
@@ -91,7 +95,7 @@ class NoteFragment : Fragment(), MenuProvider {
         _binding = FragmentNoteBinding.inflate(inflater, container, false)
         val root: View = binding.root
 
-//        insertFirstNote(sharedPreferences)
+        insertFirstNote(sharedPreferences)
         val isVisible = sharedPreferences.getBoolean("isVisible", true)
         isOnTrash = sharedPreferences.getBoolean("isOnTrash", true)
         if (isVisible) {
@@ -237,6 +241,7 @@ class NoteFragment : Fragment(), MenuProvider {
 
             toolbar.title = "Notepad Free"
             toolbar.setNavigationIcon(R.drawable.nav)
+            binding.fab.visibility = View.VISIBLE
             toolbar.setNavigationOnClickListener {
                 (activity as MainActivity).setupDefaultToolbar()
             }
@@ -287,43 +292,43 @@ class NoteFragment : Fragment(), MenuProvider {
         arrowImageView.rotation = angle.toFloat()
     }
 
-//    // tạo note đầu tiên mặc định
-//    private fun insertFirstNote(sharedPreferences: SharedPreferences) {
-//        val isFirstRun = sharedPreferences.getBoolean("isFirstRun", true)
-//        val currentDateTime = Date()
-//        val dateFormat = SimpleDateFormat("dd/MM/yyyy, hh:mm a", Locale.getDefault())
-//        val time = dateFormat.format(currentDateTime)
-//
-//        if (isFirstRun) {
-//            val text = """
-//            Thank you for downloading Notepad Free. This is a welcome message.
-//            You can delete this message by clicking Delete button in the top right corner.
-//            You can revert any unwanted changes during note edition with the "Undo" and "Redo" buttons. Try to edit this text, and click the buttons in the top right corner.
-//            Please check the main menu for additional functions, like Help screen, backup functions, or settings. It can be opened with the button in the top left corner of the main screen.
-//            Have a nice day.
-//            ☺️
-//        """.trimIndent()
-//
-//            val spannableText = SpannableStringBuilder(text)
-//
-//            val noteContent = spannableToNoteContent(spannableText)
-//
-//            val firstNote = Note(
-//                title = "Hi, how are you? (tap to open)",
-//                note = Gson().toJson(noteContent),
-//                timeCreate = time
-//            )
-//
-//            // Lưu vào ViewModel
-//            noteViewModel.insertFirst(firstNote)
-//
-//            // Cập nhật trạng thái isFirstRun
-//            with(sharedPreferences.edit()) {
-//                putBoolean("isFirstRun", false)
-//                apply()
-//            }
-//        }
-//    }
+    // tạo note đầu tiên mặc định
+    private fun insertFirstNote(sharedPreferences: SharedPreferences) {
+        val isFirstRun = sharedPreferences.getBoolean("isFirstRun", true)
+        val currentDateTime = Date()
+        val dateFormat = SimpleDateFormat("dd/MM/yyyy, hh:mm a", Locale.getDefault())
+        val time = dateFormat.format(currentDateTime)
+
+        if (isFirstRun) {
+            val text = """
+            Thank you for downloading Notepad Free. This is a welcome message.
+            You can delete this message by clicking Delete button in the top right corner.
+            You can revert any unwanted changes during note edition with the "Undo" and "Redo" buttons. Try to edit this text, and click the buttons in the top right corner.
+            Please check the main menu for additional functions, like Help screen, backup functions, or settings. It can be opened with the button in the top left corner of the main screen.
+            Have a nice day.
+            ☺️
+        """.trimIndent()
+
+            val spannableText = SpannableStringBuilder(text)
+
+            val noteContent = spannableToNoteContent(spannableText)
+
+            val firstNote = Note(
+                title = "Hi, how are you? (tap to open)",
+                note = Gson().toJson(noteContent),
+                timeCreate = time
+            )
+
+            // Lưu vào ViewModel
+            noteViewModel.insertFirst(firstNote)
+
+            // Cập nhật trạng thái isFirstRun
+            with(sharedPreferences.edit()) {
+                putBoolean("isFirstRun", false)
+                apply()
+            }
+        }
+    }
 
     private fun createNewNote() {
         viewLifecycleOwner.lifecycleScope.launch {
