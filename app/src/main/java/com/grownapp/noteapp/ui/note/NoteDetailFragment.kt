@@ -897,79 +897,60 @@ class NoteDetailFragment : Fragment(), MenuProvider {
         editText.addTextChangedListener(object : TextWatcher {
             var startPos = 0
             var previousText: String = ""
-            private var isFormatting = false
-
+            var isUpdatingText = false
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {
-                if (isFormatting) return
-                startPos = start // Lưu vị trí bắt đầu của thay đổi
-                previousText = s.toString() // Lưu văn bản trước khi thay đổi
+                if (!isUpdatingText) {
+                    startPos = start // Lưu vị trí bắt đầu thay đổi
+                    previousText = s.toString() // Lưu lại văn bản trước khi thay đổi
+                }
             }
 
-            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                // Không cần xử lý tại đây
+            }
 
             override fun afterTextChanged(s: Editable?) {
+                if (isUpdatingText) return
+                isUpdatingText = true
                 s?.let {
-                    try {
-                        isFormatting = true
-                        val currentLength = it.length
-                        if (startPos < 0 || startPos >= currentLength) return@let
-
-                        val endPos = startPos + (it.length - previousText.length)
-                        if (endPos < 0 || endPos > it.length) return@let
-
-                        val newText = it.subSequence(
-                            startPos.coerceAtMost(it.length),
-                            endPos.coerceAtMost(it.length)
-                        ).toString()
-
-                        for (i in newText.indices) {
-                            val charStart = startPos + i
-                            val charEnd = charStart + 1
-
-                            if (editText.selectionStart < editText.selectionEnd) {
-                                insertTextAtCursorPosition(editText, newText)
-                                Log.d("afterTextChanged", "insertTextAtCursorPosition:$editText/$newText")
-                            } else {
-                                applyCurrentFormat(it, charStart, charEnd)
-                                Log.d("afterTextChanged", "applyCurrentFormat:$it/$charStart/$charEnd")
-                            }
-                        }
-
-                        editText.setSelection(endPos)
-                        undoRedoManager.addState(SpannableStringBuilder(it))
-
-                        if (s.toString() != previousText) {
-                            requireActivity().invalidateOptionsMenu()
-                        }
-                    } finally {
-                        isFormatting = false
+                    val newTextLength = it.length
+                    if (startPos < 0 || startPos >= newTextLength) {
+                        isUpdatingText = false
+                        return@let
                     }
+
+                    // Tính toán vị trí cuối của đoạn văn bản thay đổi
+                    val endPos = startPos + (it.length - previousText.length).coerceAtLeast(0)
+
+                    // Lấy đoạn văn bản vừa được thay đổi
+                    val newText = it.subSequence(
+                        startPos.coerceAtMost(it.length),
+                        endPos.coerceAtMost(it.length)
+                    ).toString()
+
+                    // Chèn văn bản mới và áp dụng định dạng
+                    insertTextWithFormatting(editText, newText, startPos, endPos)
+                    Log.d("afterTextChanged", "insertTextAtCursorPosition:${editText.text}/$newText")
+                    // Đặt lại vị trí con trỏ sau khi hoàn thành
+                    editText.setSelection((startPos + newText.length).coerceAtMost(it.length))
                 }
+                isUpdatingText = false
             }
         })
     }
 
-    // Hàm xử lý chèn văn bản vào giữa đoạn văn bản
-    fun insertTextAtCursorPosition(editText: EditText, insertText: String) {
-        val startPos = editText.selectionStart
-        val endPos = editText.selectionEnd
-        val currentText = editText.text as SpannableStringBuilder
+    // Hàm xử lý chèn văn bản vào giữa đoạn văn bản và định dạng
+    fun insertTextWithFormatting(editText: EditText, insertText: String, start: Int, end: Int) {
+        val spannableText = editText.text as SpannableStringBuilder
 
-        // Xóa đoạn văn bản được chọn (nếu có)
-        currentText.delete(startPos, endPos)
-        Log.d("insertTextAtCursorPosition", "delete:$startPos-$endPos")
+        // Xóa đoạn văn bản cũ trong phạm vi thay đổi
+        spannableText.delete(start, end)
 
-        // Chèn văn bản mới vào vị trí con trỏ
-        currentText.insert(startPos, insertText)
-        Log.d("insertTextAtCursorPosition", "insert:$startPos-$insertText")
+        // Chèn văn bản mới tại vị trí con trỏ
+        spannableText.insert(start, insertText)
 
-        // Áp dụng định dạng ngay sau khi chèn
-        val newEndPos = startPos + insertText.length
-        applyCurrentFormat(currentText, startPos, newEndPos)
-        Log.d("insertTextAtCursorPosition", "applyCurrentFormat:$currentText/$startPos/$newEndPos")
-
-        // Đặt con trỏ vào cuối đoạn văn bản chèn
-        editText.setSelection(newEndPos)
+        // Áp dụng định dạng cho văn bản vừa chèn
+        applyCurrentFormat(spannableText, start, start + insertText.length)
     }
 
     // Hàm mở rộng cho TextSegment để áp dụng định dạng vào Editable

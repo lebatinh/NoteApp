@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import android.graphics.Color
 import android.graphics.Typeface
+import android.net.Uri
 import android.os.Bundle
 import android.text.SpannableStringBuilder
 import android.text.style.AbsoluteSizeSpan
@@ -28,6 +29,8 @@ import android.widget.RadioGroup
 import android.widget.SeekBar
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.result.contract.ActivityResultContracts.CreateDocument
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.widget.PopupMenu
 import androidx.appcompat.widget.SearchView
@@ -74,6 +77,7 @@ class NoteFragment : Fragment(), MenuProvider {
     private var isOnTrash = true
     private var isEditMode = false
     private lateinit var listNoteSelected: MutableList<Note>
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -416,14 +420,24 @@ class NoteFragment : Fragment(), MenuProvider {
                 }
 
                 R.id.import_text_files -> {
-
+                    checkAndRequestPermissions {
+                        importNotesFromFiles()
+                    }
+                    listNoteSelected.clear()
+                    noteAdapter.exitEditMode()
+                    isEditMode = false
+                    startEditMode(false)
                     true
                 }
 
                 R.id.export_notes_to_text_files -> {
-                    listNoteSelected.forEach {
-
+                    checkAndRequestPermissions {
+                        exportNotesToFiles()
                     }
+                    listNoteSelected.clear()
+                    noteAdapter.exitEditMode()
+                    isEditMode = false
+                    startEditMode(false)
                     true
                 }
 
@@ -443,6 +457,116 @@ class NoteFragment : Fragment(), MenuProvider {
 
         // Hiển thị PopupMenu
         popupMenu.show()
+    }
+
+    private val createFileLauncher =
+        registerForActivityResult(CreateDocument("todo/todo")) { uri: Uri? ->
+            uri?.let {
+                // Khi tệp đã được chọn, lưu nội dung vào tệp
+                saveNotesToFile(it)
+            }
+        }
+
+    // Đăng ký launcher để mở cửa sổ lưu tệp (CreateDocument)
+    private fun openSaveFileDialog(fileName: String) {
+        // Mở cửa sổ để người dùng chọn nơi lưu tệp
+       createFileLauncher.launch(fileName)
+    }
+
+    // Đăng ký launcher để mở cửa sổ chọn tệp (OpenDocument)
+    private val openFileLauncher =
+        registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
+            uri?.let {
+                importFile(it) // Đọc và xử lý tệp đã chọn
+            }
+        }
+
+    // Lưu nội dung vào tệp người dùng đã chọn
+    private fun saveNotesToFile(uri: Uri) {
+        listNoteSelected.forEach { note ->
+            // Tạo tên tệp cho từng ghi chú
+            val fileTitle = note.title ?: "Untitled"
+            val fileName = "$fileTitle.txt"
+
+            // Mở cửa sổ lưu tệp cho từng ghi chú
+            openSaveFileDialog(fileName)
+
+            // Sau khi tệp được chọn, ta sẽ gọi hàm saveToFile với nội dung của từng ghi chú
+            val noteContent = note.note ?: ""
+
+            // Lưu nội dung ghi chú vào tệp đã chọn
+            saveToFile(uri, noteContent)
+        }
+    }
+    // Lưu nội dung vào tệp người dùng đã chọn
+    private fun saveToFile(uri: Uri, content: String) {
+        try {
+            // Tạo nội dung cần lưu vào tệp
+            context?.contentResolver?.openOutputStream(uri)?.use { outputStream ->
+                outputStream.write(content.toByteArray())
+                Toast.makeText(requireContext(), "Tệp đã được lưu", Toast.LENGTH_SHORT).show()
+            }
+        } catch (e: Exception) {
+            Toast.makeText(requireContext(), "Lỗi khi lưu tệp: ${e.message}", Toast.LENGTH_SHORT)
+                .show()
+        }
+    }
+
+    // Đọc nội dung tệp người dùng chọn và lưu vào database
+    private fun importFile(uri: Uri) {
+        try {
+            context?.contentResolver?.openInputStream(uri)?.use { inputStream ->
+                val content = inputStream.bufferedReader().use { it.readText() }
+                // Tiến hành xử lý nội dung tệp
+                val text =  SpannableStringBuilder(content)
+                val spannableContent = spannableToNoteContent(text)
+                val note = Note(title = uri.lastPathSegment, note = Gson().toJson(spannableContent))
+                // Lưu vào Room hoặc xử lý tiếp
+                viewLifecycleOwner.lifecycleScope.launch {
+                    noteViewModel.insert(note) {}
+
+                    noteViewModel.noteId.observe(viewLifecycleOwner) { id ->
+                        id?.let {
+                            val action = NoteFragmentDirections.actionNavNoteToNoteDetailFragment(it)
+                            findNavController().navigate(action)
+                            noteViewModel.clearNoteId()
+                            noteViewModel.noteId.removeObservers(viewLifecycleOwner)
+                        }
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            Log.d("Error", e.toString())
+        }
+    }
+
+    // Hàm để xuất các ghi chú được chọn vào tệp
+    private fun exportNotesToFiles() {
+        // Kiểm tra xem có ghi chú nào được chọn không
+        if (listNoteSelected.isNotEmpty()) {
+            // Gọi hàm lưu tệp cho từng ghi chú
+            listNoteSelected.forEach { note ->
+                val noteContent = note.note ?: ""
+                if (noteContent.isNotBlank()) {
+                    val fileTitle = note.title ?: "Untitled"
+                    val fileName = "$fileTitle.txt"
+
+                    // Mở cửa sổ lưu tệp và truyền vào tên tệp và nội dung ghi chú
+                    openSaveFileDialog(fileName)
+                }
+            }
+        } else {
+            Toast.makeText(requireContext(), "Không có ghi chú nào được chọn", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    // Nhập các ghi chú từ tệp
+    private fun importNotesFromFiles() {
+        openFileLauncher.launch(arrayOf("text/plain")) // Mở cửa sổ chọn tệp
+    }
+
+    private fun checkAndRequestPermissions(action: () -> Unit) {
+        action()
     }
 
     private fun dialogPickColor() {
