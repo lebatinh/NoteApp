@@ -193,6 +193,7 @@ class NoteDetailFragment : Fragment(), MenuProvider {
                         toggleSearchToolbar(false)
                     } else {
                         isEnabled = false
+                        @Suppress("DEPRECATION")
                         requireActivity().onBackPressed()
                     }
                 }
@@ -343,7 +344,7 @@ class NoteDetailFragment : Fragment(), MenuProvider {
         val tvOK = dialogView.findViewById<TextView>(R.id.tvOK)
         val tvCancel = dialogView.findViewById<TextView>(R.id.tvCancel)
 
-        val dialog = androidx.appcompat.app.AlertDialog.Builder(requireContext()).setView(dialogView).create()
+        val dialog = AlertDialog.Builder(requireContext()).setView(dialogView).create()
 
         tvOpacity.visibility = View.GONE
         sbPercentOpacity.visibility = View.GONE
