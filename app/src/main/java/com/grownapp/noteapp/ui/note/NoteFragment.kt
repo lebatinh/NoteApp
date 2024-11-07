@@ -258,7 +258,7 @@ class NoteFragment : Fragment(), MenuProvider {
         btnCancel.setOnClickListener {
             dialog.dismiss()
         }
-        btnDelete.setText("OK")
+        btnDelete.text = "OK"
 
         btnDelete.setOnClickListener {
             listNoteSelected.forEach {
@@ -673,7 +673,8 @@ class NoteFragment : Fragment(), MenuProvider {
                 .observe(viewLifecycleOwner, sortObserver)
 
             "color" -> {
-                // Xử lý tùy chọn "color"
+                noteViewModel.sortedByColorAsc()
+                    .observe(viewLifecycleOwner, sortObserver)
             }
         }
     }

@@ -557,8 +557,12 @@ class NoteListFragment : Fragment(), MenuProvider {
                     .observe(viewLifecycleOwner, sortObserver)
             }
 
-            "color" -> {
-                // Xử lý tùy chọn "color"
+            "color" -> if (categoryId != null) {
+                noteViewModel.sortedByColorWithCategory(categoryId!!)
+                    .observe(viewLifecycleOwner, sortObserver)
+            } else {
+                noteViewModel.sortedByColorWithoutCategory()
+                    .observe(viewLifecycleOwner, sortObserver)
             }
         }
     }

@@ -107,6 +107,9 @@ interface NoteDao {
     @Query("SELECT * FROM Note WHERE onTrash = 0 ORDER BY timeCreate ASC")
     fun sortedByCreatedTimeAsc(): LiveData<List<Note>>
 
+    @Query("SELECT * FROM note ORDER BY backgroundColor ASC")
+    fun sortedByColor(): LiveData<List<Note>>
+
     // ko cateory
     // Sắp xếp theo thời gian chỉnh sửa
     @Query(
@@ -164,6 +167,15 @@ interface NoteDao {
     """
     )
     fun sortedByCreatedTimeAscWithoutCategory(): LiveData<List<Note>>
+
+    @Query(
+        """
+        SELECT Note.* FROM Note
+        WHERE noteId NOT IN (SELECT noteId FROM note_category) AND onTrash = 0 
+        ORDER BY backgroundColor ASC
+    """
+    )
+    fun sortedByColorWithoutCategory(): LiveData<List<Note>>
 
     // theo cateory
     // Sắp xếp theo thời gian chỉnh sửa
@@ -228,6 +240,16 @@ interface NoteDao {
     """
     )
     fun sortedByCreatedTimeAscByCategory(categoryId: Int): LiveData<List<Note>>
+
+    @Query(
+        """
+        SELECT Note.* FROM Note 
+        INNER JOIN note_category ON Note.noteId = note_category.noteId 
+        WHERE note_category.categoryId = :categoryId AND onTrash = 0 
+        ORDER BY backgroundColor ASC
+    """
+    )
+    fun sortedByColorWithCategory(categoryId: Int): LiveData<List<Note>>
 
     @Query("UPDATE note SET onTrash = :onTrash WHERE noteId = :noteId")
     fun pushInTrash(onTrash: Boolean, noteId: Int)

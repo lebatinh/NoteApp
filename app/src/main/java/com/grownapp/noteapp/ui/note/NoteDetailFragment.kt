@@ -921,20 +921,19 @@ class NoteDetailFragment : Fragment(), MenuProvider {
                             startPos.coerceAtMost(it.length),
                             endPos.coerceAtMost(it.length)
                         ).toString()
-                        applyCurrentFormat(it, startPos, endPos)
 
-//                        for (i in newText.indices) {
-//                            val charStart = startPos + i
-//                            val charEnd = charStart + 1
-//
-//                            if (editText.selectionStart < editText.selectionEnd) {
-//                                insertTextAtCursorPosition(editText, newText)
-//                                Log.d("afterTextChanged", "insertTextAtCursorPosition:$editText/$newText")
-//                            } else {
-//                                applyCurrentFormat(it, charStart, charEnd)
-//                                Log.d("afterTextChanged", "applyCurrentFormat:$it/$charStart/$charEnd")
-//                            }
-//                        }
+                        for (i in newText.indices) {
+                            val charStart = startPos + i
+                            val charEnd = charStart + 1
+
+                            if (editText.selectionStart < editText.selectionEnd) {
+                                insertTextAtCursorPosition(editText, newText)
+                                Log.d("afterTextChanged", "insertTextAtCursorPosition:$editText/$newText")
+                            } else {
+                                applyCurrentFormat(it, charStart, charEnd)
+                                Log.d("afterTextChanged", "applyCurrentFormat:$it/$charStart/$charEnd")
+                            }
+                        }
 
                         editText.setSelection(endPos)
                         undoRedoManager.addState(SpannableStringBuilder(it))

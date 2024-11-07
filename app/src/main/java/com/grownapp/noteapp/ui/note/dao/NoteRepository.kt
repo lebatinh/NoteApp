@@ -84,6 +84,10 @@ class NoteRepository(
         return noteDao.sortedByCreatedTimeAsc()
     }
 
+    fun sortedByColorAsc(): LiveData<List<Note>> {
+        return noteDao.sortedByColor()
+    }
+
     // ko category
     fun sortedByUpdatedTimeDescWithoutCategory(): LiveData<List<Note>> {
         return noteDao.sortedByUpdatedTimeDescWithoutCategory()
@@ -107,6 +111,10 @@ class NoteRepository(
 
     fun sortedByCreatedTimeAscWithoutCategory(): LiveData<List<Note>> {
         return noteDao.sortedByCreatedTimeAscWithoutCategory()
+    }
+
+    fun sortedByColorWithoutCategory(): LiveData<List<Note>> {
+        return noteDao.sortedByColorWithoutCategory()
     }
 
     //theo category
@@ -134,6 +142,9 @@ class NoteRepository(
         return noteDao.sortedByCreatedTimeAscByCategory(categoryId)
     }
 
+    fun sortedByColorWithCategory(categoryId: Int): LiveData<List<Note>> {
+        return noteDao.sortedByColorWithCategory(categoryId)
+    }
     val allTrashNote: LiveData<List<Note>> = noteDao.getNoteOnTrash()
 
     fun pushInTrash(onTrash: Boolean, noteId: Int) {

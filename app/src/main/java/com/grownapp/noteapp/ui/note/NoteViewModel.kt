@@ -148,6 +148,10 @@ class NoteViewModel(application: Application) : AndroidViewModel(application) {
         return repository.sortedByCreatedTimeAsc()
     }
 
+    fun sortedByColorAsc(): LiveData<List<Note>> {
+        return repository.sortedByColorAsc()
+    }
+
     // ko category
     fun sortedByUpdatedTimeDescWithoutCategory(): LiveData<List<Note>> {
         return repository.sortedByUpdatedTimeDescWithoutCategory()
@@ -172,7 +176,9 @@ class NoteViewModel(application: Application) : AndroidViewModel(application) {
     fun sortedByCreatedTimeAscWithoutCategory(): LiveData<List<Note>> {
         return repository.sortedByCreatedTimeAscWithoutCategory()
     }
-
+    fun sortedByColorWithoutCategory(): LiveData<List<Note>> {
+        return repository.sortedByColorWithoutCategory()
+    }
     //theo category
     fun sortedByUpdatedTimeDescByCategory(categoryId: Int): LiveData<List<Note>> {
         return repository.sortedByUpdatedTimeDescByCategory(categoryId)
@@ -196,6 +202,9 @@ class NoteViewModel(application: Application) : AndroidViewModel(application) {
 
     fun sortedByCreatedTimeAscByCategory(categoryId: Int): LiveData<List<Note>> {
         return repository.sortedByCreatedTimeAscByCategory(categoryId)
+    }
+    fun sortedByColorWithCategory(categoryId: Int): LiveData<List<Note>> {
+        return repository.sortedByColorWithCategory(categoryId)
     }
 
     fun pushInTrash(onTrash: Boolean, noteId: Int){
