@@ -43,7 +43,6 @@ import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.google.gson.Gson
 import com.grownapp.noteapp.MainActivity
 import com.grownapp.noteapp.R
 import com.grownapp.noteapp.databinding.FragmentNoteBinding
@@ -54,9 +53,6 @@ import com.grownapp.noteapp.ui.note.adapter.NoteAdapter
 import com.grownapp.noteapp.ui.note.dao.Note
 import com.grownapp.noteapp.ui.note_category.NoteCategoryCrossRef
 import kotlinx.coroutines.launch
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 import kotlin.math.atan2
 
 class NoteFragment : Fragment(), MenuProvider {
@@ -95,7 +91,7 @@ class NoteFragment : Fragment(), MenuProvider {
         _binding = FragmentNoteBinding.inflate(inflater, container, false)
         val root: View = binding.root
 
-        insertFirstNote(sharedPreferences)
+//        insertFirstNote(sharedPreferences)
         val isVisible = sharedPreferences.getBoolean("isVisible", true)
         isOnTrash = sharedPreferences.getBoolean("isOnTrash", true)
         if (isVisible) {
@@ -126,7 +122,8 @@ class NoteFragment : Fragment(), MenuProvider {
             },
             hideCreated = true,
             listNoteSelectedAdapter = listNoteSelected,
-            updateCountCallback = { updateCountNoteSeleted() }
+            updateCountCallback = { updateCountNoteSeleted() },
+            getCategoryOfNote = { noteId -> noteViewModel.getCategoryOfNote(noteId) }
         )
 
         binding.rcvNote.layoutManager = LinearLayoutManager(requireContext())
@@ -228,13 +225,7 @@ class NoteFragment : Fragment(), MenuProvider {
             }
 
             imgDelete.setOnClickListener {
-                listNoteSelected.forEach {
-                    if (isOnTrash) {
-                        noteViewModel.pushInTrash(true, it.noteId)
-                    } else {
-                        noteViewModel.delete(it.noteId)
-                    }
-                }
+                showDialogDelete()
             }
         } else {
             btnSearch?.visibility = View.VISIBLE
@@ -243,7 +234,44 @@ class NoteFragment : Fragment(), MenuProvider {
 
             val noteLayout = toolbar.findViewById<View>(R.id.custom_note_toolbar)
             noteLayout?.let { toolbar.removeView(it) }
+
+            toolbar.title = "Notepad Free"
+            toolbar.setNavigationIcon(R.drawable.nav)
+            toolbar.setNavigationOnClickListener {
+                (activity as MainActivity).setupDefaultToolbar()
+            }
         }
+    }
+
+    private fun showDialogDelete() {
+        val dialogView = layoutInflater.inflate(R.layout.delete_dialog, null)
+        val deleteLog = dialogView.findViewById<TextView>(R.id.delete_log)
+        val btnDelete = dialogView.findViewById<TextView>(R.id.btnDelete)
+        val btnCancel = dialogView.findViewById<TextView>(R.id.btnCancel)
+
+        val dialog = android.app.AlertDialog.Builder(requireContext()).setView(dialogView).create()
+
+        deleteLog.text = buildString {
+            append("Delete the selected notes?")
+        }
+
+        btnCancel.setOnClickListener {
+            dialog.dismiss()
+        }
+        btnDelete.setText("OK")
+
+        btnDelete.setOnClickListener {
+            listNoteSelected.forEach {
+                if (isOnTrash) {
+                    noteViewModel.pushInTrash(true, it.noteId)
+                } else {
+                    noteViewModel.delete(it.noteId)
+                }
+            }
+            startEditMode(false)
+            dialog.dismiss()
+        }
+        dialog.show()
     }
 
     private fun rotateArrowToCorner(arrowImageView: ImageView, cornerX: Float, cornerY: Float) {
@@ -259,43 +287,43 @@ class NoteFragment : Fragment(), MenuProvider {
         arrowImageView.rotation = angle.toFloat()
     }
 
-    // tạo note đầu tiên mặc định
-    private fun insertFirstNote(sharedPreferences: SharedPreferences) {
-        val isFirstRun = sharedPreferences.getBoolean("isFirstRun", true)
-        val currentDateTime = Date()
-        val dateFormat = SimpleDateFormat("dd/MM/yyyy, hh:mm a", Locale.getDefault())
-        val time = dateFormat.format(currentDateTime)
-
-        if (isFirstRun) {
-            val text = """
-            Thank you for downloading Notepad Free. This is a welcome message.
-            You can delete this message by clicking Delete button in the top right corner.
-            You can revert any unwanted changes during note edition with the "Undo" and "Redo" buttons. Try to edit this text, and click the buttons in the top right corner.
-            Please check the main menu for additional functions, like Help screen, backup functions, or settings. It can be opened with the button in the top left corner of the main screen.
-            Have a nice day.
-            ☺️
-        """.trimIndent()
-
-            val spannableText = SpannableStringBuilder(text)
-
-            val noteContent = spannableToNoteContent(spannableText)
-
-            val firstNote = Note(
-                title = "Hi, how are you? (tap to open)",
-                note = Gson().toJson(noteContent),
-                timeCreate = time
-            )
-
-            // Lưu vào ViewModel
-            noteViewModel.insertFirst(firstNote)
-
-            // Cập nhật trạng thái isFirstRun
-            with(sharedPreferences.edit()) {
-                putBoolean("isFirstRun", false)
-                apply()
-            }
-        }
-    }
+//    // tạo note đầu tiên mặc định
+//    private fun insertFirstNote(sharedPreferences: SharedPreferences) {
+//        val isFirstRun = sharedPreferences.getBoolean("isFirstRun", true)
+//        val currentDateTime = Date()
+//        val dateFormat = SimpleDateFormat("dd/MM/yyyy, hh:mm a", Locale.getDefault())
+//        val time = dateFormat.format(currentDateTime)
+//
+//        if (isFirstRun) {
+//            val text = """
+//            Thank you for downloading Notepad Free. This is a welcome message.
+//            You can delete this message by clicking Delete button in the top right corner.
+//            You can revert any unwanted changes during note edition with the "Undo" and "Redo" buttons. Try to edit this text, and click the buttons in the top right corner.
+//            Please check the main menu for additional functions, like Help screen, backup functions, or settings. It can be opened with the button in the top left corner of the main screen.
+//            Have a nice day.
+//            ☺️
+//        """.trimIndent()
+//
+//            val spannableText = SpannableStringBuilder(text)
+//
+//            val noteContent = spannableToNoteContent(spannableText)
+//
+//            val firstNote = Note(
+//                title = "Hi, how are you? (tap to open)",
+//                note = Gson().toJson(noteContent),
+//                timeCreate = time
+//            )
+//
+//            // Lưu vào ViewModel
+//            noteViewModel.insertFirst(firstNote)
+//
+//            // Cập nhật trạng thái isFirstRun
+//            with(sharedPreferences.edit()) {
+//                putBoolean("isFirstRun", false)
+//                apply()
+//            }
+//        }
+//    }
 
     private fun createNewNote() {
         viewLifecycleOwner.lifecycleScope.launch {
@@ -383,10 +411,14 @@ class NoteFragment : Fragment(), MenuProvider {
                 }
 
                 R.id.import_text_files -> {
+
                     true
                 }
 
                 R.id.export_notes_to_text_files -> {
+                    listNoteSelected.forEach {
+
+                    }
                     true
                 }
 
@@ -441,6 +473,7 @@ class NoteFragment : Fragment(), MenuProvider {
                 val dialogWidth = dialogView.width
                 val itemWidth = dialogWidth / 6
                 gridlayoutColor.removeAllViews()
+                gridlayoutColor.columnCount = 6
 
                 for (color in ColorPicker().colorBackgroundItem) {
                     val colorView = TextView(requireContext()).apply {
@@ -480,7 +513,10 @@ class NoteFragment : Fragment(), MenuProvider {
         })
         tvOK.setOnClickListener {
             Log.d("updateBackgroundColor", listNoteSelected.size.toString())
-            noteViewModel.updateBackgroundColor(listNoteSelected.map { it.noteId }, colorFillBackground)
+            noteViewModel.updateBackgroundColor(
+                listNoteSelected.map { it.noteId },
+                colorFillBackground
+            )
             listNoteSelected.clear()
             noteAdapter.exitEditMode()
             isEditMode = false
@@ -533,6 +569,8 @@ class NoteFragment : Fragment(), MenuProvider {
             }
             Toast.makeText(requireContext(), "Update categories", Toast.LENGTH_SHORT).show()
             dialog.dismiss()
+            noteAdapter.exitEditMode()
+            startEditMode(false)
         }
         dialog.show()
     }
@@ -666,7 +704,7 @@ class NoteFragment : Fragment(), MenuProvider {
             val textColor = spannable.getSpans(start, end, ForegroundColorSpan::class.java)
                 .firstOrNull()?.foregroundColor ?: defaultTextColor
             val textSize = spannable.getSpans(start, end, AbsoluteSizeSpan::class.java)
-                .firstOrNull()?.size?.toFloat() ?: 18f
+                .firstOrNull()?.size ?: 18
 
             // Thêm vào danh sách TextSegment
             segments.add(

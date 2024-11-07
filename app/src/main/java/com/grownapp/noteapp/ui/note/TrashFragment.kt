@@ -72,11 +72,12 @@ class TrashFragment : Fragment(), MenuProvider {
                 dialogDeleteOrUndelete(it)
             },
             onLongClickNote = { note ->
-                startEditMode(note, !isEditMode)
+                startEditMode(!isEditMode)
             },
             hideCreated = true,
             listNoteSelectedAdapter = listNoteSelected,
-            updateCountCallback = { updateCountNoteSeleted() }
+            updateCountCallback = { updateCountNoteSeleted() },
+            getCategoryOfNote = { noteId -> noteViewModel.getCategoryOfNote(noteId) }
         )
 
         binding.rcvNoteTrash.layoutManager = LinearLayoutManager(requireContext())
@@ -97,7 +98,7 @@ class TrashFragment : Fragment(), MenuProvider {
         tvCountSeletedTrash?.text = listNoteSelected.size.toString()
     }
 
-    private fun startEditMode(note: Note, isVisible: Boolean) {
+    private fun startEditMode(isVisible: Boolean) {
         isEditMode = isVisible
         val toolbar = requireActivity().findViewById<Toolbar>(R.id.toolbar)
         Log.d("startEditMode", "isEditMode: $isEditMode")
@@ -119,7 +120,7 @@ class TrashFragment : Fragment(), MenuProvider {
 
             toolbar.setNavigationIcon(R.drawable.back)
             toolbar.setNavigationOnClickListener {
-                startEditMode(note, false)
+                startEditMode(false)
                 noteAdapter.exitEditMode()
                 tvCountSeletedTrash?.visibility = View.GONE
                 imgRestore?.visibility = View.GONE
@@ -136,14 +137,14 @@ class TrashFragment : Fragment(), MenuProvider {
             }
 
             imgSelectAll.setOnClickListener {
-                if (listNoteSelected.isEmpty()){
-                    noteViewModel.allTrashNote.observe(viewLifecycleOwner){
+                if (listNoteSelected.isEmpty()) {
+                    noteViewModel.allTrashNote.observe(viewLifecycleOwner) {
                         listNoteSelected = it.toMutableList()
                         noteAdapter.updateListNoteSelected(listNoteSelected)
                         Log.d("TrashFragment", "imgSelectAll")
                         Log.d("TrashFragment", listNoteSelected.size.toString())
                     }
-                }else{
+                } else {
                     listNoteSelected.clear()
                     noteAdapter.updateListNoteSelected(listNoteSelected)
                     Log.d("TrashFragment", "imgSelectAll")
@@ -156,6 +157,10 @@ class TrashFragment : Fragment(), MenuProvider {
             val trashLayout = toolbar.findViewById<View>(R.id.custom_trash_toolbar)
             if (trashLayout != null) {
                 toolbar.removeView(trashLayout)
+            }
+            toolbar.setNavigationIcon(R.drawable.nav)
+            toolbar.setNavigationOnClickListener {
+                (activity as MainActivity).setupDefaultToolbar()
             }
         }
 
@@ -195,6 +200,8 @@ class TrashFragment : Fragment(), MenuProvider {
                 dialogDelete(note)
             } else {
                 noteViewModel.pushInTrash(false, note.noteId)
+                noteAdapter.exitEditMode()
+                startEditMode(false)
                 Toast.makeText(requireContext(), "Restore note", Toast.LENGTH_SHORT).show()
             }
             dialog.dismiss()
@@ -260,6 +267,8 @@ class TrashFragment : Fragment(), MenuProvider {
             }
             Toast.makeText(requireContext(), "Deleted notes", Toast.LENGTH_SHORT).show()
             dialog.dismiss()
+            noteAdapter.exitEditMode()
+            startEditMode(false)
         }
         dialog.show()
     }
@@ -349,17 +358,20 @@ class TrashFragment : Fragment(), MenuProvider {
 
         tvYes.setOnClickListener {
             if (!isEmptyTrash) {
-                for (note in listNoteSelected){
+                for (note in listNoteSelected) {
                     noteViewModel.emptyTrash()
                 }
                 Toast.makeText(requireContext(), "Deleted notes", Toast.LENGTH_SHORT).show()
             } else {
-                for (note in listNoteSelected){
+                for (note in listNoteSelected) {
                     noteViewModel.restoreAllNote()
                 }
                 Toast.makeText(requireContext(), "Restored notes", Toast.LENGTH_SHORT).show()
             }
             dialog.dismiss()
+
+            noteAdapter.exitEditMode()
+            startEditMode(false)
         }
         dialog.show()
     }

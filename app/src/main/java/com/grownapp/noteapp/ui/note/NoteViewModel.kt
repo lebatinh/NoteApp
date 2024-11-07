@@ -31,13 +31,6 @@ class NoteViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _returnResult = MutableLiveData<ReturnResult>()
 
-//    private val _isLongClickEnabled = MutableLiveData(false)
-//    val isLongClickEnabled: LiveData<Boolean> get() = _isLongClickEnabled
-//
-//    fun setLongClickEnabled(enabled: Boolean) {
-//        _isLongClickEnabled.value = enabled
-//    }
-
     init {
         val noteDao = NoteDatabase.getDatabase(application).noteDao()
         val categoryDao = NoteDatabase.getDatabase(application).categoryDao()

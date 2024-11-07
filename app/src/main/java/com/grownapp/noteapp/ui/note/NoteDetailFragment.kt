@@ -5,6 +5,8 @@ import android.content.Context
 import android.content.SharedPreferences
 import android.graphics.Color
 import android.graphics.Typeface
+import android.graphics.drawable.GradientDrawable
+import android.graphics.drawable.LayerDrawable
 import android.os.Bundle
 import android.text.Editable
 import android.text.SpannableStringBuilder
@@ -104,10 +106,39 @@ class NoteDetailFragment : Fragment(), MenuProvider {
             note?.let {
                 binding.edtTitle.setText(it.title)
 
+                val startColor = note.backgroundColor
+                val endColor = Color.WHITE
+                if (startColor!= null && startColor != 0){
+
+                    // Tạo GradientDrawable với hai màu
+                    val gradientDrawable = GradientDrawable(
+                        GradientDrawable.Orientation.TOP_BOTTOM, // Hướng gradient từ trên xuống dưới
+                        intArrayOf(startColor, endColor)         // Mảng chứa hai màu gradient
+                    )
+                    gradientDrawable.setStroke(0, Color.TRANSPARENT)
+
+                    // Tải drawable `background_add_note` từ tài nguyên
+                    val borderDrawable = ContextCompat.getDrawable(requireContext(), R.drawable.background_add_note)?.mutate()
+                    (borderDrawable as? GradientDrawable)?.setColor(Color.TRANSPARENT)
+                    val layerDrawable = LayerDrawable(arrayOf(gradientDrawable, borderDrawable))
+
+                    binding.fragmentNoteDetail.background = layerDrawable
+
+                    val toolbar = requireActivity().findViewById<Toolbar>(R.id.toolbar)
+                    toolbar.setBackgroundColor(startColor)
+                }else{
+                    binding.fragmentNoteDetail.background= ContextCompat.getDrawable(requireContext(), R.drawable.background_add_note)
+                }
+
                 if (it.note != null) {
-                    val noteContent = Gson().fromJson(note.note!!, NoteContent::class.java)
-                    binding.edtNote.text = noteContentToSpannable(noteContent)
-                    formattedTextSegments = noteContentToSpannable(noteContent)
+                    binding.edtNote.text = noteContentToSpannable(
+                        Gson().fromJson(
+                            note.note!!,
+                            NoteContent::class.java
+                        )
+                    )
+                    formattedTextSegments =
+                        noteContentToSpannable(Gson().fromJson(note.note, NoteContent::class.java))
                 } else {
                     // Trường hợp `note` null hoặc không có nội dung
                     binding.edtNote.text = SpannableStringBuilder("") // Đặt `edtNote` là chuỗi rỗng
@@ -131,12 +162,10 @@ class NoteDetailFragment : Fragment(), MenuProvider {
         val toolbar = requireActivity().findViewById<Toolbar>(R.id.toolbar)
         toolbar.setNavigationIcon(R.drawable.back)
         toolbar.setNavigationOnClickListener {
-            // nếu dùng thì k dùng back và menu điều hướng đc
             view?.let {
                 findNavController().navigateUp()
             }
         }
-
         return root
     }
 
@@ -148,6 +177,8 @@ class NoteDetailFragment : Fragment(), MenuProvider {
     override fun onDestroyView() {
         super.onDestroyView()
         (activity as MainActivity).setupDefaultToolbar()
+        val toolbar = requireActivity().findViewById<Toolbar>(R.id.toolbar)
+        toolbar.setBackgroundColor(ContextCompat.getColor(requireContext(), R.color.topBarBackgroundLight))
         _binding = null
     }
 
@@ -592,6 +623,8 @@ class NoteDetailFragment : Fragment(), MenuProvider {
         var colorFillTextColor = textColor
         var alpha: Int
 
+        var isTextColorRemoved = false
+
         if (isBackground) {
             alpha = Color.alpha(backgroundColor)
             sbPercentOpacity.progress = (alpha * 100 / 255)
@@ -604,17 +637,12 @@ class NoteDetailFragment : Fragment(), MenuProvider {
 
         btnRemoveColor.setOnClickListener {
             if (isBackground) {
-                tvColor.setBackgroundColor(
-                    ContextCompat.getColor(
-                        requireContext(), R.color.transparent
-                    )
-                )
+                colorFillBackground = ContextCompat.getColor(requireContext(), R.color.transparent)
+                tvColor.setBackgroundColor(colorFillBackground)
             } else {
-                tvColor.setTextColor(
-                    ContextCompat.getColor(
-                        requireContext(), R.color.text
-                    )
-                )
+                isTextColorRemoved = true
+                colorFillTextColor = ContextCompat.getColor(requireContext(), R.color.text)
+                tvColor.setTextColor(colorFillTextColor)
             }
             for (i in 0 until gridlayoutColor.childCount) {
                 val childView = gridlayoutColor.getChildAt(i) as? TextView
@@ -719,7 +747,11 @@ class NoteDetailFragment : Fragment(), MenuProvider {
                 currentFormat = currentFormat.copy(backgroundColor = colorFillBackground)
                 Log.d("backgroundColor", colorFillBackground.toString())
             } else {
-                binding.fillColorText.setBackgroundColor(colorFillTextColor)
+                if (isTextColorRemoved){
+                    binding.fillColorText.setBackgroundColor(ContextCompat.getColor(requireContext(), R.color.transparent))
+                }else{
+                    binding.fillColorText.setBackgroundColor(colorFillTextColor)
+                }
                 currentFormat = currentFormat.copy(textColor = colorFillTextColor)
                 Log.d("textColor", colorFillTextColor.toString())
             }
@@ -731,7 +763,7 @@ class NoteDetailFragment : Fragment(), MenuProvider {
         dialog.show()
     }
 
-    private fun dialogPickTextSize(size: Float, colorChecked: Int, colorUncheck: Int) {
+    private fun dialogPickTextSize(size: Int, colorChecked: Int, colorUncheck: Int) {
         val dialogView = layoutInflater.inflate(R.layout.pick_size, null)
         val tvTextSize = dialogView.findViewById<TextView>(R.id.tvTextSize)
         val sbTextSize = dialogView.findViewById<SeekBar>(R.id.sbTextSize)
@@ -742,15 +774,15 @@ class NoteDetailFragment : Fragment(), MenuProvider {
         val dialog = AlertDialog.Builder(requireContext()).setView(dialogView).create()
 
         var s = size
-        sbTextSize.progress = currentFormat.textSize.toInt()
-        "Text size ${currentFormat.textSize.toInt()}".also { tvTextSize.text = it }
-        tvTextSize.textSize = currentFormat.textSize
+        sbTextSize.progress = currentFormat.textSize
+        "Text size ${currentFormat.textSize}".also { tvTextSize.text = it }
+        tvTextSize.textSize = currentFormat.textSize.toFloat()
 
         sbTextSize.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
                 "Text size $progress".also { tvTextSize.text = it }
                 tvTextSize.textSize = progress.toFloat()
-                s = progress.toFloat()
+                s = progress
             }
 
             override fun onStartTrackingTouch(seekBar: SeekBar) {}
@@ -762,10 +794,10 @@ class NoteDetailFragment : Fragment(), MenuProvider {
             tvTextSize.textSize = 18f
             tvTextSize.text = getString(R.string.text_size_18)
             sbTextSize.setProgress(18, true)
-            currentFormat.textSize = 18f
+            currentFormat.textSize = 18
         }
         tvOK.setOnClickListener {
-            binding.fontSize.setBackgroundColor(if (s == 18f) colorUncheck else colorChecked)
+            binding.fontSize.setBackgroundColor(if (s == 18) colorUncheck else colorChecked)
             dialog.dismiss()
             currentFormat = currentFormat.copy(textSize = s)
             Log.d("fontSize", currentFormat.textSize.toString())
@@ -776,105 +808,88 @@ class NoteDetailFragment : Fragment(), MenuProvider {
         dialog.show()
     }
 
-//    private fun applyFormatting(editText: EditText) {
-//        editText.addTextChangedListener(object : TextWatcher {
-//            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {
-//                // Xác định hành động xóa, thêm hoặc thay thế
-//                when {
-//                    count > 0 && after == 0 -> Log.d("TextWatcher", "Xóa ký tự hoặc đoạn văn bản")
-//                    count == 0 && after > 0 -> Log.d("TextWatcher", "Thêm ký tự hoặc đoạn văn bản")
-//                    count > 0 && after > 0 -> Log.d("TextWatcher", "Thay thế đoạn văn bản")
-//                }
-//            }
-//
-//            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
-//                // Theo dõi vị trí và số ký tự mới được thêm vào
-//                Log.d("TextWatcher", "Thay đổi từ vị trí $start, số ký tự: $count")
-//            }
-//
-//            override fun afterTextChanged(s: Editable?) {
-//                s?.let {
-//                    val start = editText.selectionStart // Vị trí con trỏ hiện tại
-//                    val newText = it.subSequence(start, editText.selectionEnd) // Ký tự hoặc đoạn văn bản mới bạn muốn thêm
-//
-//                    // Kiểm tra nếu start là vị trí hợp lệ
-//                    if (start >= 0 && start <= formattedTextSegments.length) {
-//                        // Chèn văn bản mới vào vị trí con trỏ
-//                        formattedTextSegments.insert(start, newText)
-//
-//                        // Áp dụng định dạng cho ký tự vừa thêm
-//                        val newTextStart = start // Vị trí bắt đầu của ký tự mới
-//                        val newTextEnd = newTextStart + newText.length // Vị trí kết thúc của ký tự mới
-//                        applyCurrentFormat(formattedTextSegments, newTextStart, newTextEnd) // Hàm để áp dụng định dạng
-//
-//                        // Cập nhật EditText
-//                        editText.removeTextChangedListener(this) // Tạm dừng TextWatcher để tránh vòng lặp
-//                        editText.text = formattedTextSegments // Cập nhật EditText với văn bản đã định dạng
-//                        editText.setSelection(newTextEnd) // Đặt con trỏ ở sau ký tự mới
-//                        editText.addTextChangedListener(this) // Kích hoạt lại TextWatcher
-//                    }
-//                }
-//
-//            }
-//        })
-//    }
     private fun applyFormatting(editText: EditText) {
         editText.addTextChangedListener(object : TextWatcher {
             var startPos = 0
             var previousText: String = ""
+            private var isFormatting = false
 
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {
-                // Lưu vị trí bắt đầu và kết thúc để sử dụng trong afterTextChanged
-                startPos = editText.selectionStart
+                if (isFormatting) return
+                startPos = start // Lưu vị trí bắt đầu của thay đổi
+                previousText = s.toString() // Lưu văn bản trước khi thay đổi
             }
 
-            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
-                // Không thực hiện gì trong onTextChanged để tránh vòng lặp
-            }
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
 
             override fun afterTextChanged(s: Editable?) {
                 s?.let {
-                    val endPos = editText.selectionEnd
-                    if (startPos < endPos) {
-                        val newText = it.subSequence(startPos, endPos)
-                        // Áp dụng định dạng hiện tại cho đoạn văn bản mới
-                        formattedTextSegments.append(newText)
-                        Log.d("textchangedlistener", "$it-$newText-$formattedTextSegments")
-                        applyCurrentFormat(formattedTextSegments, startPos, endPos)
+                    try {
+                        isFormatting = true
+                        val currentLength = it.length
+                        if (startPos < 0 || startPos >= currentLength) return@let
 
-                        // Cập nhật lại EditText
-                        editText.removeTextChangedListener(this)  // Tạm ngừng TextWatcher
-                        editText.text =
-                            formattedTextSegments     // Cập nhật lại EditText với định dạng đã áp dụng
-                        editText.setSelection(formattedTextSegments.length) // Đặt con trỏ ở cuối văn bản
+                        val endPos = startPos + (it.length - previousText.length)
+                        if (endPos < 0 || endPos > it.length) return@let
 
-                        undoRedoManager.addState(formattedTextSegments)
+                        val newText = it.subSequence(
+                            startPos.coerceAtMost(it.length),
+                            endPos.coerceAtMost(it.length)
+                        ).toString()
+                        applyCurrentFormat(it, startPos, endPos)
 
-                        editText.addTextChangedListener(this)     // Kích hoạt lại TextWatcher
+//                        for (i in newText.indices) {
+//                            val charStart = startPos + i
+//                            val charEnd = charStart + 1
+//
+//                            if (editText.selectionStart < editText.selectionEnd) {
+//                                insertTextAtCursorPosition(editText, newText)
+//                                Log.d("afterTextChanged", "insertTextAtCursorPosition:$editText/$newText")
+//                            } else {
+//                                applyCurrentFormat(it, charStart, charEnd)
+//                                Log.d("afterTextChanged", "applyCurrentFormat:$it/$charStart/$charEnd")
+//                            }
+//                        }
 
-                        Log.d("noteHistoryStack", "${undoRedoManager.history}")
-                        Log.d("textchangedlistener_later", "$s-$newText-$formattedTextSegments")
-                    } else if (endPos in 0..<startPos && startPos <= formattedTextSegments.length) {
-                        formattedTextSegments.delete(endPos, startPos)
+                        editText.setSelection(endPos)
+                        undoRedoManager.addState(SpannableStringBuilder(it))
 
-                        undoRedoManager.addState(SpannableStringBuilder(formattedTextSegments))
-                        Log.d("noteHistoryStack", "$${undoRedoManager.history}")
-                        Log.d(
-                            "textchangedlistener_delete",
-                            "$it-$startPos/$endPos-$formattedTextSegments"
-                        )
-                    } 
-                    val currentText = s.toString()
-                    if (currentText != previousText) {
-                        requireActivity().invalidateOptionsMenu()
+                        if (s.toString() != previousText) {
+                            requireActivity().invalidateOptionsMenu()
+                        }
+                    } finally {
+                        isFormatting = false
                     }
                 }
             }
         })
     }
 
+    // Hàm xử lý chèn văn bản vào giữa đoạn văn bản
+    fun insertTextAtCursorPosition(editText: EditText, insertText: String) {
+        val startPos = editText.selectionStart
+        val endPos = editText.selectionEnd
+        val currentText = editText.text as SpannableStringBuilder
+
+        // Xóa đoạn văn bản được chọn (nếu có)
+        currentText.delete(startPos, endPos)
+        Log.d("insertTextAtCursorPosition", "delete:$startPos-$endPos")
+
+        // Chèn văn bản mới vào vị trí con trỏ
+        currentText.insert(startPos, insertText)
+        Log.d("insertTextAtCursorPosition", "insert:$startPos-$insertText")
+
+        // Áp dụng định dạng ngay sau khi chèn
+        val newEndPos = startPos + insertText.length
+        applyCurrentFormat(currentText, startPos, newEndPos)
+        Log.d("insertTextAtCursorPosition", "applyCurrentFormat:$currentText/$startPos/$newEndPos")
+
+        // Đặt con trỏ vào cuối đoạn văn bản chèn
+        editText.setSelection(newEndPos)
+    }
+
     // Hàm mở rộng cho TextSegment để áp dụng định dạng vào Editable
-    private fun applyCurrentFormat(text: SpannableStringBuilder, start: Int, end: Int) {
+    private fun applyCurrentFormat(text: Editable, start: Int, end: Int) {
 
         val defautBackgroundColor =
             ContextCompat.getColor(requireContext(), R.color.transparent)
@@ -914,15 +929,11 @@ class NoteDetailFragment : Fragment(), MenuProvider {
                 currentFormat.textColor
             ), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
         )
-        if (currentFormat.textSize != 18f) text.setSpan(
-            AbsoluteSizeSpan(currentFormat.textSize.toInt()),
+        text.setSpan(
+            AbsoluteSizeSpan(currentFormat.textSize, true),
             start,
             end,
             Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
-        )
-        Log.d(
-            "current",
-            "Text: $text, isBold: ${currentFormat.isBold}, isItalic: ${currentFormat.isItalic}, isUnderline: ${currentFormat.isUnderline}, isStrikethrough: ${currentFormat.isStrikethrough}, background: ${currentFormat.backgroundColor}, textcolor: ${currentFormat.textColor}, textsize: ${currentFormat.textSize}"
         )
     }
 
@@ -955,7 +966,7 @@ class NoteDetailFragment : Fragment(), MenuProvider {
             val textColor = spannable.getSpans(start, end, ForegroundColorSpan::class.java)
                 .firstOrNull()?.foregroundColor ?: defaultTextColor
             val textSize = spannable.getSpans(start, end, AbsoluteSizeSpan::class.java)
-                .firstOrNull()?.size?.toFloat() ?: 18f
+                .firstOrNull()?.size ?: 18
 
             // Thêm vào danh sách TextSegment
             segments.add(
@@ -1035,7 +1046,7 @@ class NoteDetailFragment : Fragment(), MenuProvider {
                 }
                 textSize.let {
                     spannable.setSpan(
-                        AbsoluteSizeSpan(it?.toInt() ?: 18),
+                        AbsoluteSizeSpan(it ?: 18, true),
                         start,
                         end,
                         Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
@@ -1047,59 +1058,86 @@ class NoteDetailFragment : Fragment(), MenuProvider {
     }
 
     private fun updateCurrentFormatFromCursorPosition() {
-        val cursorPosition = binding.edtNote.selectionStart
-        if (cursorPosition > 0) {
+        val selectionStart = binding.edtNote.selectionStart
+        val selectionEnd = binding.edtNote.selectionEnd
+        if (selectionStart in 0..<selectionEnd) {
             val spannable = binding.edtNote.text as SpannableStringBuilder
 
-            // Lấy định dạng ở vị trí ngay trước con trỏ
-            val boldSpans =
-                spannable.getSpans(
-                    cursorPosition - 1,
-                    cursorPosition,
-                    StyleSpan::class.java
-                )
-            val colorSpans = spannable.getSpans(
-                cursorPosition - 1,
-                cursorPosition,
-                ForegroundColorSpan::class.java
-            )
-            val backgroundColorSpans = spannable.getSpans(
-                cursorPosition - 1,
-                cursorPosition,
-                BackgroundColorSpan::class.java
-            )
+            // Lấy các spans trong phạm vi vùng chọn
+            val boldSpans = spannable.getSpans(selectionStart, selectionEnd, StyleSpan::class.java)
+            val colorSpans =
+                spannable.getSpans(selectionStart, selectionEnd, ForegroundColorSpan::class.java)
+            val backgroundColorSpans =
+                spannable.getSpans(selectionStart, selectionEnd, BackgroundColorSpan::class.java)
             val underlineSpans =
-                spannable.getSpans(
-                    cursorPosition - 1,
-                    cursorPosition,
-                    UnderlineSpan::class.java
-                )
-            val strikethroughSpans = spannable.getSpans(
-                cursorPosition - 1,
-                cursorPosition,
-                StrikethroughSpan::class.java
-            )
+                spannable.getSpans(selectionStart, selectionEnd, UnderlineSpan::class.java)
+            val strikethroughSpans =
+                spannable.getSpans(selectionStart, selectionEnd, StrikethroughSpan::class.java)
             val sizeSpans =
-                spannable.getSpans(
-                    cursorPosition - 1,
-                    cursorPosition,
-                    AbsoluteSizeSpan::class.java
-                )
+                spannable.getSpans(selectionStart, selectionEnd, AbsoluteSizeSpan::class.java)
 
-            // Đặt lại currentFormat với các thuộc tính lấy được
+            // Kiểm tra định dạng chung trong toàn bộ vùng chọn
+            val isBold = boldSpans.all { it.style == Typeface.BOLD }
+            val isItalic = boldSpans.all { it.style == Typeface.ITALIC }
+            val isUnderline =
+                underlineSpans.isNotEmpty() && underlineSpans.size == spannable.getSpans(
+                    selectionStart,
+                    selectionEnd,
+                    UnderlineSpan::class.java
+                ).size
+            val isStrikethrough =
+                strikethroughSpans.isNotEmpty() && strikethroughSpans.size == spannable.getSpans(
+                    selectionStart,
+                    selectionEnd,
+                    StrikethroughSpan::class.java
+                ).size
+
+            val textColor = colorSpans.firstOrNull()?.foregroundColor ?: currentFormat.textColor
+            val backgroundColor =
+                backgroundColorSpans.firstOrNull()?.backgroundColor ?: currentFormat.backgroundColor
+            val textSize = sizeSpans.firstOrNull()?.size ?: currentFormat.textSize
+
+            // Cập nhật currentFormat với các thuộc tính lấy được
+            currentFormat = currentFormat.copy(
+                isBold = isBold,
+                isItalic = isItalic,
+                isUnderline = isUnderline,
+                isStrikethrough = isStrikethrough,
+                textColor = textColor,
+                backgroundColor = backgroundColor,
+                textSize = textSize
+            )
+        } else {
+            val spannable = binding.edtNote.text as SpannableStringBuilder
+
+            // Lấy định dạng ngay tại vị trí con trỏ
+            val boldSpans =
+                spannable.getSpans(selectionStart, selectionStart, StyleSpan::class.java)
+            val colorSpans =
+                spannable.getSpans(selectionStart, selectionStart, ForegroundColorSpan::class.java)
+            val backgroundColorSpans =
+                spannable.getSpans(selectionStart, selectionStart, BackgroundColorSpan::class.java)
+            val underlineSpans =
+                spannable.getSpans(selectionStart, selectionStart, UnderlineSpan::class.java)
+            val strikethroughSpans =
+                spannable.getSpans(selectionStart, selectionStart, StrikethroughSpan::class.java)
+            val sizeSpans =
+                spannable.getSpans(selectionStart, selectionStart, AbsoluteSizeSpan::class.java)
+
+            // Cập nhật currentFormat với các thuộc tính tìm thấy
             currentFormat = currentFormat.copy(
                 isBold = boldSpans.isNotEmpty() && boldSpans[0].style == Typeface.BOLD,
                 isItalic = boldSpans.isNotEmpty() && boldSpans[0].style == Typeface.ITALIC,
                 isUnderline = underlineSpans.isNotEmpty(),
                 isStrikethrough = strikethroughSpans.isNotEmpty(),
-                textColor = colorSpans.firstOrNull()?.foregroundColor
-                    ?: currentFormat.textColor,
+                textColor = colorSpans.firstOrNull()?.foregroundColor ?: currentFormat.textColor,
                 backgroundColor = backgroundColorSpans.firstOrNull()?.backgroundColor
                     ?: currentFormat.backgroundColor,
-                textSize = (sizeSpans.firstOrNull()?.size
-                    ?: currentFormat.textSize) as Float
+                textSize = sizeSpans.firstOrNull()?.size ?: currentFormat.textSize
             )
         }
+
+        Log.d("currentFormat", currentFormat.toString())
     }
 
     // Hàm kiểm tra định dạng của đoạn mới với đoạn cuối trong stack

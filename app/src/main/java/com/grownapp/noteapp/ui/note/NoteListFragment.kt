@@ -98,10 +98,11 @@ class NoteListFragment : Fragment(), MenuProvider {
                 NoteListFragmentDirections.actionNoteListFragmentToNoteDetailFragment(it.noteId)
             findNavController().navigate(action)
         }, onLongClickNote = {
-            startEditMode(it, !isEditMode)
+            startEditMode(!isEditMode)
         },
             listNoteSelectedAdapter = listNoteSelected,
-            updateCountCallback = { updateCountNoteSeleted() }
+            updateCountCallback = { updateCountNoteSeleted() },
+            getCategoryOfNote = { noteId -> noteViewModel.getCategoryOfNote(noteId) }
         )
 
         binding.rcvNoteList.layoutManager = LinearLayoutManager(requireContext())
@@ -137,7 +138,7 @@ class NoteListFragment : Fragment(), MenuProvider {
         tvCountSeleted?.text = listNoteSelected.size.toString()
     }
 
-    private fun startEditMode(note: Note, isVisible: Boolean) {
+    private fun startEditMode(isVisible: Boolean) {
         isEditMode = isVisible
         val toolbar = requireActivity().findViewById<Toolbar>(R.id.toolbar)
         val btnSearch = toolbar.findViewById<View>(R.id.item_search)
@@ -166,8 +167,9 @@ class NoteListFragment : Fragment(), MenuProvider {
 
             toolbar.setNavigationIcon(R.drawable.back)
             toolbar.setNavigationOnClickListener {
-                startEditMode(note, false)
+                startEditMode(false)
                 noteAdapter.exitEditMode()
+                binding.fab.visibility = View.VISIBLE
                 tvCountSeleted?.visibility = View.GONE
                 imgDelete?.visibility = View.GONE
                 imgSelectAll?.visibility = View.GONE
@@ -195,13 +197,7 @@ class NoteListFragment : Fragment(), MenuProvider {
             }
 
             imgDelete.setOnClickListener {
-                listNoteSelected.forEach {
-                    if (isOnTrash) {
-                        noteViewModel.pushInTrash(true, it.noteId)
-                    } else {
-                        noteViewModel.delete(it.noteId)
-                    }
-                }
+                showDialogDelete()
             }
         } else {
             btnSearch?.visibility = View.VISIBLE
@@ -213,6 +209,37 @@ class NoteListFragment : Fragment(), MenuProvider {
                 toolbar.removeView(noteLayout)
             }
         }
+    }
+
+    private fun showDialogDelete() {
+        val dialogView = layoutInflater.inflate(R.layout.delete_dialog, null)
+        val deleteLog = dialogView.findViewById<TextView>(R.id.delete_log)
+        val btnDelete = dialogView.findViewById<TextView>(R.id.btnDelete)
+        val btnCancel = dialogView.findViewById<TextView>(R.id.btnCancel)
+
+        val dialog = android.app.AlertDialog.Builder(requireContext()).setView(dialogView).create()
+
+        deleteLog.text = buildString {
+            append("Delete the selected notes?")
+        }
+
+        btnCancel.setOnClickListener {
+            dialog.dismiss()
+        }
+        btnDelete.setText("OK")
+
+        btnDelete.setOnClickListener {
+            listNoteSelected.forEach {
+                if (isOnTrash) {
+                    noteViewModel.pushInTrash(true, it.noteId)
+                } else {
+                    noteViewModel.delete(it.noteId)
+                }
+            }
+            startEditMode(false)
+            dialog.dismiss()
+        }
+        dialog.show()
     }
 
     private fun addNote(categoryId: Int?) {
@@ -405,7 +432,7 @@ class NoteListFragment : Fragment(), MenuProvider {
         popupMenu.setOnMenuItemClickListener { menuItem ->
             when (menuItem.itemId) {
                 R.id.select_all_notes -> {
-                    startEditMode(Note(), true)
+                    startEditMode(true)
                     noteAdapter.selectAllNotes()
                     true
                 }
@@ -472,6 +499,8 @@ class NoteListFragment : Fragment(), MenuProvider {
             }
             Toast.makeText(requireContext(), "Update categories", Toast.LENGTH_SHORT).show()
             dialog.dismiss()
+            noteAdapter.exitEditMode()
+            startEditMode(false)
         }
         dialog.show()
     }

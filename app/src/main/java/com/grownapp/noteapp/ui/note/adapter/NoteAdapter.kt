@@ -9,8 +9,12 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.LiveData
 import androidx.recyclerview.widget.RecyclerView
+import com.google.gson.Gson
 import com.grownapp.noteapp.R
+import com.grownapp.noteapp.ui.categories.dao.Category
+import com.grownapp.noteapp.ui.note.NoteContent
 import com.grownapp.noteapp.ui.note.dao.Note
 
 class NoteAdapter(
@@ -18,7 +22,8 @@ class NoteAdapter(
     private val onLongClickNote: (Note) -> Unit,
     private var hideCreated: (Boolean) = true,
     private var listNoteSelectedAdapter: (MutableList<Note>),
-    private val updateCountCallback: () -> Unit
+    private val updateCountCallback: () -> Unit,
+    private val getCategoryOfNote: (Int) -> LiveData<List<Category>>
 ) : RecyclerView.Adapter<NoteAdapter.NoteViewHolder>() {
 
     private var noteList = listOf<Note>()
@@ -27,11 +32,32 @@ class NoteAdapter(
     inner class NoteViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         @SuppressLint("SetTextI18n")
         fun bind(note: Note) {
-            title.text = if (note.title.isNullOrEmpty()) "Untitled" else note.title
-//            content.text = note.note?.let { stripFormatting(it) }
+            if (note.title != null && note.title != "") {
+                title.text = note.title
+                title.visibility = View.VISIBLE
+            } else {
+                if (note.note != null && note.note != "") {
+                    val plainText =
+                        noteContentToPlainText(Gson().fromJson(note.note, NoteContent::class.java))
+                    content.text = plainText
+                    content.visibility = View.VISIBLE
+                    title.visibility = View.GONE
+                } else {
+                    content.visibility = View.GONE
+                }
+            }
+
+            getCategoryOfNote(note.noteId).observeForever { categoryList ->
+                if (!categoryList.isNullOrEmpty()) {
+                    noteCategory.visibility = View.VISIBLE
+                    val categoryName = categoryList.joinToString(", ") { it.name }
+                    noteCategory.text = categoryName
+                } else {
+                    noteCategory.visibility = View.GONE
+                }
+            }
             noteTime.text =
                 if (hideCreated) "Last edit: ${note.timeLastEdit}" else "Created: ${note.timeCreate}"
-
             itemView.apply {
                 val isSelected = isEditMode && listNoteSelectedAdapter.contains(note)
                 updateBackground(this, note, isSelected)
@@ -74,6 +100,7 @@ class NoteAdapter(
         private val title: TextView = itemView.findViewById(R.id.noteTitle)
         private val content: TextView = itemView.findViewById(R.id.noteContent)
         private val noteTime: TextView = itemView.findViewById(R.id.noteTime)
+        private val noteCategory: TextView = itemView.findViewById(R.id.noteCategory)
 
         // Hàm trộn màu
         private fun blendColors(color1: Int, color2: Int): Int {
@@ -121,9 +148,16 @@ class NoteAdapter(
                     // Nếu có màu nền, trộn màu giữa note và long click background
                     val longClickColor =
                         ContextCompat.getColor(view.context, R.color.bottomBackgroundColorLongClick)
+                    val white =
+                        ContextCompat.getColor(view.context, R.color.topBackgroundItem)
                     val blendedColor = blendColors(longClickColor, note.backgroundColor!!)
-                    drawable.colors = intArrayOf(Color.WHITE, blendedColor)
-                    view.background = drawable
+                    drawable.colors = intArrayOf(white, blendedColor)
+                    view.background = ContextCompat.getDrawable(
+                        view.context,
+                        R.drawable.long_click_item_background
+                    ).apply {
+                        (this as GradientDrawable).colors = drawable.colors
+                    }
                 }
             } else {
                 // Khi không chọn
@@ -132,10 +166,20 @@ class NoteAdapter(
                     view.setBackgroundResource(R.drawable.border_item_note)
                 } else {
                     // Nếu có màu nền, tạo gradient từ white đến màu của note
-                    drawable.colors = intArrayOf(Color.WHITE, note.backgroundColor!!)
+                    val white =
+                        ContextCompat.getColor(view.context, R.color.topBackgroundItem)
+                    drawable.colors = intArrayOf(white, note.backgroundColor!!)
                     view.background = drawable
                 }
             }
+        }
+
+        private fun noteContentToPlainText(noteContent: NoteContent): String {
+            val plainTextBuilder = StringBuilder()
+            for (segment in noteContent.segments) {
+                plainTextBuilder.append(segment.text)
+            }
+            return plainTextBuilder.toString()
         }
 
     }
@@ -176,7 +220,4 @@ class NoteAdapter(
         updateCountCallback()
         notifyDataSetChanged() // Gọi lại callback để cập nhật giao diện
     }
-    // TODO: Thêm replace backgroundColor trong room và đặt màu chỉ cho danh sách item chọn chứ k phải all
-    // TODO: xem lại cách trộn màu khi item có màu nền khác null (khi click và longclick)
-    // TODO: khi tìm kiếm thì cập nhật ui của noteItem
 }

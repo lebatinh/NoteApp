@@ -15,9 +15,9 @@ data class Note(
     var timeLastEdit: String? = getCurrentTime(),
     var onTrash: Boolean? = false,
     var backgroundColor: Int? = null
-){
-    companion object{
-        fun getCurrentTime():String{
+) {
+    companion object {
+        fun getCurrentTime(): String {
             val currentDateTime = Date()
             val dateFormat = SimpleDateFormat("dd/MM/yyyy, hh:mm a", Locale.getDefault())
             val time = dateFormat.format(currentDateTime)
