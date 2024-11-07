@@ -298,6 +298,7 @@ class NoteDetailFragment : Fragment(), MenuProvider {
                 }
 
                 R.id.colorize -> {
+                    dialogPickBackgroundColor()
                     true
                 }
 
@@ -330,6 +331,90 @@ class NoteDetailFragment : Fragment(), MenuProvider {
 
         // Hiển thị PopupMenu
         popupMenu.show()
+    }
+
+    private fun dialogPickBackgroundColor() {
+        val dialogView = layoutInflater.inflate(R.layout.pick_color, null)
+        val tvColor = dialogView.findViewById<TextView>(R.id.tvColor)
+        val gridlayoutColor = dialogView.findViewById<GridLayout>(R.id.gridlayoutColor)
+        val tvOpacity = dialogView.findViewById<TextView>(R.id.tvOpacity)
+        val sbPercentOpacity = dialogView.findViewById<SeekBar>(R.id.sbPercentOpacity)
+        val btnRemoveColor = dialogView.findViewById<Button>(R.id.btnRemoveColor)
+        val tvOK = dialogView.findViewById<TextView>(R.id.tvOK)
+        val tvCancel = dialogView.findViewById<TextView>(R.id.tvCancel)
+
+        val dialog = androidx.appcompat.app.AlertDialog.Builder(requireContext()).setView(dialogView).create()
+
+        tvOpacity.visibility = View.GONE
+        sbPercentOpacity.visibility = View.GONE
+        var colorFillBackground = ContextCompat.getColor(requireContext(), R.color.transparent)
+        tvColor.setBackgroundColor(colorFillBackground)
+
+        btnRemoveColor.setOnClickListener {
+            colorFillBackground = ContextCompat.getColor(requireContext(), R.color.transparent)
+            tvColor.setBackgroundColor(colorFillBackground)
+
+            for (i in 0 until gridlayoutColor.childCount) {
+                val childView = gridlayoutColor.getChildAt(i) as? TextView
+                childView?.text = null
+            }
+        }
+
+        dialogView.viewTreeObserver.addOnGlobalLayoutListener(object :
+            ViewTreeObserver.OnGlobalLayoutListener {
+            override fun onGlobalLayout() {
+                val dialogWidth = dialogView.width
+                val itemWidth = dialogWidth / 6
+                gridlayoutColor.removeAllViews()
+                gridlayoutColor.columnCount = 6
+
+                for (color in ColorPicker().colorBackgroundItem) {
+                    val colorView = TextView(requireContext()).apply {
+                        setBackgroundColor(Color.parseColor(color))
+                        layoutParams = GridLayout.LayoutParams().apply {
+                            width = itemWidth
+                            height = itemWidth
+                        }
+                        gravity = Gravity.CENTER
+                        text = null
+                        textSize = 30f
+                    }
+                    colorView.setOnClickListener {
+                        val parseColor = Color.parseColor(color)
+
+                        colorFillBackground = parseColor
+
+                        // Cập nhật `tvColor` với màu được chọn
+                        tvColor.setBackgroundColor(colorFillBackground)
+
+                        for (i in 0 until gridlayoutColor.childCount) {
+                            val childView = gridlayoutColor.getChildAt(i) as? TextView
+                            childView?.text = null
+                            childView?.setBackgroundColor(Color.parseColor(ColorPicker().colorBackgroundItem[i]))
+
+                        }
+
+                        "+".also { colorView.text = it }
+
+                        colorView.setBackgroundColor(parseColor)
+                    }
+
+                    gridlayoutColor.addView(colorView)
+                }
+                dialogView.viewTreeObserver.removeOnGlobalLayoutListener(this)
+            }
+        })
+        tvOK.setOnClickListener {
+            noteViewModel.updateBackgroundColor(
+                listOf(noteId),
+                colorFillBackground
+            )
+            dialog.dismiss()
+        }
+        tvCancel.setOnClickListener {
+            dialog.dismiss()
+        }
+        dialog.show()
     }
 
     private fun toggleSearchToolbar(isVisible: Boolean) {
