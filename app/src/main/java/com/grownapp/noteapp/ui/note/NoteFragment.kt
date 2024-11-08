@@ -1,11 +1,13 @@
 package com.grownapp.noteapp.ui.note
 
 import android.content.Context
+import android.content.Intent
 import android.content.SharedPreferences
 import android.graphics.Color
 import android.graphics.Typeface
 import android.net.Uri
 import android.os.Bundle
+import android.provider.DocumentsContract
 import android.text.SpannableStringBuilder
 import android.text.style.AbsoluteSizeSpan
 import android.text.style.BackgroundColorSpan
@@ -30,7 +32,6 @@ import android.widget.SeekBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.activity.result.contract.ActivityResultContracts.CreateDocument
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.widget.PopupMenu
 import androidx.appcompat.widget.SearchView
@@ -77,7 +78,7 @@ class NoteFragment : Fragment(), MenuProvider {
     private var isOnTrash = true
     private var isEditMode = false
     private lateinit var listNoteSelected: MutableList<Note>
-
+    private var selectedDirectoryUri: Uri? = null
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -432,10 +433,8 @@ class NoteFragment : Fragment(), MenuProvider {
 
                 R.id.export_notes_to_text_files -> {
                     checkAndRequestPermissions {
-                        exportNotesToFiles()
+                        openDirectoryChooser()
                     }
-                    listNoteSelected.clear()
-                    noteAdapter.exitEditMode()
                     isEditMode = false
                     startEditMode(false)
                     true
@@ -459,18 +458,100 @@ class NoteFragment : Fragment(), MenuProvider {
         popupMenu.show()
     }
 
-    private val createFileLauncher =
-        registerForActivityResult(CreateDocument("todo/todo")) { uri: Uri? ->
+    private fun checkAndRequestPermissions(action: () -> Unit) {
+        action()
+    }
+
+    // Đăng ký launcher để chọn thư mục
+    private val selectDirectoryLauncher =
+        registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri: Uri? ->
             uri?.let {
-                // Khi tệp đã được chọn, lưu nội dung vào tệp
-                saveNotesToFile(it)
+                // Lưu Uri của thư mục để sử dụng sau
+                selectedDirectoryUri = it
+                Log.d("selectedDirectoryUri", "$selectedDirectoryUri")
+                val takeFlags =
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                requireContext().contentResolver.takePersistableUriPermission(it, takeFlags)
+
+                // Gọi hàm lưu nhiều tệp vào thư mục đã chọn
+                exportNotesToDirectory()
             }
         }
 
-    // Đăng ký launcher để mở cửa sổ lưu tệp (CreateDocument)
-    private fun openSaveFileDialog(fileName: String) {
-        // Mở cửa sổ để người dùng chọn nơi lưu tệp
-       createFileLauncher.launch(fileName)
+    // Mở hộp thoại chọn thư mục
+    private fun openDirectoryChooser() {
+        selectDirectoryLauncher.launch(null)
+    }
+
+    // Hàm xuất ghi chú đã chọn vào thư mục (sử dụng Uri đã lưu)
+    private fun exportNotesToDirectory() {
+        val directoryUri = selectedDirectoryUri
+        if (directoryUri == null) {
+            Toast.makeText(requireContext(), "Chưa chọn thư mục", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        if (listNoteSelected.isNotEmpty()) {
+            listNoteSelected.forEach { note ->
+                val noteContent = note.note ?: ""
+                if (noteContent.isNotBlank()) {
+                    val fileTitle = note.title ?: "Untitled"
+                    val fileName = "$fileTitle.txt"
+
+                    // Tạo Uri cho file trong thư mục đã chọn
+                    val fileUri = createFileInDirectory(directoryUri, fileName)
+                    fileUri?.let {
+                        saveToFile(it, noteContent) // Lưu nội dung ghi chú vào file đã tạo
+                    }
+                }
+            }
+        } else {
+            Toast.makeText(requireContext(), "Không có ghi chú nào được chọn", Toast.LENGTH_SHORT)
+                .show()
+        }
+        listNoteSelected.clear()
+        noteAdapter.exitEditMode()
+    }
+
+    // Hàm tạo Uri của tệp trong thư mục đã chọn
+    private fun createFileInDirectory(directoryUri: Uri, fileName: String): Uri? {
+        val documentUri = DocumentsContract.buildDocumentUriUsingTree(
+            directoryUri,
+            DocumentsContract.getTreeDocumentId(directoryUri)
+        )
+        return try {
+            DocumentsContract.createDocument(
+                requireContext().contentResolver,
+                documentUri,
+                "text/plain",
+                fileName
+            )
+        } catch (e: Exception) {
+            Toast.makeText(requireContext(), "Lỗi khi tạo tệp: ${e.message}", Toast.LENGTH_SHORT)
+                .show()
+            null
+        }
+    }
+
+    private fun saveToFile(uri: Uri, content: String) {
+        try {
+            requireContext().contentResolver.openOutputStream(uri)?.use { outputStream ->
+                outputStream.write(content.toByteArray())
+                Toast.makeText(
+                    requireContext(),
+                    "Tệp đã được lưu: ${uri.lastPathSegment}",
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+        } catch (e: Exception) {
+            Toast.makeText(requireContext(), "Lỗi khi lưu tệp: ${e.message}", Toast.LENGTH_SHORT)
+                .show()
+        }
+    }
+
+    // Nhập các ghi chú từ tệp
+    private fun importNotesFromFiles() {
+        openFileLauncher.launch(arrayOf("text/plain")) // Mở cửa sổ chọn tệp
     }
 
     // Đăng ký launcher để mở cửa sổ chọn tệp (OpenDocument)
@@ -481,46 +562,27 @@ class NoteFragment : Fragment(), MenuProvider {
             }
         }
 
-    // Lưu nội dung vào tệp người dùng đã chọn
-    private fun saveNotesToFile(uri: Uri) {
-        listNoteSelected.forEach { note ->
-            // Tạo tên tệp cho từng ghi chú
-            val fileTitle = note.title ?: "Untitled"
-            val fileName = "$fileTitle.txt"
-
-            // Mở cửa sổ lưu tệp cho từng ghi chú
-            openSaveFileDialog(fileName)
-
-            // Sau khi tệp được chọn, ta sẽ gọi hàm saveToFile với nội dung của từng ghi chú
-            val noteContent = note.note ?: ""
-
-            // Lưu nội dung ghi chú vào tệp đã chọn
-            saveToFile(uri, noteContent)
-        }
-    }
-    // Lưu nội dung vào tệp người dùng đã chọn
-    private fun saveToFile(uri: Uri, content: String) {
-        try {
-            // Tạo nội dung cần lưu vào tệp
-            context?.contentResolver?.openOutputStream(uri)?.use { outputStream ->
-                outputStream.write(content.toByteArray())
-                Toast.makeText(requireContext(), "Tệp đã được lưu", Toast.LENGTH_SHORT).show()
-            }
-        } catch (e: Exception) {
-            Toast.makeText(requireContext(), "Lỗi khi lưu tệp: ${e.message}", Toast.LENGTH_SHORT)
-                .show()
-        }
-    }
-
     // Đọc nội dung tệp người dùng chọn và lưu vào database
     private fun importFile(uri: Uri) {
         try {
             context?.contentResolver?.openInputStream(uri)?.use { inputStream ->
-                val content = inputStream.bufferedReader().use { it.readText() }
+                val content = inputStream.bufferedReader().use { it.readText() }.trimIndent()
+
+                Log.d("content", content)
+
+                // Xử lý tên tệp, chỉ lấy phần tên tệp không có đường dẫn và phần mở rộng
+                val fileName = uri.lastPathSegment?.substringAfterLast('/') // Lấy phần tên cuối cùng sau dấu "/"
+                    ?.substringBeforeLast(".txt") // Loại bỏ phần mở rộng .txt
+
                 // Tiến hành xử lý nội dung tệp
-                val text =  SpannableStringBuilder(content)
+                val text = SpannableStringBuilder(content)
                 val spannableContent = spannableToNoteContent(text)
-                val note = Note(title = uri.lastPathSegment, note = Gson().toJson(spannableContent))
+                // Tạo đối tượng Note với title là tên tệp
+                val note = Note(
+                    title = fileName ?: "Untitled", // Dùng tên file đã xử lý hoặc "Untitled" nếu null
+                    note = Gson().toJson(spannableContent)
+                )
+                Log.d("JSON Debug", "JSON khi lưu: ${Gson().toJson(spannableContent)}")
                 // Lưu vào Room hoặc xử lý tiếp
                 viewLifecycleOwner.lifecycleScope.launch {
                     noteViewModel.insert(note) {}
@@ -540,34 +602,6 @@ class NoteFragment : Fragment(), MenuProvider {
         }
     }
 
-    // Hàm để xuất các ghi chú được chọn vào tệp
-    private fun exportNotesToFiles() {
-        // Kiểm tra xem có ghi chú nào được chọn không
-        if (listNoteSelected.isNotEmpty()) {
-            // Gọi hàm lưu tệp cho từng ghi chú
-            listNoteSelected.forEach { note ->
-                val noteContent = note.note ?: ""
-                if (noteContent.isNotBlank()) {
-                    val fileTitle = note.title ?: "Untitled"
-                    val fileName = "$fileTitle.txt"
-
-                    // Mở cửa sổ lưu tệp và truyền vào tên tệp và nội dung ghi chú
-                    openSaveFileDialog(fileName)
-                }
-            }
-        } else {
-            Toast.makeText(requireContext(), "Không có ghi chú nào được chọn", Toast.LENGTH_SHORT).show()
-        }
-    }
-
-    // Nhập các ghi chú từ tệp
-    private fun importNotesFromFiles() {
-        openFileLauncher.launch(arrayOf("text/plain")) // Mở cửa sổ chọn tệp
-    }
-
-    private fun checkAndRequestPermissions(action: () -> Unit) {
-        action()
-    }
 
     private fun dialogPickColor() {
         val dialogView = layoutInflater.inflate(R.layout.pick_color, null)

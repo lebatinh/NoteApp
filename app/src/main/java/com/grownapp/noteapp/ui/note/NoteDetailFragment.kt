@@ -108,7 +108,7 @@ class NoteDetailFragment : Fragment(), MenuProvider {
 
                 val startColor = note.backgroundColor
                 val endColor = Color.WHITE
-                if (startColor!= null && startColor != 0){
+                if (startColor != null && startColor != 0) {
 
                     // Tạo GradientDrawable với hai màu
                     val gradientDrawable = GradientDrawable(
@@ -118,7 +118,9 @@ class NoteDetailFragment : Fragment(), MenuProvider {
                     gradientDrawable.setStroke(0, Color.TRANSPARENT)
 
                     // Tải drawable `background_add_note` từ tài nguyên
-                    val borderDrawable = ContextCompat.getDrawable(requireContext(), R.drawable.background_add_note)?.mutate()
+                    val borderDrawable =
+                        ContextCompat.getDrawable(requireContext(), R.drawable.background_add_note)
+                            ?.mutate()
                     (borderDrawable as? GradientDrawable)?.setColor(Color.TRANSPARENT)
                     val layerDrawable = LayerDrawable(arrayOf(gradientDrawable, borderDrawable))
 
@@ -126,8 +128,9 @@ class NoteDetailFragment : Fragment(), MenuProvider {
 
                     val toolbar = requireActivity().findViewById<Toolbar>(R.id.toolbar)
                     toolbar.setBackgroundColor(startColor)
-                }else{
-                    binding.fragmentNoteDetail.background= ContextCompat.getDrawable(requireContext(), R.drawable.background_add_note)
+                } else {
+                    binding.fragmentNoteDetail.background =
+                        ContextCompat.getDrawable(requireContext(), R.drawable.background_add_note)
                 }
 
                 if (it.note != null) {
@@ -137,6 +140,7 @@ class NoteDetailFragment : Fragment(), MenuProvider {
                             NoteContent::class.java
                         )
                     )
+                    Log.d("JSON Debug", "JSON khi đọc từ DB: ${note.note}")
                     formattedTextSegments =
                         noteContentToSpannable(Gson().fromJson(note.note, NoteContent::class.java))
                 } else {
@@ -178,7 +182,12 @@ class NoteDetailFragment : Fragment(), MenuProvider {
         super.onDestroyView()
         (activity as MainActivity).setupDefaultToolbar()
         val toolbar = requireActivity().findViewById<Toolbar>(R.id.toolbar)
-        toolbar.setBackgroundColor(ContextCompat.getColor(requireContext(), R.color.topBarBackgroundLight))
+        toolbar.setBackgroundColor(
+            ContextCompat.getColor(
+                requireContext(),
+                R.color.topBarBackgroundLight
+            )
+        )
         _binding = null
     }
 
@@ -232,7 +241,7 @@ class NoteDetailFragment : Fragment(), MenuProvider {
     }
 
     private fun saveNote() {
-        val spannableText = binding.edtNote.text as SpannableStringBuilder
+        val spannableText = SpannableStringBuilder(binding.edtNote.text)
         val noteContent = spannableToNoteContent(spannableText)
 
         Log.d("noteContent", noteContent.toString())
@@ -833,9 +842,14 @@ class NoteDetailFragment : Fragment(), MenuProvider {
                 currentFormat = currentFormat.copy(backgroundColor = colorFillBackground)
                 Log.d("backgroundColor", colorFillBackground.toString())
             } else {
-                if (isTextColorRemoved){
-                    binding.fillColorText.setBackgroundColor(ContextCompat.getColor(requireContext(), R.color.transparent))
-                }else{
+                if (isTextColorRemoved) {
+                    binding.fillColorText.setBackgroundColor(
+                        ContextCompat.getColor(
+                            requireContext(),
+                            R.color.transparent
+                        )
+                    )
+                } else {
                     binding.fillColorText.setBackgroundColor(colorFillTextColor)
                 }
                 currentFormat = currentFormat.copy(textColor = colorFillTextColor)
@@ -898,64 +912,66 @@ class NoteDetailFragment : Fragment(), MenuProvider {
         editText.addTextChangedListener(object : TextWatcher {
             var startPos = 0
             var previousText: String = ""
-            var isUpdatingText = false
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {
-                if (!isUpdatingText) {
-                    startPos = start // Lưu vị trí bắt đầu thay đổi
-                    previousText = s.toString() // Lưu lại văn bản trước khi thay đổi
-                }
+                // Lưu vị trí bắt đầu và kết thúc để sử dụng trong afterTextChanged
+                startPos = editText.selectionStart
             }
 
-            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
-                // Không cần xử lý tại đây
-            }
+            override fun onTextChanged(
+                s: CharSequence?, // Văn bản hiện tại trong EditText tại thời điểm thay đổi
+                start: Int, // Vị trí bắt đầu thay đổi trong văn bản
+                before: Int, // Số lượng ký tự bị thay thế hoặc bị xóa. Nếu before > 0, có ký tự bị xóa đi
+                count: Int // Số lượng ký tự mới được thêm vào. Nếu count > 0, có ký tự mới được thêm vào tại vị trí start.
+            ) {}
 
             override fun afterTextChanged(s: Editable?) {
-                if (isUpdatingText) return
-                isUpdatingText = true
                 s?.let {
-                    val newTextLength = it.length
-                    if (startPos < 0 || startPos >= newTextLength) {
-                        isUpdatingText = false
-                        return@let
+                    val endPos = editText.selectionEnd
+                    if (startPos < endPos) {
+                        val newText = it.subSequence(startPos, endPos)
+                        // Áp dụng định dạng hiện tại cho đoạn văn bản mới
+                        formattedTextSegments.insert(startPos, newText)
+                        Log.d("textchangedlistener", "$it-$newText-$formattedTextSegments")
+                        applyCurrentFormat(formattedTextSegments, startPos, endPos)
+
+                        // Cập nhật lại EditText
+                        editText.removeTextChangedListener(this)  // Tạm ngừng TextWatcher
+                        editText.text = formattedTextSegments     // Cập nhật lại EditText với định dạng đã áp dụng
+                        editText.setSelection(startPos +newText.length) // Đặt con trỏ ở cuối văn bản
+
+                        undoRedoManager.addState(formattedTextSegments)
+
+                        editText.addTextChangedListener(this)     // Kích hoạt lại TextWatcher
+
+                        Log.d("noteHistoryStack", "${undoRedoManager.history}")
+                        Log.d("textchangedlistener_later", "$s-$newText-$formattedTextSegments")
+                    } else if (startPos > endPos) {
+                        formattedTextSegments.delete(endPos, startPos)
+
+                        undoRedoManager.addState(SpannableStringBuilder(formattedTextSegments))
+                        Log.d("noteHistoryStack", "$${undoRedoManager.history}")
+                        Log.d(
+                            "textchangedlistener_delete",
+                            "$it-$startPos/$endPos-$formattedTextSegments"
+                        )
+                        editText.removeTextChangedListener(this)  // Tạm ngừng TextWatcher
+                        editText.text = formattedTextSegments     // Cập nhật lại EditText
+                        editText.setSelection(endPos)            // Đặt con trỏ đúng vị trí sau khi xóa
+
+                        editText.addTextChangedListener(this)
                     }
-
-                    // Tính toán vị trí cuối của đoạn văn bản thay đổi
-                    val endPos = startPos + (it.length - previousText.length).coerceAtLeast(0)
-
-                    // Lấy đoạn văn bản vừa được thay đổi
-                    val newText = it.subSequence(
-                        startPos.coerceAtMost(it.length),
-                        endPos.coerceAtMost(it.length)
-                    ).toString()
-
-                    // Chèn văn bản mới và áp dụng định dạng
-                    insertTextWithFormatting(editText, newText, startPos, endPos)
-                    Log.d("afterTextChanged", "insertTextAtCursorPosition:${editText.text}/$newText")
-                    // Đặt lại vị trí con trỏ sau khi hoàn thành
-                    editText.setSelection((startPos + newText.length).coerceAtMost(it.length))
+                    val currentText = s.toString()
+                    if (currentText != previousText) {
+                        requireActivity().invalidateOptionsMenu()
+                    }
                 }
-                isUpdatingText = false
             }
         })
     }
 
-    // Hàm xử lý chèn văn bản vào giữa đoạn văn bản và định dạng
-    fun insertTextWithFormatting(editText: EditText, insertText: String, start: Int, end: Int) {
-        val spannableText = editText.text as SpannableStringBuilder
-
-        // Xóa đoạn văn bản cũ trong phạm vi thay đổi
-        spannableText.delete(start, end)
-
-        // Chèn văn bản mới tại vị trí con trỏ
-        spannableText.insert(start, insertText)
-
-        // Áp dụng định dạng cho văn bản vừa chèn
-        applyCurrentFormat(spannableText, start, start + insertText.length)
-    }
-
+    // TODO: còn lỗi thay thế bị lỗi chữ đầu luôn bị sai thanh chữ đầu của văn bản bị xóa trước đó
     // Hàm mở rộng cho TextSegment để áp dụng định dạng vào Editable
-    private fun applyCurrentFormat(text: Editable, start: Int, end: Int) {
+    private fun applyCurrentFormat(text: SpannableStringBuilder, start: Int, end: Int) {
 
         val defautBackgroundColor =
             ContextCompat.getColor(requireContext(), R.color.transparent)
