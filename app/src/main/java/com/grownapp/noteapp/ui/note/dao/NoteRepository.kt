@@ -2,13 +2,11 @@ package com.grownapp.noteapp.ui.note.dao
 
 import androidx.lifecycle.LiveData
 import com.grownapp.noteapp.ui.categories.dao.Category
-import com.grownapp.noteapp.ui.categories.dao.CategoryDao
 import com.grownapp.noteapp.ui.note_category.NoteCategoryCrossRef
 import com.grownapp.noteapp.ui.note_category.NoteWithCategories
 
 class NoteRepository(
-    private val noteDao: NoteDao,
-    private val categoryDao: CategoryDao
+    private val noteDao: NoteDao
 ) {
     val allNote: LiveData<List<Note>> = noteDao.getAllNote()
 
@@ -145,6 +143,7 @@ class NoteRepository(
     fun sortedByColorWithCategory(categoryId: Int): LiveData<List<Note>> {
         return noteDao.sortedByColorWithCategory(categoryId)
     }
+
     val allTrashNote: LiveData<List<Note>> = noteDao.getNoteOnTrash()
 
     fun pushInTrash(onTrash: Boolean, noteId: Int) {
@@ -155,11 +154,11 @@ class NoteRepository(
         noteDao.restoreAllNote()
     }
 
-    suspend fun emptyTrash(){
+    suspend fun emptyTrash() {
         noteDao.emptyTrash()
     }
 
-    suspend fun updateBackgroundColor(noteIds: List<Int>, backgroundColor: Int){
+    suspend fun updateBackgroundColor(noteIds: List<Int>, backgroundColor: Int) {
         noteDao.updateBackgroundColor(noteIds, backgroundColor)
     }
 }

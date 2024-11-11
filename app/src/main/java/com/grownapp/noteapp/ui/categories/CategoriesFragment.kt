@@ -28,7 +28,7 @@ class CategoriesFragment : Fragment() {
         super.onCreate(savedInstanceState)
 
         categoriesViewModel =
-            ViewModelProvider(this).get(CategoriesViewModel::class.java)
+            ViewModelProvider(this)[CategoriesViewModel::class.java]
     }
 
     override fun onCreateView(
@@ -68,13 +68,13 @@ class CategoriesFragment : Fragment() {
 
     private fun showDeleteDialog(category: Category) {
         AlertDialog.Builder(requireContext())
-            .setMessage("Delete category '${category.name}'? Notes from the category won't be deleted")
+            .setMessage(getString(R.string.delete_category, category.name))
             .setCancelable(false)
-            .setPositiveButton("OK") { dialog, _ ->
+            .setPositiveButton(getString(R.string.ok)) { dialog, _ ->
                 categoriesViewModel.deleteCategory(category)
                 dialog.dismiss()
             }
-            .setNegativeButton("Cancel") { dialog, _ ->
+            .setNegativeButton(getString(R.string.cancel)) { dialog, _ ->
                 dialog.dismiss()
             }
             .create()

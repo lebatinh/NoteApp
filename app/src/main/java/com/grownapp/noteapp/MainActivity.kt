@@ -1,13 +1,10 @@
 package com.grownapp.noteapp
 
 import android.os.Bundle
-import android.view.Menu
-import android.view.View
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
 import androidx.core.content.ContextCompat
 import androidx.core.view.GravityCompat
-import androidx.core.view.children
 import androidx.drawerlayout.widget.DrawerLayout
 import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.findNavController
@@ -86,7 +83,7 @@ class MainActivity : AppCompatActivity() {
                 }
             }
 
-            val menuItemUncategorized = categoryGroup?.add("Uncategorized")
+            val menuItemUncategorized = categoryGroup?.add(getString(R.string.uncategorized))
             menuItemUncategorized?.icon = ContextCompat.getDrawable(this, R.drawable.uncategorized)
             menuItemUncategorized?.setOnMenuItemClickListener {
                 val action = NoteNavigationDirections.actionGlobalNavToNoteList(null, null)
@@ -129,16 +126,15 @@ class MainActivity : AppCompatActivity() {
     }
 
     fun setupDefaultToolbar() {
-        val toolbar = findViewById<Toolbar>(R.id.toolbar) // Đảm bảo bạn đang dùng đúng ID của Toolbar
+        val toolbar =
+            findViewById<Toolbar>(R.id.toolbar)
         setSupportActionBar(toolbar)
 
-        // Thiết lập lại NavController
         val navController = findNavController(R.id.nav_host_fragment_content_main)
         setupActionBarWithNavController(navController, appBarConfiguration)
         binding.navView.setupWithNavController(navController)
-        // Xóa các item tùy chỉnh nếu có
         toolbar.menu.clear()
-        invalidateOptionsMenu() // Cập nhật lại menu để hiển thị các item mặc định
+        invalidateOptionsMenu()
     }
 
 }

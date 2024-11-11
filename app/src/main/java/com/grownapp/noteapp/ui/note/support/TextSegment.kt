@@ -1,9 +1,9 @@
-package com.grownapp.noteapp.ui.note
+package com.grownapp.noteapp.ui.note.support
 
 import android.graphics.Color
 
 data class NoteContent(
-    val segments: List<TextSegment> // Danh sách các đoạn văn bản đã định dạng
+    val segments: List<TextSegment>
 )
 
 data class TextSegment(

@@ -3,7 +3,6 @@ package com.grownapp.noteapp.ui.note
 import android.content.Context
 import android.content.SharedPreferences
 import android.os.Bundle
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.Menu
 import android.view.MenuInflater
@@ -80,11 +79,9 @@ class NoteListFragment : Fragment(), MenuProvider {
             binding.ctlInstruct.visibility = View.GONE
         }
 
-        // Lấy kích thước màn hình
         val screenWidth = resources.displayMetrics.widthPixels.toFloat()
         val screenHeight = resources.displayMetrics.heightPixels.toFloat()
 
-        // Xoay mũi tên về góc dưới bên phải
         rotateArrowToCorner(binding.arrowImageView, screenWidth, screenHeight)
         sortBy()
         return root
@@ -101,7 +98,7 @@ class NoteListFragment : Fragment(), MenuProvider {
             startEditMode(!isEditMode)
         },
             listNoteSelectedAdapter = listNoteSelected,
-            updateCountCallback = { updateCountNoteSeleted() },
+            updateCountCallback = { updateCountNoteSelected() },
             getCategoryOfNote = { noteId -> noteViewModel.getCategoryOfNote(noteId) }
         )
 
@@ -132,23 +129,23 @@ class NoteListFragment : Fragment(), MenuProvider {
         }
     }
 
-    private fun updateCountNoteSeleted() {
+    private fun updateCountNoteSelected() {
         val toolbar = requireActivity().findViewById<Toolbar>(R.id.toolbar)
-        val tvCountSeleted = toolbar?.findViewById<TextView>(R.id.tvCountSeleted)
-        tvCountSeleted?.text = listNoteSelected.size.toString()
+        val tvCountSelected = toolbar?.findViewById<TextView>(R.id.tvCountSeleted)
+        tvCountSelected?.text = listNoteSelected.size.toString()
     }
 
     private fun startEditMode(isVisible: Boolean) {
         isEditMode = isVisible
         val toolbar = requireActivity().findViewById<Toolbar>(R.id.toolbar)
         val btnSearch = toolbar.findViewById<View>(R.id.item_search)
-        val item_sort = toolbar.findViewById<View>(R.id.item_sort)
-        val item_more = toolbar.findViewById<View>(R.id.item_more)
+        val itemSort = toolbar.findViewById<View>(R.id.item_sort)
+        val itemMore = toolbar.findViewById<View>(R.id.item_more)
 
         if (isVisible) {
             btnSearch?.visibility = View.GONE
-            item_sort?.visibility = View.GONE
-            item_more?.visibility = View.GONE
+            itemSort?.visibility = View.GONE
+            itemMore?.visibility = View.GONE
 
             val layoutParams = Toolbar.LayoutParams(
                 Toolbar.LayoutParams.MATCH_PARENT,
@@ -158,19 +155,18 @@ class NoteListFragment : Fragment(), MenuProvider {
             val noteLayout = layoutInflater.inflate(R.layout.custom_note_toolbar, toolbar, false)
             toolbar.addView(noteLayout, layoutParams)
 
-            val tvCountSeleted = toolbar.findViewById<TextView>(R.id.tvCountSeleted)
+            val tvCountSelected = toolbar.findViewById<TextView>(R.id.tvCountSeleted)
             val imgDelete = toolbar.findViewById<ImageView>(R.id.imgDelete)
             val imgSelectAll = toolbar.findViewById<ImageView>(R.id.imgSelectAll)
 
-            Log.d("listNoteSelectedFragment", listNoteSelected.size.toString())
-            tvCountSeleted.text = listNoteSelected.size.toString()
+            tvCountSelected.text = listNoteSelected.size.toString()
 
             toolbar.setNavigationIcon(R.drawable.back)
             toolbar.setNavigationOnClickListener {
                 startEditMode(false)
                 noteAdapter.exitEditMode()
                 binding.fab.visibility = View.VISIBLE
-                tvCountSeleted?.visibility = View.GONE
+                tvCountSelected?.visibility = View.GONE
                 imgDelete?.visibility = View.GONE
                 imgSelectAll?.visibility = View.GONE
                 toolbar.title = "Notepad Free"
@@ -184,16 +180,12 @@ class NoteListFragment : Fragment(), MenuProvider {
                     noteViewModel.allNote.observe(viewLifecycleOwner) {
                         listNoteSelected = it.toMutableList()
                         noteAdapter.updateListNoteSelected(listNoteSelected)
-                        Log.d("TrashFragment", "imgSelectAll")
-                        Log.d("TrashFragment", listNoteSelected.size.toString())
                     }
                 } else {
                     listNoteSelected.clear()
                     noteAdapter.updateListNoteSelected(listNoteSelected)
-                    Log.d("TrashFragment", "imgSelectAll")
-                    Log.d("TrashFragment", listNoteSelected.size.toString())
                 }
-                updateCountNoteSeleted()
+                updateCountNoteSelected()
             }
 
             imgDelete.setOnClickListener {
@@ -201,8 +193,8 @@ class NoteListFragment : Fragment(), MenuProvider {
             }
         } else {
             btnSearch?.visibility = View.VISIBLE
-            item_sort?.visibility = View.VISIBLE
-            item_more?.visibility = View.VISIBLE
+            itemSort?.visibility = View.VISIBLE
+            itemMore?.visibility = View.VISIBLE
 
             val noteLayout = toolbar.findViewById<View>(R.id.custom_note_toolbar)
             if (noteLayout != null) {
@@ -219,14 +211,12 @@ class NoteListFragment : Fragment(), MenuProvider {
 
         val dialog = android.app.AlertDialog.Builder(requireContext()).setView(dialogView).create()
 
-        deleteLog.text = buildString {
-            append("Delete the selected notes?")
-        }
+        deleteLog.text = getString(R.string.delete_the_selected_notes)
 
         btnCancel.setOnClickListener {
             dialog.dismiss()
         }
-        btnDelete.setText("OK")
+        btnDelete.text = getString(R.string.ok)
 
         btnDelete.setOnClickListener {
             listNoteSelected.forEach {
@@ -356,62 +346,59 @@ class NoteListFragment : Fragment(), MenuProvider {
             dialog.dismiss()
         }
 
-        // Đặt RadioButton checked dựa trên giá trị "sort" trong SharedPreferences
         val sort = sharedPreferences.getString("sort", null)
         when (sort) {
-            "editnewest" -> rdgSort.check(R.id.rdbEditNewest)
-            "editoldest" -> rdgSort.check(R.id.rdbEditOldest)
-            "a_z" -> rdgSort.check(R.id.rdbA_Z)
-            "z_a" -> rdgSort.check(R.id.rdbZ_A)
-            "createnewest" -> rdgSort.check(R.id.rdbCreateNewest)
-            "createoldest" -> rdgSort.check(R.id.rdbCreateOldest)
-            "color" -> rdgSort.check(R.id.rdbColor)
+            getString(R.string.editnewest) -> rdgSort.check(R.id.rdbEditNewest)
+            getString(R.string.editoldest) -> rdgSort.check(R.id.rdbEditOldest)
+            getString(R.string.a_z) -> rdgSort.check(R.id.rdbA_Z)
+            getString(R.string.z_a) -> rdgSort.check(R.id.rdbZ_A)
+            getString(R.string.createnewest) -> rdgSort.check(R.id.rdbCreateNewest)
+            getString(R.string.createoldest) -> rdgSort.check(R.id.rdbCreateOldest)
+            getString(R.string.color) -> rdgSort.check(R.id.rdbColor)
         }
 
         buttonSort.setOnClickListener {
             val selectedRadioButtonId = rdgSort.checkedRadioButtonId
             val editor = sharedPreferences.edit()
 
-            // Lưu giá trị "sort" mới vào SharedPreferences và xử lý trạng thái "hideCreated"
             when (selectedRadioButtonId) {
                 R.id.rdbEditNewest -> {
-                    editor.putString("sort", "editnewest")
+                    editor.putString("sort", getString(R.string.editnewest))
                     hideCreated = false
                 }
 
                 R.id.rdbEditOldest -> {
-                    editor.putString("sort", "editoldest")
+                    editor.putString("sort", getString(R.string.editoldest))
                     hideCreated = false
                 }
 
                 R.id.rdbA_Z -> {
-                    editor.putString("sort", "a_z")
+                    editor.putString("sort", getString(R.string.a_z))
                     hideCreated = false
                 }
 
                 R.id.rdbZ_A -> {
-                    editor.putString("sort", "z_a")
+                    editor.putString("sort", getString(R.string.z_a))
                     hideCreated = false
                 }
 
                 R.id.rdbCreateNewest -> {
-                    editor.putString("sort", "createnewest")
+                    editor.putString("sort", getString(R.string.createnewest))
                     hideCreated = true
                 }
 
                 R.id.rdbCreateOldest -> {
-                    editor.putString("sort", "createoldest")
+                    editor.putString("sort", getString(R.string.createoldest))
                     hideCreated = true
                 }
 
                 R.id.rdbColor -> {
-                    editor.putString("sort", "color")
+                    editor.putString("sort", getString(R.string.color))
                     hideCreated = false
                 }
             }
-            editor.apply() // Lưu thay đổi
+            editor.apply()
 
-            // Gọi hàm sắp xếp
             sortBy()
             dialog.dismiss()
         }
@@ -444,6 +431,7 @@ class NoteListFragment : Fragment(), MenuProvider {
                 R.id.export_notes_to_text_files -> {
                     true
                 }
+
                 R.id.categorize -> {
                     showCategorizeDialog()
                     true
@@ -452,17 +440,18 @@ class NoteListFragment : Fragment(), MenuProvider {
                 R.id.colorize -> {
                     true
                 }
+
                 else -> false
             }
         }
 
-        // Hiển thị PopupMenu
         popupMenu.show()
     }
+
     private fun showCategorizeDialog() {
         val dialogView = layoutInflater.inflate(R.layout.category_list_dialog, null)
         val categoryListView = dialogView.findViewById<RecyclerView>(R.id.rcvCategory)
-        val cancelButon = dialogView.findViewById<TextView>(R.id.btnCancel)
+        val cancelButton = dialogView.findViewById<TextView>(R.id.btnCancel)
         val okButton = dialogView.findViewById<TextView>(R.id.btnOk)
 
         val categoryMutableList = mutableListOf<Category>()
@@ -483,7 +472,7 @@ class NoteListFragment : Fragment(), MenuProvider {
         }
         val dialog = AlertDialog.Builder(requireContext()).setView(dialogView).create()
 
-        cancelButon.setOnClickListener {
+        cancelButton.setOnClickListener {
             dialog.dismiss()
         }
 
@@ -497,19 +486,24 @@ class NoteListFragment : Fragment(), MenuProvider {
                     }
                 }
             }
-            Toast.makeText(requireContext(), "Update categories", Toast.LENGTH_SHORT).show()
+            Toast.makeText(
+                requireContext(),
+                getString(R.string.update_categories),
+                Toast.LENGTH_SHORT
+            ).show()
             dialog.dismiss()
             noteAdapter.exitEditMode()
             startEditMode(false)
         }
         dialog.show()
     }
+
     private fun sortBy() {
         val sort = sharedPreferences.getString("sort", null)
         val sortObserver = { notes: List<Note> -> noteAdapter.updateListNote(notes) }
 
         when (sort) {
-            "editnewest" -> if (categoryId != null) {
+            getString(R.string.editnewest) -> if (categoryId != null) {
                 noteViewModel.sortedByUpdatedTimeDescByCategory(categoryId!!)
                     .observe(viewLifecycleOwner, sortObserver)
             } else {
@@ -517,7 +511,7 @@ class NoteListFragment : Fragment(), MenuProvider {
                     .observe(viewLifecycleOwner, sortObserver)
             }
 
-            "editoldest" -> if (categoryId != null) {
+            getString(R.string.editoldest) -> if (categoryId != null) {
                 noteViewModel.sortedByUpdatedTimeAscByCategory(categoryId!!)
                     .observe(viewLifecycleOwner, sortObserver)
             } else {
@@ -525,7 +519,7 @@ class NoteListFragment : Fragment(), MenuProvider {
                     .observe(viewLifecycleOwner, sortObserver)
             }
 
-            "a_z" -> if (categoryId != null) {
+            getString(R.string.a_z) -> if (categoryId != null) {
                 noteViewModel.sortedByTitleAscByCategory(categoryId!!)
                     .observe(viewLifecycleOwner, sortObserver)
             } else {
@@ -533,7 +527,7 @@ class NoteListFragment : Fragment(), MenuProvider {
                     .observe(viewLifecycleOwner, sortObserver)
             }
 
-            "z_a" -> if (categoryId != null) {
+            getString(R.string.z_a) -> if (categoryId != null) {
                 noteViewModel.sortedByTitleDescByCategory(categoryId!!)
                     .observe(viewLifecycleOwner, sortObserver)
             } else {
@@ -541,7 +535,7 @@ class NoteListFragment : Fragment(), MenuProvider {
                     .observe(viewLifecycleOwner, sortObserver)
             }
 
-            "createnewest" -> if (categoryId != null) {
+            getString(R.string.createnewest) -> if (categoryId != null) {
                 noteViewModel.sortedByCreatedTimeDescByCategory(categoryId!!)
                     .observe(viewLifecycleOwner, sortObserver)
             } else {
@@ -549,7 +543,7 @@ class NoteListFragment : Fragment(), MenuProvider {
                     .observe(viewLifecycleOwner, sortObserver)
             }
 
-            "createoldest" -> if (categoryId != null) {
+            getString(R.string.createoldest) -> if (categoryId != null) {
                 noteViewModel.sortedByCreatedTimeAscByCategory(categoryId!!)
                     .observe(viewLifecycleOwner, sortObserver)
             } else {
@@ -557,7 +551,7 @@ class NoteListFragment : Fragment(), MenuProvider {
                     .observe(viewLifecycleOwner, sortObserver)
             }
 
-            "color" -> if (categoryId != null) {
+            getString(R.string.color) -> if (categoryId != null) {
                 noteViewModel.sortedByColorWithCategory(categoryId!!)
                     .observe(viewLifecycleOwner, sortObserver)
             } else {

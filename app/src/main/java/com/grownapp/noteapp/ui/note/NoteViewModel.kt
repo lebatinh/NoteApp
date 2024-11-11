@@ -1,16 +1,14 @@
 package com.grownapp.noteapp.ui.note
 
 import android.app.Application
-import android.content.SharedPreferences
-import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
-import com.grownapp.noteapp.ui.note.dao.NoteDatabase
 import com.grownapp.noteapp.ReturnResult
 import com.grownapp.noteapp.ui.categories.dao.Category
 import com.grownapp.noteapp.ui.note.dao.Note
+import com.grownapp.noteapp.ui.note.dao.NoteDatabase
 import com.grownapp.noteapp.ui.note.dao.NoteRepository
 import com.grownapp.noteapp.ui.note_category.NoteCategoryCrossRef
 import com.grownapp.noteapp.ui.note_category.NoteWithCategories
@@ -33,18 +31,18 @@ class NoteViewModel(application: Application) : AndroidViewModel(application) {
 
     init {
         val noteDao = NoteDatabase.getDatabase(application).noteDao()
-        val categoryDao = NoteDatabase.getDatabase(application).categoryDao()
-        repository = NoteRepository(noteDao, categoryDao)
+        repository = NoteRepository(noteDao)
         allNote = repository.allNote
         allNoteWithoutCategory = repository.notesWithoutCategory
         allTrashNote = repository.allTrashNote
     }
 
-    fun insertFirst(note: Note){
+    fun insertFirst(note: Note) {
         viewModelScope.launch {
             repository.insert(note)
         }
     }
+
     fun insert(note: Note, callback: (Long) -> Unit) {
         val currentDateTime = Date()
         val dateFormat = SimpleDateFormat("dd/MM/yyyy, hh:mm a", Locale.getDefault())
@@ -176,9 +174,11 @@ class NoteViewModel(application: Application) : AndroidViewModel(application) {
     fun sortedByCreatedTimeAscWithoutCategory(): LiveData<List<Note>> {
         return repository.sortedByCreatedTimeAscWithoutCategory()
     }
+
     fun sortedByColorWithoutCategory(): LiveData<List<Note>> {
         return repository.sortedByColorWithoutCategory()
     }
+
     //theo category
     fun sortedByUpdatedTimeDescByCategory(categoryId: Int): LiveData<List<Note>> {
         return repository.sortedByUpdatedTimeDescByCategory(categoryId)
@@ -203,11 +203,12 @@ class NoteViewModel(application: Application) : AndroidViewModel(application) {
     fun sortedByCreatedTimeAscByCategory(categoryId: Int): LiveData<List<Note>> {
         return repository.sortedByCreatedTimeAscByCategory(categoryId)
     }
+
     fun sortedByColorWithCategory(categoryId: Int): LiveData<List<Note>> {
         return repository.sortedByColorWithCategory(categoryId)
     }
 
-    fun pushInTrash(onTrash: Boolean, noteId: Int){
+    fun pushInTrash(onTrash: Boolean, noteId: Int) {
         viewModelScope.launch(Dispatchers.IO) {
             repository.pushInTrash(onTrash, noteId)
         }
@@ -221,7 +222,7 @@ class NoteViewModel(application: Application) : AndroidViewModel(application) {
         repository.emptyTrash()
     }
 
-    fun updateBackgroundColor(noteIds: List<Int>, backgroundColor: Int){
+    fun updateBackgroundColor(noteIds: List<Int>, backgroundColor: Int) {
         viewModelScope.launch {
             repository.updateBackgroundColor(noteIds, backgroundColor)
         }

@@ -2,22 +2,18 @@ package com.grownapp.noteapp.ui.note
 
 import android.app.AlertDialog
 import android.content.Context
+import android.content.Intent
 import android.content.SharedPreferences
 import android.graphics.Color
-import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.graphics.drawable.LayerDrawable
+import android.net.Uri
 import android.os.Bundle
 import android.text.Editable
 import android.text.SpannableStringBuilder
 import android.text.Spanned
 import android.text.TextWatcher
-import android.text.style.AbsoluteSizeSpan
 import android.text.style.BackgroundColorSpan
-import android.text.style.ForegroundColorSpan
-import android.text.style.StrikethroughSpan
-import android.text.style.StyleSpan
-import android.text.style.UnderlineSpan
 import android.util.Log
 import android.view.Gravity
 import android.view.LayoutInflater
@@ -35,6 +31,7 @@ import android.widget.SeekBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.widget.PopupMenu
 import androidx.appcompat.widget.SearchView
 import androidx.appcompat.widget.Toolbar
@@ -54,6 +51,11 @@ import com.grownapp.noteapp.ui.categories.CategoriesViewModel
 import com.grownapp.noteapp.ui.categories.dao.Category
 import com.grownapp.noteapp.ui.note.adapter.CategoryForNoteAdapter
 import com.grownapp.noteapp.ui.note.dao.Note
+import com.grownapp.noteapp.ui.note.support.FileProcess
+import com.grownapp.noteapp.ui.note.support.FormatTextSupport
+import com.grownapp.noteapp.ui.note.support.NoteContent
+import com.grownapp.noteapp.ui.note.support.TextFormat
+import com.grownapp.noteapp.ui.note.support.UndoRedoManager
 import com.grownapp.noteapp.ui.note_category.NoteCategoryCrossRef
 
 
@@ -75,10 +77,11 @@ class NoteDetailFragment : Fragment(), MenuProvider {
 
     private var isOnTrash = true
     private var isShowSearch = false
+    private var selectedDirectoryUri: Uri? = null
+    private lateinit var listNoteSelected: MutableList<Note>
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Khởi tạo ViewModel
         noteViewModel = ViewModelProvider(this)[NoteViewModel::class.java]
         categoryViewModel = ViewModelProvider(this)[CategoriesViewModel::class.java]
         sharedPreferences =
@@ -89,6 +92,7 @@ class NoteDetailFragment : Fragment(), MenuProvider {
             backgroundColor = ContextCompat.getColor(requireContext(), R.color.transparent),
             textColor = ContextCompat.getColor(requireContext(), R.color.text)
         )
+        listNoteSelected = mutableListOf()
     }
 
     override fun onCreateView(
@@ -104,20 +108,33 @@ class NoteDetailFragment : Fragment(), MenuProvider {
 
         noteViewModel.getNoteById(noteId).observe(viewLifecycleOwner) { note ->
             note?.let {
+                listNoteSelected.add(it)
                 binding.edtTitle.setText(it.title)
+                if (it.note != null) {
+                    val formattedText =
+                        FormatTextSupport().noteContentToSpannable(
+                            requireContext(),
+                            Gson().fromJson(note.note!!, NoteContent::class.java)
+                        )
+                    binding.edtNote.text = formattedText
+                    formattedTextSegments = formattedText
+                } else {
+                    binding.edtNote.text = SpannableStringBuilder("")
+                    formattedTextSegments =
+                        SpannableStringBuilder("")
+                }
 
                 val startColor = note.backgroundColor
                 val endColor = Color.WHITE
+
                 if (startColor != null && startColor != 0) {
 
-                    // Tạo GradientDrawable với hai màu
                     val gradientDrawable = GradientDrawable(
-                        GradientDrawable.Orientation.TOP_BOTTOM, // Hướng gradient từ trên xuống dưới
-                        intArrayOf(startColor, endColor)         // Mảng chứa hai màu gradient
+                        GradientDrawable.Orientation.TOP_BOTTOM,
+                        intArrayOf(startColor, endColor)
                     )
                     gradientDrawable.setStroke(0, Color.TRANSPARENT)
 
-                    // Tải drawable `background_add_note` từ tài nguyên
                     val borderDrawable =
                         ContextCompat.getDrawable(requireContext(), R.drawable.background_add_note)
                             ?.mutate()
@@ -132,24 +149,6 @@ class NoteDetailFragment : Fragment(), MenuProvider {
                     binding.fragmentNoteDetail.background =
                         ContextCompat.getDrawable(requireContext(), R.drawable.background_add_note)
                 }
-
-                if (it.note != null) {
-                    binding.edtNote.text = noteContentToSpannable(
-                        Gson().fromJson(
-                            note.note!!,
-                            NoteContent::class.java
-                        )
-                    )
-                    Log.d("JSON Debug", "JSON khi đọc từ DB: ${note.note}")
-                    formattedTextSegments =
-                        noteContentToSpannable(Gson().fromJson(note.note, NoteContent::class.java))
-                } else {
-                    // Trường hợp `note` null hoặc không có nội dung
-                    binding.edtNote.text = SpannableStringBuilder("") // Đặt `edtNote` là chuỗi rỗng
-                    formattedTextSegments =
-                        SpannableStringBuilder("") // Đặt chuỗi định dạng là rỗng
-                }
-
                 undoRedoManager.addState(formattedTextSegments)
                 requireActivity().invalidateOptionsMenu()
             }
@@ -161,8 +160,6 @@ class NoteDetailFragment : Fragment(), MenuProvider {
             showFormattingBar()
         }
 
-        applyFormatting(binding.edtNote)
-
         val toolbar = requireActivity().findViewById<Toolbar>(R.id.toolbar)
         toolbar.setNavigationIcon(R.drawable.back)
         toolbar.setNavigationOnClickListener {
@@ -170,6 +167,10 @@ class NoteDetailFragment : Fragment(), MenuProvider {
                 findNavController().navigateUp()
             }
         }
+
+        applyFormatting(binding.edtNote)
+
+        Log.d("formattedTextSegments", formattedTextSegments.toString())
         return root
     }
 
@@ -228,7 +229,7 @@ class NoteDetailFragment : Fragment(), MenuProvider {
                 val previousState = undoRedoManager.undo()
                 if (previousState != null) {
                     binding.edtNote.text = previousState
-                    binding.edtNote.setSelection(previousState.length.coerceAtMost(previousState.length))
+                    binding.edtNote.selectionEnd
                 }
             }
 
@@ -241,10 +242,11 @@ class NoteDetailFragment : Fragment(), MenuProvider {
     }
 
     private fun saveNote() {
+        Log.d("Save Note", "Save Note")
         val spannableText = SpannableStringBuilder(binding.edtNote.text)
-        val noteContent = spannableToNoteContent(spannableText)
+        val noteContent =
+            FormatTextSupport().spannableToNoteContent(requireContext(), spannableText)
 
-        Log.d("noteContent", noteContent.toString())
         val updateNote = Note().copy(
             noteId = noteId,
             title = binding.edtTitle.text.toString(),
@@ -252,7 +254,7 @@ class NoteDetailFragment : Fragment(), MenuProvider {
         )
 
         noteViewModel.insert(updateNote) {}
-        Toast.makeText(requireContext(), "Saved", Toast.LENGTH_SHORT).show()
+        Toast.makeText(requireContext(), getString(R.string.saved), Toast.LENGTH_SHORT).show()
     }
 
     private fun showPopupMenuMore() {
@@ -268,7 +270,7 @@ class NoteDetailFragment : Fragment(), MenuProvider {
                     val previousState = undoRedoManager.redo()
                     if (previousState != null) {
                         binding.edtNote.text = previousState
-                        binding.edtNote.setSelection(previousState.length)
+                        binding.edtNote.selectionEnd
                     }
                     true
                 }
@@ -277,7 +279,7 @@ class NoteDetailFragment : Fragment(), MenuProvider {
                     val previousState = undoRedoManager.undoAll()
                     if (previousState != null) {
                         binding.edtNote.text = previousState
-                        binding.edtNote.setSelection(previousState.length)
+                        binding.edtNote.selectionEnd
                     }
                     true
                 }
@@ -299,6 +301,9 @@ class NoteDetailFragment : Fragment(), MenuProvider {
                 }
 
                 R.id.export_to_a_text_files -> {
+                    FileProcess().checkAndRequestPermissions {
+                        openDirectoryChooser()
+                    }
                     true
                 }
 
@@ -338,9 +343,27 @@ class NoteDetailFragment : Fragment(), MenuProvider {
                 else -> false
             }
         }
-
-        // Hiển thị PopupMenu
         popupMenu.show()
+    }
+
+    private val selectDirectoryLauncher =
+        registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri: Uri? ->
+            uri?.let {
+                selectedDirectoryUri = it
+                val takeFlags =
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                requireContext().contentResolver.takePersistableUriPermission(it, takeFlags)
+
+                FileProcess().exportNotesToDirectory(
+                    selectedDirectoryUri,
+                    requireContext(),
+                    listNoteSelected
+                )
+            }
+        }
+
+    private fun openDirectoryChooser() {
+        selectDirectoryLauncher.launch(null)
     }
 
     private fun dialogPickBackgroundColor() {
@@ -394,7 +417,6 @@ class NoteDetailFragment : Fragment(), MenuProvider {
 
                         colorFillBackground = parseColor
 
-                        // Cập nhật `tvColor` với màu được chọn
                         tvColor.setBackgroundColor(colorFillBackground)
 
                         for (i in 0 until gridlayoutColor.childCount) {
@@ -460,7 +482,6 @@ class NoteDetailFragment : Fragment(), MenuProvider {
             }
             toolbar.addView(searchLayout, layoutParams)
 
-            // Cài đặt listener cho `SearchView`
             search.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
                 override fun onQueryTextSubmit(query: String?): Boolean {
                     query?.let {
@@ -487,14 +508,13 @@ class NoteDetailFragment : Fragment(), MenuProvider {
             btnUndo?.visibility = View.VISIBLE
 
             val searchLayout =
-                toolbar.findViewById<View>(R.id.custom_search_toolbar) // Tìm kiếm layout
+                toolbar.findViewById<View>(R.id.custom_search_toolbar)
             if (searchLayout != null) {
-                toolbar.removeView(searchLayout) // Xóa searchLayout
+                toolbar.removeView(searchLayout)
             }
 
             toolbar.setNavigationIcon(R.drawable.back)
             toolbar.setNavigationOnClickListener {
-                // nếu dùng thì k dùng back và menu điều hướng đc
                 view?.let {
                     findNavController().navigateUp()
                 }
@@ -504,27 +524,20 @@ class NoteDetailFragment : Fragment(), MenuProvider {
         }
     }
 
-    // Hàm tìm kiếm từ khóa và cập nhật vị trí
     private fun searchKeyword(query: String) {
         val searchLayout = layoutInflater.inflate(R.layout.custom_search_toolbar, null)
         val searchCountView = searchLayout.findViewById<TextView>(R.id.searchCount)
-        // Lấy nội dung văn bản từ edtNote
         val text = binding.edtNote.text.toString()
-        // Xóa highlight cũ
         clearSearchHighlights()
 
-        // Tìm tất cả vị trí của từ khóa
         val pattern = Regex(query, RegexOption.IGNORE_CASE)
         val matches = pattern.findAll(text).map { it.range }.toList()
 
-        // Hiển thị số lượng tìm thấy
         searchCountView.text = "1/${matches.size}"
 
-        // Tô màu cho từ khóa tìm thấy
         highlightMatches(matches)
     }
 
-    // Hàm tô màu kết quả tìm kiếm
     private fun highlightMatches(matches: List<IntRange>) {
         val spannable = SpannableStringBuilder(binding.edtNote.text)
         val highlightColor =
@@ -542,20 +555,13 @@ class NoteDetailFragment : Fragment(), MenuProvider {
         binding.edtNote.text = spannable
     }
 
-    // Hàm xóa highlight khi thoát tìm kiếm
     private fun clearSearchHighlights() {
         binding.edtNote.text = SpannableStringBuilder(binding.edtNote.text.toString())
     }
 
-    // Hàm di chuyển đến kết quả trước đó
-    private fun highlightPreviousResult() {
-        // Xử lý logic di chuyển đến kết quả trước đó
-    }
+    private fun highlightPreviousResult() {}
 
-    // Hàm di chuyển đến kết quả tiếp theo
-    private fun highlightNextResult() {
-        // Xử lý logic di chuyển đến kết quả tiếp theo
-    }
+    private fun highlightNextResult() {}
 
     private fun showDialogDelete() {
         val dialogView = layoutInflater.inflate(R.layout.delete_dialog, null)
@@ -566,22 +572,19 @@ class NoteDetailFragment : Fragment(), MenuProvider {
         val dialog = AlertDialog.Builder(requireContext()).setView(dialogView).create()
         noteViewModel.getNoteById(noteId).observe(viewLifecycleOwner) { note ->
             if (isOnTrash) {
-                "The '${
-                    note.title ?: note.note?.substring(
+                getString(
+                    R.string.delete_log_detail, note.title ?: note.note?.substring(
                         0,
                         20
-                    ) ?: "Untitled"
-                }' note will be deleted.\nAre you sure?".also { deleteLog.text = it }
+                    ) ?: getString(R.string.untitled)
+                ).also { deleteLog.text = it }
             } else {
                 deleteLog.text = buildString {
-                    append("The note will be deleted permanently!\n")
-                    append(
-                        "Are you sure that you want to delete the '${
-                            note.title ?: note.note?.substring(
-                                0,
-                                20
-                            ) ?: "Untitled"
-                        }' note?"
+                    getString(
+                        R.string.delete_log_detail_permanently, note.title ?: note.note?.substring(
+                            0,
+                            20
+                        ) ?: getString(R.string.untitled)
                     )
                 }
             }
@@ -609,7 +612,7 @@ class NoteDetailFragment : Fragment(), MenuProvider {
     private fun showCategorizeDialog(noteId: Int?) {
         val dialogView = layoutInflater.inflate(R.layout.category_list_dialog, null)
         val categoryListView = dialogView.findViewById<RecyclerView>(R.id.rcvCategory)
-        val cancelButon = dialogView.findViewById<TextView>(R.id.btnCancel)
+        val cancelButton = dialogView.findViewById<TextView>(R.id.btnCancel)
         val okButton = dialogView.findViewById<TextView>(R.id.btnOk)
 
         val categoryMutableList = mutableListOf<Category>()
@@ -633,7 +636,7 @@ class NoteDetailFragment : Fragment(), MenuProvider {
         }
         val dialog = AlertDialog.Builder(requireContext()).setView(dialogView).create()
 
-        cancelButon.setOnClickListener {
+        cancelButton.setOnClickListener {
             dialog.dismiss()
         }
 
@@ -646,7 +649,11 @@ class NoteDetailFragment : Fragment(), MenuProvider {
                     noteViewModel.insertNoteCategoryCrossRef(noteCategoryCrossRef)
                 }
             }
-            Toast.makeText(requireContext(), "Update categories", Toast.LENGTH_SHORT).show()
+            Toast.makeText(
+                requireContext(),
+                getString(R.string.update_categories),
+                Toast.LENGTH_SHORT
+            ).show()
             dialog.dismiss()
         }
         dialog.show()
@@ -665,25 +672,21 @@ class NoteDetailFragment : Fragment(), MenuProvider {
         binding.bold.setOnClickListener {
             currentFormat = currentFormat.copy(isBold = !currentFormat.isBold)
             binding.bold.setBackgroundColor(if (!currentFormat.isBold) colorUncheck else colorChecked)
-            Log.d("isBold", currentFormat.isBold.toString())
         }
 
         binding.italic.setOnClickListener {
             currentFormat = currentFormat.copy(isItalic = !currentFormat.isItalic)
             binding.italic.setBackgroundColor(if (!currentFormat.isItalic) colorUncheck else colorChecked)
-            Log.d("isItalic", currentFormat.isItalic.toString())
         }
 
         binding.underline.setOnClickListener {
             currentFormat = currentFormat.copy(isUnderline = !currentFormat.isUnderline)
             binding.underline.setBackgroundColor(if (!currentFormat.isUnderline) colorUncheck else colorChecked)
-            Log.d("isUnderline", currentFormat.isUnderline.toString())
         }
 
         binding.strikethrough.setOnClickListener {
             currentFormat = currentFormat.copy(isStrikethrough = !currentFormat.isStrikethrough)
             binding.strikethrough.setBackgroundColor(if (!currentFormat.isStrikethrough) colorUncheck else colorChecked)
-            Log.d("isStrikethrough", currentFormat.isStrikethrough.toString())
         }
 
         binding.fillColorBackground.setOnClickListener {
@@ -822,7 +825,7 @@ class NoteDetailFragment : Fragment(), MenuProvider {
                             (gridlayoutColor.getChildAt(i) as? TextView)?.text = null
                         }
 
-                        "+".also { colorView.text = it }
+                        colorView.text = getString(R.string.sum)
 
                         colorView.setTextColor(
                             ContextCompat.getColor(
@@ -840,7 +843,6 @@ class NoteDetailFragment : Fragment(), MenuProvider {
             if (isBackground) {
                 binding.fillColorBackground.setBackgroundColor(colorFillBackground)
                 currentFormat = currentFormat.copy(backgroundColor = colorFillBackground)
-                Log.d("backgroundColor", colorFillBackground.toString())
             } else {
                 if (isTextColorRemoved) {
                     binding.fillColorText.setBackgroundColor(
@@ -853,7 +855,6 @@ class NoteDetailFragment : Fragment(), MenuProvider {
                     binding.fillColorText.setBackgroundColor(colorFillTextColor)
                 }
                 currentFormat = currentFormat.copy(textColor = colorFillTextColor)
-                Log.d("textColor", colorFillTextColor.toString())
             }
             dialog.dismiss()
         }
@@ -900,7 +901,6 @@ class NoteDetailFragment : Fragment(), MenuProvider {
             binding.fontSize.setBackgroundColor(if (s == 18) colorUncheck else colorChecked)
             dialog.dismiss()
             currentFormat = currentFormat.copy(textSize = s)
-            Log.d("fontSize", currentFormat.textSize.toString())
         }
         tvCancel.setOnClickListener {
             dialog.dismiss()
@@ -911,330 +911,44 @@ class NoteDetailFragment : Fragment(), MenuProvider {
     private fun applyFormatting(editText: EditText) {
         editText.addTextChangedListener(object : TextWatcher {
             var startPos = 0
-            var previousText: String = ""
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {
-                // Lưu vị trí bắt đầu và kết thúc để sử dụng trong afterTextChanged
-                startPos = editText.selectionStart
+                startPos = start+count
             }
 
-            override fun onTextChanged(
-                s: CharSequence?, // Văn bản hiện tại trong EditText tại thời điểm thay đổi
-                start: Int, // Vị trí bắt đầu thay đổi trong văn bản
-                before: Int, // Số lượng ký tự bị thay thế hoặc bị xóa. Nếu before > 0, có ký tự bị xóa đi
-                count: Int // Số lượng ký tự mới được thêm vào. Nếu count > 0, có ký tự mới được thêm vào tại vị trí start.
-            ) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
 
             override fun afterTextChanged(s: Editable?) {
                 s?.let {
                     val endPos = editText.selectionEnd
                     if (startPos < endPos) {
                         val newText = it.subSequence(startPos, endPos)
-                        // Áp dụng định dạng hiện tại cho đoạn văn bản mới
-                        formattedTextSegments.insert(startPos, newText)
-                        Log.d("textchangedlistener", "$it-$newText-$formattedTextSegments")
-                        applyCurrentFormat(formattedTextSegments, startPos, endPos)
 
-                        // Cập nhật lại EditText
-                        editText.removeTextChangedListener(this)  // Tạm ngừng TextWatcher
-                        editText.text = formattedTextSegments     // Cập nhật lại EditText với định dạng đã áp dụng
-                        editText.setSelection(startPos +newText.length) // Đặt con trỏ ở cuối văn bản
+                        formattedTextSegments.insert(startPos, newText)
+
+                        FormatTextSupport().applyCurrentFormat(
+                            requireContext(),
+                            currentFormat,
+                            formattedTextSegments,
+                            startPos,
+                            endPos
+                        )
+
+                        editText.removeTextChangedListener(this)
+                        editText.text =
+                            formattedTextSegments
+                        editText.setSelection(endPos)
 
                         undoRedoManager.addState(formattedTextSegments)
 
-                        editText.addTextChangedListener(this)     // Kích hoạt lại TextWatcher
-
-                        Log.d("noteHistoryStack", "${undoRedoManager.history}")
-                        Log.d("textchangedlistener_later", "$s-$newText-$formattedTextSegments")
-                    } else if (startPos > endPos) {
+                        editText.addTextChangedListener(this)
+                    } else if (endPos in 0..<startPos && startPos <= formattedTextSegments.length) {
                         formattedTextSegments.delete(endPos, startPos)
 
                         undoRedoManager.addState(SpannableStringBuilder(formattedTextSegments))
-                        Log.d("noteHistoryStack", "$${undoRedoManager.history}")
-                        Log.d(
-                            "textchangedlistener_delete",
-                            "$it-$startPos/$endPos-$formattedTextSegments"
-                        )
-                        editText.removeTextChangedListener(this)  // Tạm ngừng TextWatcher
-                        editText.text = formattedTextSegments     // Cập nhật lại EditText
-                        editText.setSelection(endPos)            // Đặt con trỏ đúng vị trí sau khi xóa
-
-                        editText.addTextChangedListener(this)
-                    }
-                    val currentText = s.toString()
-                    if (currentText != previousText) {
-                        requireActivity().invalidateOptionsMenu()
                     }
                 }
             }
         })
     }
-
-    // TODO: còn lỗi thay thế bị lỗi chữ đầu luôn bị sai thanh chữ đầu của văn bản bị xóa trước đó
-    // Hàm mở rộng cho TextSegment để áp dụng định dạng vào Editable
-    private fun applyCurrentFormat(text: SpannableStringBuilder, start: Int, end: Int) {
-
-        val defautBackgroundColor =
-            ContextCompat.getColor(requireContext(), R.color.transparent)
-        val defautTextColor = ContextCompat.getColor(requireContext(), R.color.text)
-
-        if (currentFormat.isBold) text.setSpan(
-            StyleSpan(Typeface.BOLD),
-            start,
-            end,
-            Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
-        )
-        if (currentFormat.isItalic) text.setSpan(
-            StyleSpan(Typeface.ITALIC),
-            start,
-            end,
-            Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
-        )
-        if (currentFormat.isUnderline) text.setSpan(
-            UnderlineSpan(),
-            start,
-            end,
-            Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
-        )
-        if (currentFormat.isStrikethrough) text.setSpan(
-            StrikethroughSpan(),
-            start,
-            end,
-            Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
-        )
-        if (currentFormat.backgroundColor != defautBackgroundColor) text.setSpan(
-            BackgroundColorSpan(
-                currentFormat.backgroundColor
-            ), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
-        )
-        if (currentFormat.textColor != defautTextColor) text.setSpan(
-            ForegroundColorSpan(
-                currentFormat.textColor
-            ), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
-        )
-        text.setSpan(
-            AbsoluteSizeSpan(currentFormat.textSize, true),
-            start,
-            end,
-            Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
-        )
-    }
-
-    private fun spannableToNoteContent(spannable: SpannableStringBuilder): NoteContent {
-        val defaultBackgroundColor =
-            ContextCompat.getColor(requireContext(), R.color.transparent)
-        val defaultTextColor = ContextCompat.getColor(requireContext(), R.color.text)
-        val segments = mutableListOf<TextSegment>()
-        var start = 0
-
-        // Lặp qua từng ký tự trong spannable
-        while (start < spannable.length) {
-            val end = spannable.nextSpanTransition(start, spannable.length, Any::class.java)
-            val text = spannable.subSequence(start, end).toString()
-
-            // Lấy các định dạng hiện có
-            val isBold = spannable.getSpans(start, end, StyleSpan::class.java)
-                .any { it.style == Typeface.BOLD }
-            val isItalic = spannable.getSpans(start, end, StyleSpan::class.java)
-                .any { it.style == Typeface.ITALIC }
-            val isUnderline =
-                spannable.getSpans(start, end, UnderlineSpan::class.java).isNotEmpty()
-            val isStrikethrough =
-                spannable.getSpans(start, end, StrikethroughSpan::class.java).isNotEmpty()
-
-            // Lấy backgroundColor và textColor
-            val backgroundColor =
-                spannable.getSpans(start, end, BackgroundColorSpan::class.java)
-                    .firstOrNull()?.backgroundColor ?: defaultBackgroundColor
-            val textColor = spannable.getSpans(start, end, ForegroundColorSpan::class.java)
-                .firstOrNull()?.foregroundColor ?: defaultTextColor
-            val textSize = spannable.getSpans(start, end, AbsoluteSizeSpan::class.java)
-                .firstOrNull()?.size ?: 18
-
-            // Thêm vào danh sách TextSegment
-            segments.add(
-                TextSegment(
-                    text,
-                    isBold,
-                    isItalic,
-                    isUnderline,
-                    isStrikethrough,
-                    backgroundColor,
-                    textColor,
-                    textSize
-                )
-            )
-
-            // Cập nhật start cho lần lặp tiếp theo
-            start = end
-            Log.d(
-                "SpanInfo",
-                "Text: $text, isBold: $isBold, isItalic: $isItalic, isUnderline: $isUnderline, isStrikethrough: $isStrikethrough, background: $backgroundColor, textcolor: $textColor, textsize: $textSize"
-            )
-        }
-        return NoteContent(segments)
-    }
-
-    private fun noteContentToSpannable(noteContent: NoteContent): SpannableStringBuilder {
-        val defautBackgroundColor =
-            ContextCompat.getColor(requireContext(), R.color.transparent)
-        val defautTextColor = ContextCompat.getColor(requireContext(), R.color.text)
-        val spannable = SpannableStringBuilder()
-
-        for (segment in noteContent.segments) {
-            val start = spannable.length
-            spannable.append(segment.text)
-            val end = spannable.length
-
-            segment.apply {
-                if (isBold == true) spannable.setSpan(
-                    StyleSpan(Typeface.BOLD),
-                    start,
-                    end,
-                    Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
-                )
-                if (isItalic == true) spannable.setSpan(
-                    StyleSpan(Typeface.ITALIC),
-                    start,
-                    end,
-                    Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
-                )
-                if (isUnderline == true) spannable.setSpan(
-                    UnderlineSpan(),
-                    start,
-                    end,
-                    Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
-                )
-                if (isStrikethrough == true) spannable.setSpan(
-                    StrikethroughSpan(),
-                    start,
-                    end,
-                    Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
-                )
-                backgroundColor.let {
-                    spannable.setSpan(
-                        BackgroundColorSpan(it ?: defautBackgroundColor),
-                        start,
-                        end,
-                        Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
-                    )
-                }
-                textColor.let {
-                    spannable.setSpan(
-                        ForegroundColorSpan(it ?: defautTextColor),
-                        start,
-                        end,
-                        Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
-                    )
-                }
-                textSize.let {
-                    spannable.setSpan(
-                        AbsoluteSizeSpan(it ?: 18, true),
-                        start,
-                        end,
-                        Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
-                    )
-                }
-            }
-        }
-        return spannable
-    }
-
-    private fun updateCurrentFormatFromCursorPosition() {
-        val selectionStart = binding.edtNote.selectionStart
-        val selectionEnd = binding.edtNote.selectionEnd
-        if (selectionStart in 0..<selectionEnd) {
-            val spannable = binding.edtNote.text as SpannableStringBuilder
-
-            // Lấy các spans trong phạm vi vùng chọn
-            val boldSpans = spannable.getSpans(selectionStart, selectionEnd, StyleSpan::class.java)
-            val colorSpans =
-                spannable.getSpans(selectionStart, selectionEnd, ForegroundColorSpan::class.java)
-            val backgroundColorSpans =
-                spannable.getSpans(selectionStart, selectionEnd, BackgroundColorSpan::class.java)
-            val underlineSpans =
-                spannable.getSpans(selectionStart, selectionEnd, UnderlineSpan::class.java)
-            val strikethroughSpans =
-                spannable.getSpans(selectionStart, selectionEnd, StrikethroughSpan::class.java)
-            val sizeSpans =
-                spannable.getSpans(selectionStart, selectionEnd, AbsoluteSizeSpan::class.java)
-
-            // Kiểm tra định dạng chung trong toàn bộ vùng chọn
-            val isBold = boldSpans.all { it.style == Typeface.BOLD }
-            val isItalic = boldSpans.all { it.style == Typeface.ITALIC }
-            val isUnderline =
-                underlineSpans.isNotEmpty() && underlineSpans.size == spannable.getSpans(
-                    selectionStart,
-                    selectionEnd,
-                    UnderlineSpan::class.java
-                ).size
-            val isStrikethrough =
-                strikethroughSpans.isNotEmpty() && strikethroughSpans.size == spannable.getSpans(
-                    selectionStart,
-                    selectionEnd,
-                    StrikethroughSpan::class.java
-                ).size
-
-            val textColor = colorSpans.firstOrNull()?.foregroundColor ?: currentFormat.textColor
-            val backgroundColor =
-                backgroundColorSpans.firstOrNull()?.backgroundColor ?: currentFormat.backgroundColor
-            val textSize = sizeSpans.firstOrNull()?.size ?: currentFormat.textSize
-
-            // Cập nhật currentFormat với các thuộc tính lấy được
-            currentFormat = currentFormat.copy(
-                isBold = isBold,
-                isItalic = isItalic,
-                isUnderline = isUnderline,
-                isStrikethrough = isStrikethrough,
-                textColor = textColor,
-                backgroundColor = backgroundColor,
-                textSize = textSize
-            )
-        } else {
-            val spannable = binding.edtNote.text as SpannableStringBuilder
-
-            // Lấy định dạng ngay tại vị trí con trỏ
-            val boldSpans =
-                spannable.getSpans(selectionStart, selectionStart, StyleSpan::class.java)
-            val colorSpans =
-                spannable.getSpans(selectionStart, selectionStart, ForegroundColorSpan::class.java)
-            val backgroundColorSpans =
-                spannable.getSpans(selectionStart, selectionStart, BackgroundColorSpan::class.java)
-            val underlineSpans =
-                spannable.getSpans(selectionStart, selectionStart, UnderlineSpan::class.java)
-            val strikethroughSpans =
-                spannable.getSpans(selectionStart, selectionStart, StrikethroughSpan::class.java)
-            val sizeSpans =
-                spannable.getSpans(selectionStart, selectionStart, AbsoluteSizeSpan::class.java)
-
-            // Cập nhật currentFormat với các thuộc tính tìm thấy
-            currentFormat = currentFormat.copy(
-                isBold = boldSpans.isNotEmpty() && boldSpans[0].style == Typeface.BOLD,
-                isItalic = boldSpans.isNotEmpty() && boldSpans[0].style == Typeface.ITALIC,
-                isUnderline = underlineSpans.isNotEmpty(),
-                isStrikethrough = strikethroughSpans.isNotEmpty(),
-                textColor = colorSpans.firstOrNull()?.foregroundColor ?: currentFormat.textColor,
-                backgroundColor = backgroundColorSpans.firstOrNull()?.backgroundColor
-                    ?: currentFormat.backgroundColor,
-                textSize = sizeSpans.firstOrNull()?.size ?: currentFormat.textSize
-            )
-        }
-
-        Log.d("currentFormat", currentFormat.toString())
-    }
-
-    // Hàm kiểm tra định dạng của đoạn mới với đoạn cuối trong stack
-    private fun isSameFormat(newFormat: TextFormat, lastFormat: TextFormat): Boolean {
-        return newFormat.isBold == lastFormat.isBold &&
-                newFormat.isItalic == lastFormat.isItalic &&
-                newFormat.isUnderline == lastFormat.isUnderline &&
-                newFormat.isStrikethrough == lastFormat.isStrikethrough &&
-                newFormat.backgroundColor == lastFormat.backgroundColor &&
-                newFormat.textColor == lastFormat.textColor &&
-                newFormat.textSize == lastFormat.textSize
-    }
-
-    private fun getCurrentFormat(): TextFormat {
-        // Lấy và trả về định dạng hiện tại từ trạng thái của người dùng
-        return currentFormat
-    }
+    // TODO: lỗi khi thay thế lỗi ở vị trí thay thế đầu tiên thành chữ ở trạng thái trước đó
 }

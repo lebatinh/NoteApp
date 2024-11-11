@@ -2,7 +2,6 @@ package com.grownapp.noteapp.ui.note.dao
 
 import androidx.lifecycle.LiveData
 import androidx.room.Dao
-import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
@@ -110,7 +109,7 @@ interface NoteDao {
     @Query("SELECT * FROM note WHERE onTrash = 0 ORDER BY backgroundColor ASC")
     fun sortedByColor(): LiveData<List<Note>>
 
-    // ko cateory
+    // ko category
     // Sắp xếp theo thời gian chỉnh sửa
     @Query(
         """
@@ -177,7 +176,7 @@ interface NoteDao {
     )
     fun sortedByColorWithoutCategory(): LiveData<List<Note>>
 
-    // theo cateory
+    // theo category
     // Sắp xếp theo thời gian chỉnh sửa
     @Query(
         """

@@ -4,18 +4,9 @@ import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import android.graphics.Color
-import android.graphics.Typeface
 import android.net.Uri
 import android.os.Bundle
-import android.provider.DocumentsContract
 import android.text.SpannableStringBuilder
-import android.text.style.AbsoluteSizeSpan
-import android.text.style.BackgroundColorSpan
-import android.text.style.ForegroundColorSpan
-import android.text.style.StrikethroughSpan
-import android.text.style.StyleSpan
-import android.text.style.UnderlineSpan
-import android.util.Log
 import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.Menu
@@ -56,6 +47,8 @@ import com.grownapp.noteapp.ui.categories.dao.Category
 import com.grownapp.noteapp.ui.note.adapter.CategoryForNoteAdapter
 import com.grownapp.noteapp.ui.note.adapter.NoteAdapter
 import com.grownapp.noteapp.ui.note.dao.Note
+import com.grownapp.noteapp.ui.note.support.FileProcess
+import com.grownapp.noteapp.ui.note.support.FormatTextSupport
 import com.grownapp.noteapp.ui.note_category.NoteCategoryCrossRef
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
@@ -112,26 +105,20 @@ class NoteFragment : Fragment(), MenuProvider {
         noteAdapter = NoteAdapter(
             onClickNote = {
                 if (!isEditMode) {
-                    // Chỉ thực hiện điều hướng khi không ở chế độ edit
                     val action = NoteFragmentDirections.actionNavNoteToNoteDetailFragment(it.noteId)
                     findNavController().navigate(action)
-                    Log.d("onClickNote", "không ở chế độ edit")
-                } else {
-                    // Nếu đang ở chế độ edit, không điều hướng mà chỉ log lại
-                    Log.d("onClickNote", "Chế độ edit - không điều hướng")
                 }
             },
-            onLongClickNote = { note ->
-                if (!isEditMode) {  // Chỉ bật chế độ edit nếu chưa ở chế độ edit
+            onLongClickNote = { _ ->
+                if (!isEditMode) {
                     isEditMode = true
                     startEditMode(true)
                     binding.fab.visibility = View.GONE
-                    Log.d("onClickNote", "Bắt đầu chế độ edit")
                 }
             },
             hideCreated = true,
             listNoteSelectedAdapter = listNoteSelected,
-            updateCountCallback = { updateCountNoteSeleted() },
+            updateCountCallback = { updateCountNoteSelected() },
             getCategoryOfNote = { noteId -> noteViewModel.getCategoryOfNote(noteId) }
         )
 
@@ -140,9 +127,6 @@ class NoteFragment : Fragment(), MenuProvider {
 
         noteViewModel.allNote.observe(viewLifecycleOwner) { notes ->
             notes.let {
-                notes.forEach { note ->
-                    Log.d("NoteColor", "NoteId: ${note.noteId}, Color: ${note.backgroundColor}")
-                }
                 noteAdapter.updateListNote(notes)
             }
         }
@@ -155,11 +139,9 @@ class NoteFragment : Fragment(), MenuProvider {
             sharedPreferences.edit().putBoolean("isVisible", false).apply()
         }
 
-        // Lấy kích thước màn hình
         val screenWidth = resources.displayMetrics.widthPixels.toFloat()
         val screenHeight = resources.displayMetrics.heightPixels.toFloat()
 
-        // Xoay mũi tên về góc dưới bên phải
         rotateArrowToCorner(binding.arrowImageView, screenWidth, screenHeight)
 
         sortBy()
@@ -167,24 +149,23 @@ class NoteFragment : Fragment(), MenuProvider {
         return root
     }
 
-    private fun updateCountNoteSeleted() {
+    private fun updateCountNoteSelected() {
         val toolbar = requireActivity().findViewById<Toolbar>(R.id.toolbar)
-        val tvCountSeleted = toolbar?.findViewById<TextView>(R.id.tvCountSeleted)
-        tvCountSeleted?.text = listNoteSelected.size.toString()
-        Log.d("listNoteSelectedFragment", listNoteSelected.size.toString())
+        val tvCountSelected = toolbar?.findViewById<TextView>(R.id.tvCountSeleted)
+        tvCountSelected?.text = listNoteSelected.size.toString()
     }
 
     private fun startEditMode(isVisible: Boolean) {
         isEditMode = isVisible
         val toolbar = requireActivity().findViewById<Toolbar>(R.id.toolbar)
         val btnSearch = toolbar.findViewById<View>(R.id.item_search)
-        val itemsort = toolbar.findViewById<View>(R.id.item_sort)
-        val itemmore = toolbar.findViewById<View>(R.id.item_more)
+        val itemSort = toolbar.findViewById<View>(R.id.item_sort)
+        val itemMore = toolbar.findViewById<View>(R.id.item_more)
 
         if (isVisible) {
             btnSearch?.visibility = View.GONE
-            itemsort?.visibility = View.GONE
-            itemmore?.visibility = View.GONE
+            itemSort?.visibility = View.GONE
+            itemMore?.visibility = View.GONE
 
             val layoutParams = Toolbar.LayoutParams(
                 Toolbar.LayoutParams.MATCH_PARENT,
@@ -194,19 +175,18 @@ class NoteFragment : Fragment(), MenuProvider {
             val noteLayout = layoutInflater.inflate(R.layout.custom_note_toolbar, toolbar, false)
             toolbar.addView(noteLayout, layoutParams)
 
-            val tvCountSeleted = toolbar.findViewById<TextView>(R.id.tvCountSeleted)
+            val tvCountSelected = toolbar.findViewById<TextView>(R.id.tvCountSeleted)
             val imgDelete = toolbar.findViewById<ImageView>(R.id.imgDelete)
             val imgSelectAll = toolbar.findViewById<ImageView>(R.id.imgSelectAll)
 
-            Log.d("listNoteSelectedFragment", listNoteSelected.size.toString())
-            tvCountSeleted.text = listNoteSelected.size.toString()
+            tvCountSelected.text = listNoteSelected.size.toString()
 
             toolbar.setNavigationIcon(R.drawable.back)
             toolbar.setNavigationOnClickListener {
                 startEditMode(false)
                 noteAdapter.exitEditMode()
                 binding.fab.visibility = View.VISIBLE
-                tvCountSeleted?.visibility = View.GONE
+                tvCountSelected?.visibility = View.GONE
                 imgDelete?.visibility = View.GONE
                 imgSelectAll?.visibility = View.GONE
                 toolbar.title = "Notepad Free"
@@ -221,16 +201,12 @@ class NoteFragment : Fragment(), MenuProvider {
                     noteViewModel.allNote.observe(viewLifecycleOwner) {
                         listNoteSelected = it.toMutableList()
                         noteAdapter.updateListNoteSelected(listNoteSelected)
-                        Log.d("TrashFragment", "imgSelectAll")
-                        Log.d("TrashFragment", listNoteSelected.size.toString())
                     }
                 } else {
                     listNoteSelected.clear()
                     noteAdapter.updateListNoteSelected(listNoteSelected)
-                    Log.d("TrashFragment", "imgSelectAll")
-                    Log.d("TrashFragment", listNoteSelected.size.toString())
                 }
-                updateCountNoteSeleted()
+                updateCountNoteSelected()
             }
 
             imgDelete.setOnClickListener {
@@ -238,8 +214,8 @@ class NoteFragment : Fragment(), MenuProvider {
             }
         } else {
             btnSearch?.visibility = View.VISIBLE
-            itemsort?.visibility = View.VISIBLE
-            itemmore?.visibility = View.VISIBLE
+            itemSort?.visibility = View.VISIBLE
+            itemMore?.visibility = View.VISIBLE
 
             val noteLayout = toolbar.findViewById<View>(R.id.custom_note_toolbar)
             noteLayout?.let { toolbar.removeView(it) }
@@ -261,14 +237,12 @@ class NoteFragment : Fragment(), MenuProvider {
 
         val dialog = android.app.AlertDialog.Builder(requireContext()).setView(dialogView).create()
 
-        deleteLog.text = buildString {
-            append("Delete the selected notes?")
-        }
+        deleteLog.text = getString(R.string.delete_the_selected_notes)
 
         btnCancel.setOnClickListener {
             dialog.dismiss()
         }
-        btnDelete.text = "OK"
+        btnDelete.text = getString(R.string.ok)
 
         btnDelete.setOnClickListener {
             listNoteSelected.forEach {
@@ -279,6 +253,8 @@ class NoteFragment : Fragment(), MenuProvider {
                 }
             }
             startEditMode(false)
+            listNoteSelected.clear()
+            noteAdapter.exitEditMode()
             dialog.dismiss()
         }
         dialog.show()
@@ -297,7 +273,6 @@ class NoteFragment : Fragment(), MenuProvider {
         arrowImageView.rotation = angle.toFloat()
     }
 
-    // tạo note đầu tiên mặc định
     private fun insertFirstNote(sharedPreferences: SharedPreferences) {
         val isFirstRun = sharedPreferences.getBoolean("isFirstRun", true)
         val currentDateTime = Date()
@@ -305,29 +280,20 @@ class NoteFragment : Fragment(), MenuProvider {
         val time = dateFormat.format(currentDateTime)
 
         if (isFirstRun) {
-            val text = """
-            Thank you for downloading Notepad Free. This is a welcome message.
-            You can delete this message by clicking Delete button in the top right corner.
-            You can revert any unwanted changes during note edition with the "Undo" and "Redo" buttons. Try to edit this text, and click the buttons in the top right corner.
-            Please check the main menu for additional functions, like Help screen, backup functions, or settings. It can be opened with the button in the top left corner of the main screen.
-            Have a nice day.
-            ☺️
-        """.trimIndent()
+            val text = getString(R.string.default_text).trimIndent()
 
             val spannableText = SpannableStringBuilder(text)
 
-            val noteContent = spannableToNoteContent(spannableText)
+            val noteContent =
+                FormatTextSupport().spannableToNoteContent(requireContext(), spannableText)
 
             val firstNote = Note(
-                title = "Hi, how are you? (tap to open)",
+                title = getString(R.string.first_title),
                 note = Gson().toJson(noteContent),
                 timeCreate = time
             )
-
-            // Lưu vào ViewModel
             noteViewModel.insertFirst(firstNote)
 
-            // Cập nhật trạng thái isFirstRun
             with(sharedPreferences.edit()) {
                 putBoolean("isFirstRun", false)
                 apply()
@@ -421,7 +387,7 @@ class NoteFragment : Fragment(), MenuProvider {
                 }
 
                 R.id.import_text_files -> {
-                    checkAndRequestPermissions {
+                    FileProcess().checkAndRequestPermissions {
                         importNotesFromFiles()
                     }
                     listNoteSelected.clear()
@@ -432,7 +398,7 @@ class NoteFragment : Fragment(), MenuProvider {
                 }
 
                 R.id.export_notes_to_text_files -> {
-                    checkAndRequestPermissions {
+                    FileProcess().checkAndRequestPermissions {
                         openDirectoryChooser()
                     }
                     isEditMode = false
@@ -453,143 +419,60 @@ class NoteFragment : Fragment(), MenuProvider {
                 else -> false
             }
         }
-
-        // Hiển thị PopupMenu
         popupMenu.show()
     }
 
-    private fun checkAndRequestPermissions(action: () -> Unit) {
-        action()
-    }
-
-    // Đăng ký launcher để chọn thư mục
     private val selectDirectoryLauncher =
         registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri: Uri? ->
             uri?.let {
-                // Lưu Uri của thư mục để sử dụng sau
                 selectedDirectoryUri = it
-                Log.d("selectedDirectoryUri", "$selectedDirectoryUri")
                 val takeFlags =
                     Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
                 requireContext().contentResolver.takePersistableUriPermission(it, takeFlags)
 
-                // Gọi hàm lưu nhiều tệp vào thư mục đã chọn
-                exportNotesToDirectory()
+                FileProcess().exportNotesToDirectory(selectedDirectoryUri, requireContext(), listNoteSelected)
+                noteAdapter.exitEditMode()
             }
         }
 
-    // Mở hộp thoại chọn thư mục
     private fun openDirectoryChooser() {
         selectDirectoryLauncher.launch(null)
     }
 
-    // Hàm xuất ghi chú đã chọn vào thư mục (sử dụng Uri đã lưu)
-    private fun exportNotesToDirectory() {
-        val directoryUri = selectedDirectoryUri
-        if (directoryUri == null) {
-            Toast.makeText(requireContext(), "Chưa chọn thư mục", Toast.LENGTH_SHORT).show()
-            return
-        }
-
-        if (listNoteSelected.isNotEmpty()) {
-            listNoteSelected.forEach { note ->
-                val noteContent = note.note ?: ""
-                if (noteContent.isNotBlank()) {
-                    val fileTitle = note.title ?: "Untitled"
-                    val fileName = "$fileTitle.txt"
-
-                    // Tạo Uri cho file trong thư mục đã chọn
-                    val fileUri = createFileInDirectory(directoryUri, fileName)
-                    fileUri?.let {
-                        saveToFile(it, noteContent) // Lưu nội dung ghi chú vào file đã tạo
-                    }
-                }
-            }
-        } else {
-            Toast.makeText(requireContext(), "Không có ghi chú nào được chọn", Toast.LENGTH_SHORT)
-                .show()
-        }
-        listNoteSelected.clear()
-        noteAdapter.exitEditMode()
-    }
-
-    // Hàm tạo Uri của tệp trong thư mục đã chọn
-    private fun createFileInDirectory(directoryUri: Uri, fileName: String): Uri? {
-        val documentUri = DocumentsContract.buildDocumentUriUsingTree(
-            directoryUri,
-            DocumentsContract.getTreeDocumentId(directoryUri)
-        )
-        return try {
-            DocumentsContract.createDocument(
-                requireContext().contentResolver,
-                documentUri,
-                "text/plain",
-                fileName
-            )
-        } catch (e: Exception) {
-            Toast.makeText(requireContext(), "Lỗi khi tạo tệp: ${e.message}", Toast.LENGTH_SHORT)
-                .show()
-            null
-        }
-    }
-
-    private fun saveToFile(uri: Uri, content: String) {
-        try {
-            requireContext().contentResolver.openOutputStream(uri)?.use { outputStream ->
-                outputStream.write(content.toByteArray())
-                Toast.makeText(
-                    requireContext(),
-                    "Tệp đã được lưu: ${uri.lastPathSegment}",
-                    Toast.LENGTH_SHORT
-                ).show()
-            }
-        } catch (e: Exception) {
-            Toast.makeText(requireContext(), "Lỗi khi lưu tệp: ${e.message}", Toast.LENGTH_SHORT)
-                .show()
-        }
-    }
-
-    // Nhập các ghi chú từ tệp
     private fun importNotesFromFiles() {
-        openFileLauncher.launch(arrayOf("text/plain")) // Mở cửa sổ chọn tệp
+        openFileLauncher.launch(arrayOf(getString(R.string.text_plain)))
     }
 
-    // Đăng ký launcher để mở cửa sổ chọn tệp (OpenDocument)
     private val openFileLauncher =
         registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
             uri?.let {
-                importFile(it) // Đọc và xử lý tệp đã chọn
+                importFile(it)
             }
         }
 
-    // Đọc nội dung tệp người dùng chọn và lưu vào database
     private fun importFile(uri: Uri) {
         try {
             context?.contentResolver?.openInputStream(uri)?.use { inputStream ->
                 val content = inputStream.bufferedReader().use { it.readText() }.trimIndent()
 
-                Log.d("content", content)
+                val fileName = uri.lastPathSegment?.substringAfterLast('/')
+                    ?.substringBeforeLast(".txt")
 
-                // Xử lý tên tệp, chỉ lấy phần tên tệp không có đường dẫn và phần mở rộng
-                val fileName = uri.lastPathSegment?.substringAfterLast('/') // Lấy phần tên cuối cùng sau dấu "/"
-                    ?.substringBeforeLast(".txt") // Loại bỏ phần mở rộng .txt
+                val noteContent = SpannableStringBuilder(content)
+                val spannableContent =
+                    FormatTextSupport().spannableToNoteContent(requireContext(), noteContent)
 
-                // Tiến hành xử lý nội dung tệp
-                val text = SpannableStringBuilder(content)
-                val spannableContent = spannableToNoteContent(text)
-                // Tạo đối tượng Note với title là tên tệp
                 val note = Note(
-                    title = fileName ?: "Untitled", // Dùng tên file đã xử lý hoặc "Untitled" nếu null
+                    title = fileName ?: getString(R.string.untitled),
                     note = Gson().toJson(spannableContent)
                 )
-                Log.d("JSON Debug", "JSON khi lưu: ${Gson().toJson(spannableContent)}")
-                // Lưu vào Room hoặc xử lý tiếp
                 viewLifecycleOwner.lifecycleScope.launch {
                     noteViewModel.insert(note) {}
 
                     noteViewModel.noteId.observe(viewLifecycleOwner) { id ->
                         id?.let {
-                            val action = NoteFragmentDirections.actionNavNoteToNoteDetailFragment(it)
+                            val action =
+                                NoteFragmentDirections.actionNavNoteToNoteDetailFragment(it)
                             findNavController().navigate(action)
                             noteViewModel.clearNoteId()
                             noteViewModel.noteId.removeObservers(viewLifecycleOwner)
@@ -597,11 +480,8 @@ class NoteFragment : Fragment(), MenuProvider {
                     }
                 }
             }
-        } catch (e: Exception) {
-            Log.d("Error", e.toString())
-        }
+        } catch (_: Exception) {}
     }
-
 
     private fun dialogPickColor() {
         val dialogView = layoutInflater.inflate(R.layout.pick_color, null)
@@ -654,7 +534,6 @@ class NoteFragment : Fragment(), MenuProvider {
 
                         colorFillBackground = parseColor
 
-                        // Cập nhật `tvColor` với màu được chọn
                         tvColor.setBackgroundColor(colorFillBackground)
 
                         for (i in 0 until gridlayoutColor.childCount) {
@@ -675,7 +554,6 @@ class NoteFragment : Fragment(), MenuProvider {
             }
         })
         tvOK.setOnClickListener {
-            Log.d("updateBackgroundColor", listNoteSelected.size.toString())
             noteViewModel.updateBackgroundColor(
                 listNoteSelected.map { it.noteId },
                 colorFillBackground
@@ -695,7 +573,7 @@ class NoteFragment : Fragment(), MenuProvider {
     private fun showCategorizeDialog() {
         val dialogView = layoutInflater.inflate(R.layout.category_list_dialog, null)
         val categoryListView = dialogView.findViewById<RecyclerView>(R.id.rcvCategory)
-        val cancelButon = dialogView.findViewById<TextView>(R.id.btnCancel)
+        val cancelButton = dialogView.findViewById<TextView>(R.id.btnCancel)
         val okButton = dialogView.findViewById<TextView>(R.id.btnOk)
 
         val categoryMutableList = mutableListOf<Category>()
@@ -716,7 +594,7 @@ class NoteFragment : Fragment(), MenuProvider {
         }
         val dialog = AlertDialog.Builder(requireContext()).setView(dialogView).create()
 
-        cancelButon.setOnClickListener {
+        cancelButton.setOnClickListener {
             dialog.dismiss()
         }
 
@@ -730,7 +608,10 @@ class NoteFragment : Fragment(), MenuProvider {
                     }
                 }
             }
-            Toast.makeText(requireContext(), "Update categories", Toast.LENGTH_SHORT).show()
+            Toast.makeText(
+                requireContext(),
+                getString(R.string.update_categories), Toast.LENGTH_SHORT
+            ).show()
             dialog.dismiss()
             noteAdapter.exitEditMode()
             startEditMode(false)
@@ -754,56 +635,54 @@ class NoteFragment : Fragment(), MenuProvider {
             dialog.dismiss()
         }
 
-        // Đặt RadioButton checked dựa trên giá trị "sort" trong SharedPreferences
         val sort = sharedPreferences.getString("sort", null)
         when (sort) {
-            "editnewest" -> rdgSort.check(R.id.rdbEditNewest)
-            "editoldest" -> rdgSort.check(R.id.rdbEditOldest)
-            "a_z" -> rdgSort.check(R.id.rdbA_Z)
-            "z_a" -> rdgSort.check(R.id.rdbZ_A)
-            "createnewest" -> rdgSort.check(R.id.rdbCreateNewest)
-            "createoldest" -> rdgSort.check(R.id.rdbCreateOldest)
-            "color" -> rdgSort.check(R.id.rdbColor)
+            getString(R.string.editnewest) -> rdgSort.check(R.id.rdbEditNewest)
+            getString(R.string.editoldest) -> rdgSort.check(R.id.rdbEditOldest)
+            getString(R.string.a_z) -> rdgSort.check(R.id.rdbA_Z)
+            getString(R.string.z_a) -> rdgSort.check(R.id.rdbZ_A)
+            getString(R.string.createnewest) -> rdgSort.check(R.id.rdbCreateNewest)
+            getString(R.string.createoldest) -> rdgSort.check(R.id.rdbCreateOldest)
+            getString(R.string.color) -> rdgSort.check(R.id.rdbColor)
         }
 
         buttonSort.setOnClickListener {
             val selectedRadioButtonId = rdgSort.checkedRadioButtonId
             val editor = sharedPreferences.edit()
 
-            // Lưu giá trị "sort" mới vào SharedPreferences và xử lý trạng thái "hideCreated"
             when (selectedRadioButtonId) {
                 R.id.rdbEditNewest -> {
-                    editor.putString("sort", "editnewest")
+                    editor.putString("sort", getString(R.string.editnewest))
                     hideCreated.postValue(true)
                 }
 
                 R.id.rdbEditOldest -> {
-                    editor.putString("sort", "editoldest")
+                    editor.putString("sort", getString(R.string.editoldest))
                     hideCreated.postValue(true)
                 }
 
                 R.id.rdbA_Z -> {
-                    editor.putString("sort", "a_z")
+                    editor.putString("sort", getString(R.string.a_z))
                     hideCreated.postValue(true)
                 }
 
                 R.id.rdbZ_A -> {
-                    editor.putString("sort", "z_a")
+                    editor.putString("sort", getString(R.string.z_a))
                     hideCreated.postValue(true)
                 }
 
                 R.id.rdbCreateNewest -> {
-                    editor.putString("sort", "createnewest")
+                    editor.putString("sort", getString(R.string.createnewest))
                     hideCreated.postValue(false)
                 }
 
                 R.id.rdbCreateOldest -> {
-                    editor.putString("sort", "createoldest")
+                    editor.putString("sort", getString(R.string.createoldest))
                     hideCreated.postValue(false)
                 }
 
                 R.id.rdbColor -> {
-                    editor.putString("sort", "color")
+                    editor.putString("sort", getString(R.string.color))
                     hideCreated.postValue(true)
                 }
             }
@@ -821,76 +700,28 @@ class NoteFragment : Fragment(), MenuProvider {
         val sortObserver = { notes: List<Note> -> noteAdapter.updateListNote(notes) }
 
         when (sort) {
-            "editnewest" -> noteViewModel.sortedByUpdatedTimeDesc()
+            getString(R.string.editnewest) -> noteViewModel.sortedByUpdatedTimeDesc()
                 .observe(viewLifecycleOwner, sortObserver)
 
-            "editoldest" -> noteViewModel.sortedByUpdatedTimeAsc()
+            getString(R.string.editoldest) -> noteViewModel.sortedByUpdatedTimeAsc()
                 .observe(viewLifecycleOwner, sortObserver)
 
-            "a_z" -> noteViewModel.sortedByTitleAsc().observe(viewLifecycleOwner, sortObserver)
-            "z_a" -> noteViewModel.sortedByTitleDesc().observe(viewLifecycleOwner, sortObserver)
-            "createnewest" -> noteViewModel.sortedByCreatedTimeDesc()
+            getString(R.string.a_z) -> noteViewModel.sortedByTitleAsc()
                 .observe(viewLifecycleOwner, sortObserver)
 
-            "createoldest" -> noteViewModel.sortedByCreatedTimeAsc()
+            getString(R.string.z_a) -> noteViewModel.sortedByTitleDesc()
                 .observe(viewLifecycleOwner, sortObserver)
 
-            "color" -> {
+            getString(R.string.createnewest) -> noteViewModel.sortedByCreatedTimeDesc()
+                .observe(viewLifecycleOwner, sortObserver)
+
+            getString(R.string.createoldest) -> noteViewModel.sortedByCreatedTimeAsc()
+                .observe(viewLifecycleOwner, sortObserver)
+
+            getString(R.string.color) -> {
                 noteViewModel.sortedByColorAsc()
                     .observe(viewLifecycleOwner, sortObserver)
             }
         }
-    }
-
-    private fun spannableToNoteContent(spannable: SpannableStringBuilder): NoteContent {
-        val defaultBackgroundColor = ContextCompat.getColor(requireContext(), R.color.transparent)
-        val defaultTextColor = ContextCompat.getColor(requireContext(), R.color.text)
-        val segments = mutableListOf<TextSegment>()
-        var start = 0
-
-        // Lặp qua từng ký tự trong spannable
-        while (start < spannable.length) {
-            val end = spannable.nextSpanTransition(start, spannable.length, Any::class.java)
-            val text = spannable.subSequence(start, end).toString()
-
-            // Lấy các định dạng hiện có
-            val isBold = spannable.getSpans(start, end, StyleSpan::class.java)
-                .any { it.style == Typeface.BOLD }
-            val isItalic = spannable.getSpans(start, end, StyleSpan::class.java)
-                .any { it.style == Typeface.ITALIC }
-            val isUnderline = spannable.getSpans(start, end, UnderlineSpan::class.java).isNotEmpty()
-            val isStrikethrough =
-                spannable.getSpans(start, end, StrikethroughSpan::class.java).isNotEmpty()
-
-            // Lấy backgroundColor và textColor
-            val backgroundColor = spannable.getSpans(start, end, BackgroundColorSpan::class.java)
-                .firstOrNull()?.backgroundColor ?: defaultBackgroundColor
-            val textColor = spannable.getSpans(start, end, ForegroundColorSpan::class.java)
-                .firstOrNull()?.foregroundColor ?: defaultTextColor
-            val textSize = spannable.getSpans(start, end, AbsoluteSizeSpan::class.java)
-                .firstOrNull()?.size ?: 18
-
-            // Thêm vào danh sách TextSegment
-            segments.add(
-                TextSegment(
-                    text,
-                    isBold,
-                    isItalic,
-                    isUnderline,
-                    isStrikethrough,
-                    backgroundColor,
-                    textColor,
-                    textSize
-                )
-            )
-
-            // Cập nhật start cho lần lặp tiếp theo
-            start = end
-            Log.d(
-                "SpanInfo",
-                "Text: $text, isBold: $isBold, isItalic: $isItalic, isUnderline: $isUnderline, isStrikethrough: $isStrikethrough, background: $backgroundColor, textcolor: $textColor, textsize: $textSize"
-            )
-        }
-        return NoteContent(segments)
     }
 }

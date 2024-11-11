@@ -1,9 +1,7 @@
 package com.grownapp.noteapp.ui.note.adapter
 
-import android.annotation.SuppressLint
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -14,8 +12,8 @@ import androidx.recyclerview.widget.RecyclerView
 import com.google.gson.Gson
 import com.grownapp.noteapp.R
 import com.grownapp.noteapp.ui.categories.dao.Category
-import com.grownapp.noteapp.ui.note.NoteContent
 import com.grownapp.noteapp.ui.note.dao.Note
+import com.grownapp.noteapp.ui.note.support.NoteContent
 
 class NoteAdapter(
     private val onClickNote: (Note) -> Unit,
@@ -30,7 +28,6 @@ class NoteAdapter(
     private var isEditMode = false
 
     inner class NoteViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
-        @SuppressLint("SetTextI18n")
         fun bind(note: Note) {
             if (note.title != null && note.title != "") {
                 title.text = note.title
@@ -69,18 +66,16 @@ class NoteAdapter(
                         listNoteSelectedAdapter.remove(note)
                         updateBackground(itemView, note, false)
                     } else {
-                        // Chọn note, đặt nền cho chế độ chọn
                         listNoteSelectedAdapter.add(note)
                         updateBackground(itemView, note, true)
                     }
-                    updateCountCallback() // Cập nhật số lượng item được chọn
+                    updateCountCallback()
                     notifyDataSetChanged()
                 } else {
-                    listNoteSelectedAdapter.clear() // Xóa hết các item đã chọn nếu không ở chế độ Edit
+                    listNoteSelectedAdapter.clear()
                     exitEditMode()
-                    onClickNote(note)// Xử lý sự kiện khi click vào note
+                    onClickNote(note)
                 }
-                Log.d("listNoteSelectedAdapter", listNoteSelectedAdapter.size.toString())
             }
 
             itemView.setOnLongClickListener {
@@ -91,7 +86,6 @@ class NoteAdapter(
                     updateCountCallback()
                     updateBackground(itemView, note, true)
                 }
-                Log.d("listNoteSelectedAdapter", listNoteSelectedAdapter.size.toString())
                 onLongClickNote(note)
                 true
             }
@@ -102,7 +96,6 @@ class NoteAdapter(
         private val noteTime: TextView = itemView.findViewById(R.id.noteTime)
         private val noteCategory: TextView = itemView.findViewById(R.id.noteCategory)
 
-        // Hàm trộn màu
         private fun blendColors(color1: Int, color2: Int): Int {
             val r1 = Color.red(color1)
             val g1 = Color.green(color1)
@@ -122,7 +115,6 @@ class NoteAdapter(
         private fun updateBackground(view: View, note: Note, isSelected: Boolean) {
             val drawable: GradientDrawable
 
-            // Nếu note không có màu nền, sử dụng background mặc định
             if (note.backgroundColor == null) {
                 drawable = ContextCompat.getDrawable(
                     view.context,
@@ -133,19 +125,16 @@ class NoteAdapter(
                     view.context,
                     R.drawable.border_item_note
                 ) as GradientDrawable
-                drawable.mutate() // Để tránh ảnh hưởng đến các item khác
+                drawable.mutate()
             }
 
             if (isSelected) {
-                // Khi item được chọn trong chế độ long click hoặc editMode
                 if (note.backgroundColor == null) {
-                    // Nếu không có màu nền, chỉ sử dụng viền long click
                     view.background = ContextCompat.getDrawable(
                         view.context,
                         R.drawable.long_click_item_background
                     )
                 } else {
-                    // Nếu có màu nền, trộn màu giữa note và long click background
                     val longClickColor =
                         ContextCompat.getColor(view.context, R.color.bottomBackgroundColorLongClick)
                     val white =
@@ -160,12 +149,9 @@ class NoteAdapter(
                     }
                 }
             } else {
-                // Khi không chọn
                 if (note.backgroundColor == null) {
-                    // Nếu không có màu nền, sử dụng viền mặc định
                     view.setBackgroundResource(R.drawable.border_item_note)
                 } else {
-                    // Nếu có màu nền, tạo gradient từ white đến màu của note
                     val white =
                         ContextCompat.getColor(view.context, R.color.topBackgroundItem)
                     drawable.colors = intArrayOf(white, note.backgroundColor!!)
@@ -218,6 +204,6 @@ class NoteAdapter(
         listNoteSelectedAdapter.clear()
         listNoteSelectedAdapter.addAll(noteList)
         updateCountCallback()
-        notifyDataSetChanged() // Gọi lại callback để cập nhật giao diện
+        notifyDataSetChanged()
     }
 }
