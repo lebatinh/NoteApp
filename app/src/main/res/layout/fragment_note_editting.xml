@@ -5,242 +5,229 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:padding="@dimen/_10sdp"
-    tools:context=".ui.settings.SettingsFragment">
+    tools:context=".ui.settings.NoteEdittingFragment">
 
     <androidx.constraintlayout.widget.ConstraintLayout
-        android:id="@+id/constraintTheme"
+        android:id="@+id/constraintShowNoteKeyboard"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent">
 
         <TextView
-            android:id="@+id/tvTheme"
+            android:id="@+id/tvShowNoteKeyboard"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/theme"
+            android:text="@string/show_note_keyboard"
             android:textColor="@color/text"
             android:textSize="@dimen/_13sdp"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
         <TextView
-            android:id="@+id/tvThemeDes"
+            android:id="@+id/tvShowNoteKeyboardDes"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/theme_des"
+            android:text="@string/show_note_keyboard_des"
             android:textColor="@color/textDes"
             android:textSize="@dimen/_11sdp"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/tvTheme" />
-    </androidx.constraintlayout.widget.ConstraintLayout>
-
-    <TextView
-        android:id="@+id/tvPasswordSetting"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="@dimen/_15sdp"
-        android:text="@string/password_settings"
-        android:textColor="@color/text"
-        android:textSize="@dimen/_13sdp"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/constraintTheme" />
-
-    <TextView
-        android:id="@+id/tvNoteList"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="@dimen/_15sdp"
-        android:text="@string/note_list"
-        android:textColor="@color/text"
-        android:textSize="@dimen/_13sdp"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/tvPasswordSetting" />
-
-    <TextView
-        android:id="@+id/tvNoteEditting"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="@dimen/_15sdp"
-        android:text="@string/note_editting"
-        android:textColor="@color/text"
-        android:textSize="@dimen/_13sdp"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/tvNoteList" />
-
-    <androidx.constraintlayout.widget.ConstraintLayout
-        android:id="@+id/constraintTrash"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="@dimen/_15sdp"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/tvNoteEditting">
-
-        <TextView
-            android:id="@+id/tvTrash"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/trash"
-            android:textColor="@color/text"
-            android:textSize="@dimen/_13sdp"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
-
-        <TextView
-            android:id="@+id/tvTrashDes"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/trashDes"
-            android:textColor="@color/textDes"
-            android:textSize="@dimen/_11sdp"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/tvTrash" />
+            app:layout_constraintTop_toBottomOf="@id/tvShowNoteKeyboard" />
 
         <androidx.appcompat.widget.SwitchCompat
-            android:id="@+id/swTrash"
+            android:id="@+id/swShowNoteKeyboard"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:checked="true"
-            app:thumbTint="@color/switch_thumb_color"
-            app:trackTint="@color/swBackground"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
+            app:layout_constraintTop_toTopOf="parent"
+            app:thumbTint="@color/switch_thumb_color"
+            app:trackTint="@color/swBackground" />
     </androidx.constraintlayout.widget.ConstraintLayout>
 
     <androidx.constraintlayout.widget.ConstraintLayout
-        android:id="@+id/constraintDiagnostic"
+        android:id="@+id/constraintCursorPositionInNote"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="@dimen/_15sdp"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/constraintTrash">
+        app:layout_constraintTop_toBottomOf="@id/constraintShowNoteKeyboard">
 
         <TextView
-            android:id="@+id/tvDiagnostic"
+            android:id="@+id/tvCursorPositionInNote"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/diagnostic"
+            android:text="@string/cursor_postition_in_a_note"
             android:textColor="@color/text"
             android:textSize="@dimen/_13sdp"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
         <TextView
-            android:id="@+id/tvDiagnosticDes"
-            android:layout_width="0dp"
+            android:id="@+id/tvCursorPositionInNoteDes"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginEnd="@dimen/_20sdp"
-            android:text="@string/diagnosticDes"
+            android:text="@string/cursor_postition_in_a_note_des"
             android:textColor="@color/textDes"
             android:textSize="@dimen/_11sdp"
-            app:layout_constraintEnd_toStartOf="@+id/swDiagnostic"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/tvDiagnostic" />
+            app:layout_constraintTop_toBottomOf="@id/tvCursorPositionInNote" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/constraintShowTextFormattingToolbar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/_15sdp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/constraintCursorPositionInNote">
+
+        <TextView
+            android:id="@+id/tvShowTextFormattingToolbar"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/show_text_formatting_toolbar"
+            android:textColor="@color/text"
+            android:textSize="@dimen/_13sdp"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <TextView
+            android:id="@+id/tvShowTextFormattingToolbarDes"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:text="@string/show_text_formatting_toolbar_des"
+            android:textColor="@color/textDes"
+            android:textSize="@dimen/_11sdp"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toStartOf="@id/swShowTextFormattingToolbar"
+            app:layout_constraintTop_toBottomOf="@id/tvShowTextFormattingToolbar" />
 
         <androidx.appcompat.widget.SwitchCompat
-            android:id="@+id/swDiagnostic"
+            android:id="@+id/swShowTextFormattingToolbar"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:checked="false"
-            app:thumbTint="@color/switch_thumb_color"
-            app:trackTint="@color/swBackground"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
+            app:layout_constraintTop_toTopOf="parent"
+            app:thumbTint="@color/switch_thumb_color"
+            app:trackTint="@color/swBackground" />
     </androidx.constraintlayout.widget.ConstraintLayout>
 
     <androidx.constraintlayout.widget.ConstraintLayout
-        android:id="@+id/constraintHideNoteTitleDiagnostic"
+        android:id="@+id/constraintDefaultFontSize"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="@dimen/_15sdp"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/constraintDiagnostic">
+        app:layout_constraintTop_toBottomOf="@id/constraintShowTextFormattingToolbar">
 
         <TextView
-            android:id="@+id/tvHideNoteTitleDiagnostic"
+            android:id="@+id/tvDefaultFontSize"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/hideNoteTitleDiagnostic"
-            android:textSize="@dimen/_13sdp"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
-
-        <TextView
-            android:id="@+id/tvHideNoteTitleDiagnosticDes"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginEnd="@dimen/_20sdp"
-            android:text="@string/hideNoteTitleDiagnosticDes"
-            android:textSize="@dimen/_11sdp"
-            app:layout_constraintEnd_toStartOf="@id/swHideNoteTitleDiagnostic"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/tvHideNoteTitleDiagnostic" />
-
-        <androidx.appcompat.widget.SwitchCompat
-            android:id="@+id/swHideNoteTitleDiagnostic"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:checked="true"
-            android:clickable="false"
-            app:thumbTint="@color/switch_thumb_color"
-            app:trackTint="@color/swBackground"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
-    </androidx.constraintlayout.widget.ConstraintLayout>
-
-    <androidx.constraintlayout.widget.ConstraintLayout
-        android:id="@+id/constraintBackup"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="@dimen/_15sdp"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/constraintHideNoteTitleDiagnostic">
-
-        <TextView
-            android:id="@+id/tvBackup"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/backup"
+            android:text="@string/default_note_text_font_size"
             android:textColor="@color/text"
             android:textSize="@dimen/_13sdp"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
         <TextView
-            android:id="@+id/tvBackupDes"
-            android:layout_width="0dp"
+            android:id="@+id/tvDefaultFontSizeDes"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginEnd="@dimen/_20sdp"
-            android:text="@string/backupDes"
+            android:text="@string/default_note_text_font_size_value"
             android:textColor="@color/textDes"
             android:textSize="@dimen/_11sdp"
-            app:layout_constraintEnd_toStartOf="@id/swBackup"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/tvBackup" />
+            app:layout_constraintTop_toBottomOf="@id/tvDefaultFontSize" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/constraintSwitchSaveUndo"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/_15sdp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/constraintDefaultFontSize">
+
+        <TextView
+            android:id="@+id/tvSwitchSaveUndo"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/switch_save_and_undo_buttons"
+            android:textColor="@color/text"
+            android:textSize="@dimen/_13sdp"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <TextView
+            android:id="@+id/tvSwitchSaveUndoDes"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:text="@string/switch_save_and_undo_buttons_des"
+            android:textColor="@color/textDes"
+            android:textSize="@dimen/_11sdp"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toStartOf="@id/swSwitchSaveUndo"
+            app:layout_constraintTop_toBottomOf="@id/tvSwitchSaveUndo" />
 
         <androidx.appcompat.widget.SwitchCompat
-            android:id="@+id/swBackup"
+            android:id="@+id/swSwitchSaveUndo"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:checked="false"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:thumbTint="@color/switch_thumb_color"
+            app:trackTint="@color/swBackground" />
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/constraintSaveNotesAuto"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/_15sdp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/constraintSwitchSaveUndo">
+
+        <TextView
+            android:id="@+id/tvSaveNotesAuto"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/save_notes_automatically"
+            android:textColor="@color/text"
+            android:textSize="@dimen/_13sdp"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <TextView
+            android:id="@+id/tvSaveNotesAutoDes"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:text="@string/save_notes_automatically_des"
+            android:textColor="@color/textDes"
+            android:textSize="@dimen/_11sdp"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toStartOf="@id/swSaveNotesAuto"
+            app:layout_constraintTop_toBottomOf="@id/tvSaveNotesAuto" />
+
+        <androidx.appcompat.widget.SwitchCompat
+            android:id="@+id/swSaveNotesAuto"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:checked="true"
-            app:thumbTint="@color/switch_thumb_color"
-            app:trackTint="@color/swBackground"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
+            app:layout_constraintTop_toTopOf="parent"
+            app:thumbTint="@color/switch_thumb_color"
+            app:trackTint="@color/swBackground" />
     </androidx.constraintlayout.widget.ConstraintLayout>
 
-    <TextView
-        android:id="@+id/tvPrivacySettings"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="@dimen/_15sdp"
-        android:text="@string/privacy_settings"
-        android:textColor="@color/text"
-        android:textSize="@dimen/_13sdp"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/constraintBackup" />
+    
 </androidx.constraintlayout.widget.ConstraintLayout>

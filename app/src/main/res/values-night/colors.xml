@@ -28,9 +28,13 @@
 
     <color name="textTopBar">#FFFFFF</color>
     <color name="text">#21211B</color>
-    <color name="textDisable">#BAAA94</color>
+    <color name="textDisable">#4D4D4D</color>
     <color name="textDes">#B3B3B3</color>
-    <color name="textHide">#4D4D4D</color>
+
+    <color name="swChecked">#889C73</color>
+    <color name="swCheckedFalse">#B9B9B9</color>
+    <color name="swCheckedDisable">#5F5F5F</color>
+    <color name="swBackground">#2A3023</color>
 
     <color name="backgroundDivider">#282828</color>
     <color name="backgroundPickColorDialog">#424242</color>

@@ -62,6 +62,12 @@
         <action
             android:id="@+id/action_nav_settings_to_passwordSettingsFragment"
             app:destination="@id/passwordSettingsFragment" />
+        <action
+            android:id="@+id/action_nav_settings_to_noteListSettingFragment"
+            app:destination="@id/noteListSettingFragment" />
+        <action
+            android:id="@+id/action_nav_settings_to_noteEdittingFragment"
+            app:destination="@id/noteEdittingFragment" />
     </fragment>
     <fragment
         android:id="@+id/nav_rate"
@@ -109,4 +115,14 @@
                 app:argType="integer" />
         </action>
     </fragment>
+    <fragment
+        android:id="@+id/noteListSettingFragment"
+        android:name="com.grownapp.noteapp.ui.settings.NoteListSettingFragment"
+        android:label="fragment_note_list_setting"
+        tools:layout="@layout/fragment_note_list_setting" />
+    <fragment
+        android:id="@+id/noteEdittingFragment"
+        android:name="com.grownapp.noteapp.ui.settings.NoteEdittingFragment"
+        android:label="fragment_note_editting"
+        tools:layout="@layout/fragment_note_editting" />
 </navigation>

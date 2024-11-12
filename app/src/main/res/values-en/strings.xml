@@ -135,4 +135,20 @@
     <string name="delete_log_detail">The \'%1$s\' note will be deleted.\nAre you sure?</string>
     <string name="delete_log_detail_permanently">The note will be deleted permanently!\nAre you sure that you want to delete the \'%1$s\' note?</string>
     <string name="sum">+</string>
+    <string name="open_the_last_chosen_category">Open the last chosen category</string>
+    <string name="opens_the_last_chosen_category_des">Opens the last chosen category on app start</string>
+    <string name="show_note_categories">Show note categories</string>
+    <string name="show_note_categories_des">Shows categories for each note on the list</string>
+    <string name="show_note_keyboard">Show note keyboard</string>
+    <string name="show_note_keyboard_des">Show keyboard after entering the note screen</string>
+    <string name="cursor_postition_in_a_note">Cursor postition in a note</string>
+    <string name="cursor_postition_in_a_note_des">Cursor position after opening a note with keyboard visible</string>
+    <string name="show_text_formatting_toolbar">Show text formatting toolbar</string>
+    <string name="show_text_formatting_toolbar_des">Shows a bar with text formatting tools (e.g. setting bold font)</string>
+    <string name="default_note_text_font_size">Default note text font size</string>
+    <string name="default_note_text_font_size_value">18</string>
+    <string name="switch_save_and_undo_buttons">Switch \"Save\" and \"Undo\" buttons</string>
+    <string name="switch_save_and_undo_buttons_des">Switches the \"Save\" and \"Undo\" buttons placement</string>
+    <string name="save_notes_automatically">Save notes automatically</string>
+    <string name="save_notes_automatically_des">Changes in notes are saved automatically. Disabling it may cause losing unsaved parts of notes</string>
 </resources>

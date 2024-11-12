@@ -1,8 +1,11 @@
 package com.grownapp.noteapp.ui.note
 
 import android.content.Context
+import android.content.Intent
 import android.content.SharedPreferences
+import android.net.Uri
 import android.os.Bundle
+import android.text.SpannableStringBuilder
 import android.view.LayoutInflater
 import android.view.Menu
 import android.view.MenuInflater
@@ -13,6 +16,7 @@ import android.widget.ImageView
 import android.widget.RadioGroup
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.PopupMenu
@@ -23,9 +27,11 @@ import androidx.core.view.MenuProvider
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.google.gson.Gson
 import com.grownapp.noteapp.MainActivity
 import com.grownapp.noteapp.R
 import com.grownapp.noteapp.databinding.FragmentNoteListBinding
@@ -34,7 +40,10 @@ import com.grownapp.noteapp.ui.categories.dao.Category
 import com.grownapp.noteapp.ui.note.adapter.CategoryForNoteAdapter
 import com.grownapp.noteapp.ui.note.adapter.NoteAdapter
 import com.grownapp.noteapp.ui.note.dao.Note
+import com.grownapp.noteapp.ui.note.support.FileProcess
+import com.grownapp.noteapp.ui.note.support.FormatTextSupport
 import com.grownapp.noteapp.ui.note_category.NoteCategoryCrossRef
+import kotlinx.coroutines.launch
 import kotlin.math.atan2
 
 class NoteListFragment : Fragment(), MenuProvider {
@@ -52,6 +61,7 @@ class NoteListFragment : Fragment(), MenuProvider {
     private lateinit var listNoteSelected: MutableList<Note>
     private var isEditMode = false
     private var isOnTrash = true
+    private var selectedDirectoryUri: Uri? = null
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -425,10 +435,22 @@ class NoteListFragment : Fragment(), MenuProvider {
                 }
 
                 R.id.import_text_files -> {
+                    FileProcess().checkAndRequestPermissions {
+                        importNotesFromFiles()
+                    }
+                    listNoteSelected.clear()
+                    noteAdapter.exitEditMode()
+                    isEditMode = false
+                    startEditMode(false)
                     true
                 }
 
                 R.id.export_notes_to_text_files -> {
+                    FileProcess().checkAndRequestPermissions {
+                        openDirectoryChooser()
+                    }
+                    isEditMode = false
+                    startEditMode(false)
                     true
                 }
 
@@ -446,6 +468,71 @@ class NoteListFragment : Fragment(), MenuProvider {
         }
 
         popupMenu.show()
+    }
+    private val selectDirectoryLauncher =
+        registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri: Uri? ->
+            uri?.let {
+                selectedDirectoryUri = it
+                val takeFlags =
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                requireContext().contentResolver.takePersistableUriPermission(it, takeFlags)
+
+                FileProcess().exportNotesToDirectory(selectedDirectoryUri, requireContext(), listNoteSelected)
+                noteAdapter.exitEditMode()
+            }
+        }
+
+    private fun openDirectoryChooser() {
+        selectDirectoryLauncher.launch(null)
+    }
+
+    private fun importNotesFromFiles() {
+        openFileLauncher.launch(arrayOf(getString(R.string.text_plain)))
+    }
+
+    private val openFileLauncher =
+        registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
+            uri?.let {
+                importFile(it)
+            }
+        }
+
+    private fun importFile(uri: Uri) {
+        try {
+            context?.contentResolver?.openInputStream(uri)?.use { inputStream ->
+                val content = inputStream.bufferedReader().use { it.readText() }.trimIndent()
+
+                val fileName = uri.lastPathSegment?.substringAfterLast('/')
+                    ?.substringBeforeLast(".txt")
+
+                val noteContent = SpannableStringBuilder(content)
+                val spannableContent =
+                    FormatTextSupport().spannableToNoteContent(requireContext(), noteContent)
+
+                val note = Note(
+                    title = fileName ?: getString(R.string.untitled),
+                    note = Gson().toJson(spannableContent)
+                )
+                viewLifecycleOwner.lifecycleScope.launch {
+                    noteViewModel.insert(note) { noteId ->
+                        if (categoryId != null) {
+                            val noteCategoryCrossRef =
+                                NoteCategoryCrossRef(noteId = noteId.toInt(), categoryId = categoryId!!)
+                            noteViewModel.insertNoteCategoryCrossRef(noteCategoryCrossRef)
+                        }
+                    }
+                    noteViewModel.noteId.observe(viewLifecycleOwner) { id ->
+                        id?.let {
+                            val action =
+                                NoteListFragmentDirections.actionNoteListFragmentToNoteDetailFragment(it)
+                            findNavController().navigate(action)
+                            noteViewModel.clearNoteId()
+                            noteViewModel.noteId.removeObservers(viewLifecycleOwner)
+                        }
+                    }
+                }
+            }
+        } catch (_: Exception) {}
     }
 
     private fun showCategorizeDialog() {

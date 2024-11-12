@@ -1,5 +1,7 @@
 package com.grownapp.noteapp.ui.note
 
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.Menu
@@ -11,6 +13,7 @@ import android.widget.ImageView
 import android.widget.RadioGroup
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.widget.PopupMenu
 import androidx.appcompat.widget.Toolbar
@@ -26,6 +29,7 @@ import com.grownapp.noteapp.R
 import com.grownapp.noteapp.databinding.FragmentTrashBinding
 import com.grownapp.noteapp.ui.note.adapter.NoteAdapter
 import com.grownapp.noteapp.ui.note.dao.Note
+import com.grownapp.noteapp.ui.note.support.FileProcess
 import com.grownapp.noteapp.ui.note.support.FormatTextSupport
 import com.grownapp.noteapp.ui.note.support.NoteContent
 
@@ -39,7 +43,8 @@ class TrashFragment : Fragment(), MenuProvider {
 
     private lateinit var listNoteSelected: MutableList<Note>
 
-    private var isEditMode = false
+    private var editMode = false
+    private var selectedDirectoryUri: Uri? = null
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -63,7 +68,7 @@ class TrashFragment : Fragment(), MenuProvider {
                 dialogDeleteOrUndelete(it)
             },
             onLongClickNote = {
-                startEditMode(!isEditMode)
+                startEditMode(!editMode)
             },
             hideCreated = true,
             listNoteSelectedAdapter = listNoteSelected,
@@ -89,7 +94,7 @@ class TrashFragment : Fragment(), MenuProvider {
     }
 
     private fun startEditMode(isVisible: Boolean) {
-        isEditMode = isVisible
+        editMode = isVisible
         val toolbar = requireActivity().findViewById<Toolbar>(R.id.toolbar)
         if (isVisible) {
             val layoutParams = Toolbar.LayoutParams(
@@ -272,7 +277,7 @@ class TrashFragment : Fragment(), MenuProvider {
     override fun onMenuItemSelected(menuItem: MenuItem): Boolean {
         when (menuItem.itemId) {
             R.id.item_more_trash -> {
-                showMoreDialog(isEditMode)
+                showMoreDialog(editMode)
             }
         }
         return false
@@ -296,6 +301,11 @@ class TrashFragment : Fragment(), MenuProvider {
                 }
 
                 R.id.export_notes_to_text_files_trash -> {
+                    FileProcess().checkAndRequestPermissions {
+                        openDirectoryChooser()
+                    }
+                    editMode = false
+                    startEditMode(false)
                     true
                 }
 
@@ -318,7 +328,22 @@ class TrashFragment : Fragment(), MenuProvider {
         // Hiển thị PopupMenu
         popupMenu.show()
     }
+    private val selectDirectoryLauncher =
+        registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri: Uri? ->
+            uri?.let {
+                selectedDirectoryUri = it
+                val takeFlags =
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                requireContext().contentResolver.takePersistableUriPermission(it, takeFlags)
 
+                FileProcess().exportNotesToDirectory(selectedDirectoryUri, requireContext(), listNoteSelected)
+                noteAdapter.exitEditMode()
+            }
+        }
+
+    private fun openDirectoryChooser() {
+        selectDirectoryLauncher.launch(null)
+    }
     private fun restoreDialog(isEmptyTrash: Boolean) {
         val dialogView = layoutInflater.inflate(R.layout.restore_dialog, null)
         val tvRestore = dialogView.findViewById<TextView>(R.id.tvRestore)

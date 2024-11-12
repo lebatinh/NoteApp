@@ -10,6 +10,7 @@ import android.view.ViewGroup
 import android.widget.RadioGroup
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
+import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
 import com.grownapp.noteapp.R
@@ -51,11 +52,91 @@ class SettingsFragment : Fragment() {
         val isOnTrash = sharedPreferences.getBoolean("isOnTrash", true)
         binding.swTrash.isChecked = isOnTrash
 
+        binding.constraintTrash.setOnClickListener {
+            val currentIsOnTrash = sharedPreferences.getBoolean("isOnTrash", true)
+            editor.putBoolean("isOnTrash", !currentIsOnTrash).apply()
+            binding.swTrash.isChecked = !currentIsOnTrash
+        }
         binding.swTrash.setOnCheckedChangeListener { _, checked ->
             editor.putBoolean("isOnTrash", checked).apply()
             binding.swTrash.isChecked = checked
         }
 
+        val isDiagnostic = sharedPreferences.getBoolean("isDiagnostic", false)
+        binding.swDiagnostic.isChecked = isDiagnostic
+
+        val thumbColorStateList = ContextCompat.getColorStateList(requireContext(), R.color.switch_thumb_color)
+        val thumbColorStateListDisable = ContextCompat.getColorStateList(requireContext(), R.color.switch_thumb_color_disable)
+
+        val textColor = ContextCompat.getColorStateList(requireContext(), R.color.text_color)
+        val textDesColor = ContextCompat.getColorStateList(requireContext(), R.color.text_des_color)
+
+        binding.constraintDiagnostic.setOnClickListener {
+            val currentIsDiagnostic = sharedPreferences.getBoolean("isDiagnostic", false)
+            editor.putBoolean("isDiagnostic", !currentIsDiagnostic).apply()
+            binding.swDiagnostic.isChecked = !currentIsDiagnostic
+            binding.constraintHideNoteTitleDiagnostic.isEnabled = !currentIsDiagnostic
+            binding.swHideNoteTitleDiagnostic.thumbTintList = if (!currentIsDiagnostic) thumbColorStateList else thumbColorStateListDisable
+
+            binding.tvHideNoteTitleDiagnostic.isEnabled = !currentIsDiagnostic
+            binding.tvHideNoteTitleDiagnosticDes.isEnabled = !currentIsDiagnostic
+            binding.tvHideNoteTitleDiagnostic.setTextColor(textColor)
+            binding.tvHideNoteTitleDiagnosticDes.setTextColor(textDesColor)
+        }
+        binding.swDiagnostic.setOnCheckedChangeListener { _, checked ->
+            editor.putBoolean("isDiagnostic", checked).apply()
+            binding.swDiagnostic.isChecked = checked
+            binding.constraintHideNoteTitleDiagnostic.isEnabled = checked
+
+            binding.swHideNoteTitleDiagnostic.thumbTintList = if (checked) thumbColorStateList else thumbColorStateListDisable
+
+            binding.tvHideNoteTitleDiagnostic.isEnabled = checked
+            binding.tvHideNoteTitleDiagnosticDes.isEnabled = checked
+            binding.tvHideNoteTitleDiagnostic.setTextColor(textColor)
+            binding.tvHideNoteTitleDiagnosticDes.setTextColor(textDesColor)
+        }
+
+        val isHideNoteTitleDiagnostic =
+            sharedPreferences.getBoolean("isHideNoteTitleDiagnostic", true)
+        binding.swHideNoteTitleDiagnostic.isChecked = isHideNoteTitleDiagnostic
+        binding.swHideNoteTitleDiagnostic.thumbTintList = if (isDiagnostic) thumbColorStateList else thumbColorStateListDisable
+
+        binding.tvHideNoteTitleDiagnostic.isEnabled = isDiagnostic
+        binding.tvHideNoteTitleDiagnosticDes.isEnabled = isDiagnostic
+        binding.tvHideNoteTitleDiagnostic.setTextColor(textColor)
+        binding.tvHideNoteTitleDiagnosticDes.setTextColor(textDesColor)
+
+        binding.constraintHideNoteTitleDiagnostic.setOnClickListener {
+            if (binding.swDiagnostic.isChecked){
+                val currentIsHideNoteTitleDiagnostic =
+                    sharedPreferences.getBoolean("isHideNoteTitleDiagnostic", true)
+                editor.putBoolean("isHideNoteTitleDiagnostic", !currentIsHideNoteTitleDiagnostic)
+                    .apply()
+                binding.swHideNoteTitleDiagnostic.isChecked = !currentIsHideNoteTitleDiagnostic
+
+            }
+        }
+
+        var isBackup =
+            sharedPreferences.getBoolean("isBackup", true)
+        binding.swBackup.isChecked = isBackup
+
+        binding.constraintBackup.setOnClickListener {
+            isBackup = !isBackup
+            editor.putBoolean("isBackup", isBackup).apply()
+            binding.swBackup.isChecked = isBackup
+        }
+
+        binding.swBackup.setOnCheckedChangeListener { _, checked ->
+            isBackup = checked
+            editor.putBoolean("isBackup", isBackup).apply()
+            binding.swBackup.isChecked = isBackup
+        }
+
+        binding.tvNoteList.setOnClickListener {
+            val action = SettingsFragmentDirections.actionNavSettingsToNoteListSettingFragment()
+            findNavController().navigate(action)
+        }
         return root
     }
 
