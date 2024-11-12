@@ -912,7 +912,7 @@ class NoteDetailFragment : Fragment(), MenuProvider {
         editText.addTextChangedListener(object : TextWatcher {
             var startPos = 0
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {
-                startPos = start+count
+                startPos = start + count
             }
 
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
@@ -934,14 +934,13 @@ class NoteDetailFragment : Fragment(), MenuProvider {
                         )
 
                         editText.removeTextChangedListener(this)
-                        editText.text =
-                            formattedTextSegments
+                        editText.text = formattedTextSegments
                         editText.setSelection(endPos)
 
                         undoRedoManager.addState(formattedTextSegments)
 
                         editText.addTextChangedListener(this)
-                    } else if (endPos in 0..<startPos && startPos <= formattedTextSegments.length) {
+                    } else if (endPos in 0..<startPos) {
                         formattedTextSegments.delete(endPos, startPos)
 
                         undoRedoManager.addState(SpannableStringBuilder(formattedTextSegments))
