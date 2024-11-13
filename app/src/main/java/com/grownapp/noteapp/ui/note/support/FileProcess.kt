@@ -30,14 +30,14 @@ class FileProcess {
         if (listNoteSelected.isNotEmpty()) {
             listNoteSelected.forEach { note ->
                 val noteText = note.note
-                val noteContent = noteText?.let { extractText(it) }
+                val noteContent = extractText(noteText?:"")
 
                 val fileTitle = note.title ?: context.getString(R.string.untitled)
                 val fileName = context.getString(R.string.txt, fileTitle)
 
                 val fileUri = createFileInDirectory(directoryUri, fileName, context)
                 fileUri?.let {
-                    saveToFile(it, noteContent!!, context)
+                    saveToFile(it, noteContent, context)
                 }
             }
         } else {
@@ -89,15 +89,20 @@ class FileProcess {
     }
 
     private fun extractText(noteContent: String): String{
-        val jsonObject = JsonParser.parseString(noteContent).asJsonObject
+        if (noteContent.isNotEmpty()){
+            val jsonObject = JsonParser.parseString(noteContent).asJsonObject
 
-        val segmentArray: JsonArray = jsonObject.getAsJsonArray("segments")
+            val segmentArray: JsonArray = jsonObject.getAsJsonArray("segments")
 
-        return buildString {
-            for (s in segmentArray){
-                val segmentObject = s.asJsonObject
-                append(segmentObject["text"].asString)
+            return buildString {
+                for (s in segmentArray){
+                    val segmentObject = s.asJsonObject
+                    append(segmentObject["text"].asString)
+                }
             }
+        }else{
+            return ""
         }
+
     }
 }
