@@ -4,6 +4,8 @@ import android.content.Context
 import android.net.Uri
 import android.provider.DocumentsContract
 import android.widget.Toast
+import com.google.gson.JsonArray
+import com.google.gson.JsonParser
 import com.grownapp.noteapp.R
 import com.grownapp.noteapp.ui.note.dao.Note
 
@@ -27,15 +29,15 @@ class FileProcess {
 
         if (listNoteSelected.isNotEmpty()) {
             listNoteSelected.forEach { note ->
-                val noteContent = note.note ?: ""
-                if (noteContent.isNotBlank()) {
-                    val fileTitle = note.title ?: context.getString(R.string.untitled)
-                    val fileName = context.getString(R.string.txt, fileTitle)
+                val noteText = note.note
+                val noteContent = noteText?.let { extractText(it) }
 
-                    val fileUri = createFileInDirectory(directoryUri, fileName, context)
-                    fileUri?.let {
-                        saveToFile(it, noteContent, context)
-                    }
+                val fileTitle = note.title ?: context.getString(R.string.untitled)
+                val fileName = context.getString(R.string.txt, fileTitle)
+
+                val fileUri = createFileInDirectory(directoryUri, fileName, context)
+                fileUri?.let {
+                    saveToFile(it, noteContent!!, context)
                 }
             }
         } else {
@@ -63,8 +65,7 @@ class FileProcess {
             Toast.makeText(
                 context,
                 context.getString(R.string.error_log_create_file, e.message), Toast.LENGTH_SHORT
-            )
-                .show()
+            ).show()
             null
         }
     }
@@ -83,8 +84,20 @@ class FileProcess {
             Toast.makeText(
                 context,
                 context.getString(R.string.error_log_save_file, e.message), Toast.LENGTH_SHORT
-            )
-                .show()
+            ).show()
+        }
+    }
+
+    private fun extractText(noteContent: String): String{
+        val jsonObject = JsonParser.parseString(noteContent).asJsonObject
+
+        val segmentArray: JsonArray = jsonObject.getAsJsonArray("segments")
+
+        return buildString {
+            for (s in segmentArray){
+                val segmentObject = s.asJsonObject
+                append(segmentObject["text"].asString)
+            }
         }
     }
 }

@@ -101,8 +101,8 @@
             android:text="@string/show_text_formatting_toolbar_des"
             android:textColor="@color/textDes"
             android:textSize="@dimen/_11sdp"
-            app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toStartOf="@id/swShowTextFormattingToolbar"
+            app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/tvShowTextFormattingToolbar" />
 
         <androidx.appcompat.widget.SwitchCompat
@@ -172,8 +172,8 @@
             android:text="@string/switch_save_and_undo_buttons_des"
             android:textColor="@color/textDes"
             android:textSize="@dimen/_11sdp"
-            app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toStartOf="@id/swSwitchSaveUndo"
+            app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/tvSwitchSaveUndo" />
 
         <androidx.appcompat.widget.SwitchCompat
@@ -213,8 +213,8 @@
             android:text="@string/save_notes_automatically_des"
             android:textColor="@color/textDes"
             android:textSize="@dimen/_11sdp"
-            app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toStartOf="@id/swSaveNotesAuto"
+            app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/tvSaveNotesAuto" />
 
         <androidx.appcompat.widget.SwitchCompat
@@ -229,5 +229,163 @@
             app:trackTint="@color/swBackground" />
     </androidx.constraintlayout.widget.ConstraintLayout>
 
-    
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/constraintConfirmUnsaveChange"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/_15sdp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/constraintSaveNotesAuto">
+
+        <TextView
+            android:id="@+id/tvConfirmUnsaveChange"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/confirm_dropping_unsaved_change"
+            android:textSize="@dimen/_13sdp"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <TextView
+            android:id="@+id/tvConfirmUnsaveChangeDes"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:text="@string/confirm_dropping_unsaved_change_des"
+            android:textSize="@dimen/_11sdp"
+            app:layout_constraintEnd_toStartOf="@id/swConfirmUnsaveChange"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/tvConfirmUnsaveChange" />
+
+        <androidx.appcompat.widget.SwitchCompat
+            android:id="@+id/swConfirmUnsaveChange"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            android:checked="true"
+            android:clickable="false"
+            app:thumbTint="@color/switch_thumb_color"
+            app:trackTint="@color/swBackground" />
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/constraintOpenNoteInReadMode"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/_15sdp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/constraintConfirmUnsaveChange">
+
+        <TextView
+            android:id="@+id/tvOpenNoteInReadMode"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/open_notes_in_read_mode"
+            android:textColor="@color/text"
+            android:textSize="@dimen/_13sdp"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <TextView
+            android:id="@+id/tvOpenNoteInReadModeDes"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:text="@string/open_notes_in_read_mode_des"
+            android:textColor="@color/textDes"
+            android:textSize="@dimen/_11sdp"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toStartOf="@id/swOpenNoteInReadMode"
+            app:layout_constraintTop_toBottomOf="@id/tvOpenNoteInReadMode" />
+
+        <androidx.appcompat.widget.SwitchCompat
+            android:id="@+id/swOpenNoteInReadMode"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:thumbTint="@color/switch_thumb_color"
+            app:trackTint="@color/swBackground" />
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/constraintKeepScreenOn"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/_15sdp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/constraintOpenNoteInReadMode">
+
+        <TextView
+            android:id="@+id/tvKeepScreenOn"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/keep_screen_on"
+            android:textColor="@color/text"
+            android:textSize="@dimen/_13sdp"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <TextView
+            android:id="@+id/tvKeepScreenOnDes"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:text="@string/keep_screen_on_des"
+            android:textColor="@color/textDes"
+            android:textSize="@dimen/_11sdp"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toStartOf="@id/swKeepScreenOn"
+            app:layout_constraintTop_toBottomOf="@id/tvKeepScreenOn" />
+
+        <androidx.appcompat.widget.SwitchCompat
+            android:id="@+id/swKeepScreenOn"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:thumbTint="@color/switch_thumb_color"
+            app:trackTint="@color/swBackground" />
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/constraintDisableTextAutoComplete"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/_15sdp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/constraintKeepScreenOn">
+
+        <TextView
+            android:id="@+id/tvDisableTextAutoComplete"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/disable_text_autocomplete"
+            android:textColor="@color/text"
+            android:textSize="@dimen/_13sdp"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <TextView
+            android:id="@+id/tvDisableTextAutoCompleteDes"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:text="@string/disable_text_autocomplete_des"
+            android:textColor="@color/textDes"
+            android:textSize="@dimen/_11sdp"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toStartOf="@id/swDisableTextAutoComplete"
+            app:layout_constraintTop_toBottomOf="@id/tvDisableTextAutoComplete" />
+
+        <androidx.appcompat.widget.SwitchCompat
+            android:id="@+id/swDisableTextAutoComplete"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:thumbTint="@color/switch_thumb_color"
+            app:trackTint="@color/swBackground" />
+    </androidx.constraintlayout.widget.ConstraintLayout>
 </androidx.constraintlayout.widget.ConstraintLayout>

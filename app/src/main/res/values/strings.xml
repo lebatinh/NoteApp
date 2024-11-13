@@ -148,4 +148,12 @@
     <string name="switch_save_and_undo_buttons_des">Switches the \"Save\" and \"Undo\" buttons placement</string>
     <string name="save_notes_automatically">Save notes automatically</string>
     <string name="save_notes_automatically_des">Changes in notes are saved automatically. Disabling it may cause losing unsaved parts of notes</string>
+    <string name="confirm_dropping_unsaved_change">Confirm dropping unsaved changes</string>
+    <string name="confirm_dropping_unsaved_change_des">Asks for confirmation before closing a note with unsaved changes.</string>
+    <string name="open_notes_in_read_mode">Open notes in read mode</string>
+    <string name="open_notes_in_read_mode_des">Open notes in read mode by default</string>
+    <string name="keep_screen_on">Keep screen on</string>
+    <string name="keep_screen_on_des">Keeps the screen from turning off after opening a note</string>
+    <string name="disable_text_autocomplete">Disable text autocomplete</string>
+    <string name="disable_text_autocomplete_des">Disables phone keyboard\'s autocomplete feature.\nMay cause side effects, for example disabling starting sentences with a capital letter. Recommended solution is to disable autocompletion directly in the phone keyboard\'s settings.</string>
 </resources>
