@@ -71,8 +71,8 @@ class NoteDetailFragment : Fragment(), MenuProvider {
 
     private var noteId: Int = 0
     private var category: String? = null
-    private var formattedTextSegments = SpannableStringBuilder()
     private val undoRedoManager = UndoRedoManager()
+    private var formattedTextSegments = SpannableStringBuilder()
     private var currentFormat = TextFormat()
 
     private var isOnTrash = true
@@ -170,7 +170,7 @@ class NoteDetailFragment : Fragment(), MenuProvider {
 
         applyFormatting(binding.edtNote)
 
-        Log.d("formattedTextSegments", formattedTextSegments.toString())
+        Log.d("formattedTextSegments_start", formattedTextSegments.toString())
         return root
     }
 
@@ -243,6 +243,8 @@ class NoteDetailFragment : Fragment(), MenuProvider {
 
     private fun saveNote() {
         Log.d("Save Note", "Save Note")
+        Log.d("editText_save", binding.edtNote.text.toString())
+        Log.d("formattedTextSegments_save", formattedTextSegments.toString())
         val spannableText = SpannableStringBuilder(binding.edtNote.text)
         val noteContent =
             FormatTextSupport().spannableToNoteContent(requireContext(), spannableText)
@@ -911,8 +913,11 @@ class NoteDetailFragment : Fragment(), MenuProvider {
     private fun applyFormatting(editText: EditText) {
         editText.addTextChangedListener(object : TextWatcher {
             var startPos = 0
+            var previousSelectionStart = 0
+
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {
                 startPos = start + count
+                previousSelectionStart = start
             }
 
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
@@ -920,9 +925,10 @@ class NoteDetailFragment : Fragment(), MenuProvider {
             override fun afterTextChanged(s: Editable?) {
                 s?.let {
                     val endPos = editText.selectionEnd
+
+                    editText.removeTextChangedListener(this)
                     if (startPos < endPos) {
                         val newText = it.subSequence(startPos, endPos)
-
                         formattedTextSegments.insert(startPos, newText)
 
                         FormatTextSupport().applyCurrentFormat(
@@ -933,21 +939,37 @@ class NoteDetailFragment : Fragment(), MenuProvider {
                             endPos
                         )
 
-                        editText.removeTextChangedListener(this)
                         editText.text = formattedTextSegments
                         editText.setSelection(endPos)
-
                         undoRedoManager.addState(formattedTextSegments)
 
-                        editText.addTextChangedListener(this)
-                    } else if (endPos in 0..<startPos) {
-                        formattedTextSegments.delete(endPos, startPos)
+                    } else if (endPos in 0 until startPos) {
+                        if (previousSelectionStart == endPos) {
+                            formattedTextSegments.delete(endPos, startPos)
+                        } else if (previousSelectionStart < endPos) {
+                            formattedTextSegments.delete(previousSelectionStart, startPos)
 
-                        undoRedoManager.addState(SpannableStringBuilder(formattedTextSegments))
+                            // Lấy văn bản thay thế mới
+                            val replaceText = it.subSequence(previousSelectionStart, endPos)
+
+                            formattedTextSegments.insert(previousSelectionStart, replaceText)
+
+                            FormatTextSupport().applyCurrentFormat(
+                                requireContext(),
+                                currentFormat,
+                                formattedTextSegments,
+                                previousSelectionStart,
+                                previousSelectionStart + replaceText.length
+                            )
+
+                            editText.text = formattedTextSegments
+                            editText.setSelection(endPos)
+                        }
+                        undoRedoManager.addState(formattedTextSegments)
                     }
+                    editText.addTextChangedListener(this)
                 }
             }
         })
     }
-    // TODO: lỗi khi thay thế lỗi ở vị trí thay thế đầu tiên thành chữ ở trạng thái trước đó
 }
