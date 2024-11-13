@@ -29,7 +29,7 @@
         android:importantForAutofill="no"
         android:imeOptions="actionDone"
         android:textColor="@color/text"
-        android:textSize="@dimen/_12sdp"
+        android:textSize="18sp"
         app:layout_constraintTop_toBottomOf="@+id/edtTitle"
         app:layout_constraintBottom_toTopOf="@id/constraint"
         app:layout_constraintStart_toStartOf="parent"/>

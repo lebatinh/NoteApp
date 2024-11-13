@@ -10,6 +10,7 @@ import android.text.style.ForegroundColorSpan
 import android.text.style.StrikethroughSpan
 import android.text.style.StyleSpan
 import android.text.style.UnderlineSpan
+import android.widget.EditText
 import androidx.core.content.ContextCompat
 import com.grownapp.noteapp.R
 
@@ -177,103 +178,4 @@ class FormatTextSupport {
         }
         return spannable
     }
-
-//    fun updateCurrentFormatFromCursorPosition() {
-//        val selectionStart = binding.edtNote.selectionStart
-//        val selectionEnd = binding.edtNote.selectionEnd
-//        if (selectionStart in 0..<selectionEnd) {
-//            val spannable = binding.edtNote.text as SpannableStringBuilder
-//
-//            // Lấy các spans trong phạm vi vùng chọn
-//            val boldSpans = spannable.getSpans(selectionStart, selectionEnd, StyleSpan::class.java)
-//            val colorSpans =
-//                spannable.getSpans(selectionStart, selectionEnd, ForegroundColorSpan::class.java)
-//            val backgroundColorSpans =
-//                spannable.getSpans(selectionStart, selectionEnd, BackgroundColorSpan::class.java)
-//            val underlineSpans =
-//                spannable.getSpans(selectionStart, selectionEnd, UnderlineSpan::class.java)
-//            val strikethroughSpans =
-//                spannable.getSpans(selectionStart, selectionEnd, StrikethroughSpan::class.java)
-//            val sizeSpans =
-//                spannable.getSpans(selectionStart, selectionEnd, AbsoluteSizeSpan::class.java)
-//
-//            // Kiểm tra định dạng chung trong toàn bộ vùng chọn
-//            val isBold = boldSpans.all { it.style == Typeface.BOLD }
-//            val isItalic = boldSpans.all { it.style == Typeface.ITALIC }
-//            val isUnderline =
-//                underlineSpans.isNotEmpty() && underlineSpans.size == spannable.getSpans(
-//                    selectionStart,
-//                    selectionEnd,
-//                    UnderlineSpan::class.java
-//                ).size
-//            val isStrikethrough =
-//                strikethroughSpans.isNotEmpty() && strikethroughSpans.size == spannable.getSpans(
-//                    selectionStart,
-//                    selectionEnd,
-//                    StrikethroughSpan::class.java
-//                ).size
-//
-//            val textColor = colorSpans.firstOrNull()?.foregroundColor ?: currentFormat.textColor
-//            val backgroundColor =
-//                backgroundColorSpans.firstOrNull()?.backgroundColor ?: currentFormat.backgroundColor
-//            val textSize = sizeSpans.firstOrNull()?.size ?: currentFormat.textSize
-//
-//            // Cập nhật currentFormat với các thuộc tính lấy được
-//            currentFormat = currentFormat.copy(
-//                isBold = isBold,
-//                isItalic = isItalic,
-//                isUnderline = isUnderline,
-//                isStrikethrough = isStrikethrough,
-//                textColor = textColor,
-//                backgroundColor = backgroundColor,
-//                textSize = textSize
-//            )
-//        } else {
-//            val spannable = binding.edtNote.text as SpannableStringBuilder
-//
-//            // Lấy định dạng ngay tại vị trí con trỏ
-//            val boldSpans =
-//                spannable.getSpans(selectionStart, selectionStart, StyleSpan::class.java)
-//            val colorSpans =
-//                spannable.getSpans(selectionStart, selectionStart, ForegroundColorSpan::class.java)
-//            val backgroundColorSpans =
-//                spannable.getSpans(selectionStart, selectionStart, BackgroundColorSpan::class.java)
-//            val underlineSpans =
-//                spannable.getSpans(selectionStart, selectionStart, UnderlineSpan::class.java)
-//            val strikethroughSpans =
-//                spannable.getSpans(selectionStart, selectionStart, StrikethroughSpan::class.java)
-//            val sizeSpans =
-//                spannable.getSpans(selectionStart, selectionStart, AbsoluteSizeSpan::class.java)
-//
-//            // Cập nhật currentFormat với các thuộc tính tìm thấy
-//            currentFormat = currentFormat.copy(
-//                isBold = boldSpans.isNotEmpty() && boldSpans[0].style == Typeface.BOLD,
-//                isItalic = boldSpans.isNotEmpty() && boldSpans[0].style == Typeface.ITALIC,
-//                isUnderline = underlineSpans.isNotEmpty(),
-//                isStrikethrough = strikethroughSpans.isNotEmpty(),
-//                textColor = colorSpans.firstOrNull()?.foregroundColor ?: currentFormat.textColor,
-//                backgroundColor = backgroundColorSpans.firstOrNull()?.backgroundColor
-//                    ?: currentFormat.backgroundColor,
-//                textSize = sizeSpans.firstOrNull()?.size ?: currentFormat.textSize
-//            )
-//        }
-//
-//        Log.d("currentFormat", currentFormat.toString())
-//    }
-//
-//    // Hàm kiểm tra định dạng của đoạn mới với đoạn cuối trong stack
-//    fun isSameFormat(newFormat: TextFormat, lastFormat: TextFormat): Boolean {
-//        return newFormat.isBold == lastFormat.isBold &&
-//                newFormat.isItalic == lastFormat.isItalic &&
-//                newFormat.isUnderline == lastFormat.isUnderline &&
-//                newFormat.isStrikethrough == lastFormat.isStrikethrough &&
-//                newFormat.backgroundColor == lastFormat.backgroundColor &&
-//                newFormat.textColor == lastFormat.textColor &&
-//                newFormat.textSize == lastFormat.textSize
-//    }
-//
-//    fun getCurrentFormat(): TextFormat {
-//        // Lấy và trả về định dạng hiện tại từ trạng thái của người dùng
-//        return currentFormat
-//    }
 }

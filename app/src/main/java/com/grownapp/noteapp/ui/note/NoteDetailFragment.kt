@@ -5,15 +5,22 @@ import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import android.graphics.Color
+import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.graphics.drawable.LayerDrawable
 import android.net.Uri
 import android.os.Bundle
 import android.text.Editable
+import android.text.Spannable
 import android.text.SpannableStringBuilder
 import android.text.Spanned
 import android.text.TextWatcher
+import android.text.style.AbsoluteSizeSpan
 import android.text.style.BackgroundColorSpan
+import android.text.style.ForegroundColorSpan
+import android.text.style.StrikethroughSpan
+import android.text.style.StyleSpan
+import android.text.style.UnderlineSpan
 import android.util.Log
 import android.view.Gravity
 import android.view.LayoutInflater
@@ -116,12 +123,12 @@ class NoteDetailFragment : Fragment(), MenuProvider {
                             requireContext(),
                             Gson().fromJson(note.note!!, NoteContent::class.java)
                         )
-                    binding.edtNote.text = formattedText
                     formattedTextSegments = formattedText
+                    binding.edtNote.text = formattedTextSegments
                 } else {
-                    binding.edtNote.text = SpannableStringBuilder("")
                     formattedTextSegments =
                         SpannableStringBuilder("")
+                    binding.edtNote.text = formattedTextSegments
                 }
 
                 val startColor = note.backgroundColor
@@ -671,23 +678,116 @@ class NoteDetailFragment : Fragment(), MenuProvider {
 
         val colorUncheck = ContextCompat.getColor(requireContext(), R.color.background)
         val colorChecked = ContextCompat.getColor(requireContext(), R.color.backgroundIconChecked)
+
         binding.bold.setOnClickListener {
             currentFormat = currentFormat.copy(isBold = !currentFormat.isBold)
+
+            val start = binding.edtNote.selectionStart
+            val end = binding.edtNote.selectionEnd
+            val spannable = binding.edtNote.text as SpannableStringBuilder
+
+            if (start != end) {
+                val boldSpans = spannable.getSpans(start, end, StyleSpan::class.java)
+                if (!currentFormat.isBold) {
+                    // Nếu tắt bold, xóa span bold trong phạm vi này
+                    for (span in boldSpans) {
+                        if (span.style == Typeface.BOLD) {
+                            spannable.removeSpan(span)
+                        }
+                    }
+                } else {
+                    // Nếu bật bold, thêm span bold vào đoạn văn bản
+                    spannable.setSpan(
+                        StyleSpan(Typeface.BOLD),
+                        start,
+                        end,
+                        Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
+                    )
+                }
+            }
             binding.bold.setBackgroundColor(if (!currentFormat.isBold) colorUncheck else colorChecked)
         }
 
         binding.italic.setOnClickListener {
             currentFormat = currentFormat.copy(isItalic = !currentFormat.isItalic)
+
+            val start = binding.edtNote.selectionStart
+            val end = binding.edtNote.selectionEnd
+            val spannable = binding.edtNote.text as SpannableStringBuilder
+
+            if (start != end) {
+                val italicSpans = spannable.getSpans(start, end, StyleSpan::class.java)
+                if (!currentFormat.isItalic) {
+                    // Nếu tắt italic, xóa span italic trong phạm vi này
+                    for (span in italicSpans) {
+                        if (span.style == Typeface.ITALIC) {
+                            spannable.removeSpan(span)
+                        }
+                    }
+                } else {
+                    // Nếu bật italic, thêm span italic vào đoạn văn bản
+                    spannable.setSpan(
+                        StyleSpan(Typeface.ITALIC),
+                        start,
+                        end,
+                        Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
+                    )
+                }
+            }
             binding.italic.setBackgroundColor(if (!currentFormat.isItalic) colorUncheck else colorChecked)
         }
 
         binding.underline.setOnClickListener {
             currentFormat = currentFormat.copy(isUnderline = !currentFormat.isUnderline)
+
+            val start = binding.edtNote.selectionStart
+            val end = binding.edtNote.selectionEnd
+            val spannable = binding.edtNote.text as SpannableStringBuilder
+
+            if (start != end) {
+                val underlineSpans = spannable.getSpans(start, end, UnderlineSpan::class.java)
+                if (!currentFormat.isUnderline) {
+                    // Nếu tắt underline, xóa span underline trong phạm vi này
+                    for (span in underlineSpans) {
+                        spannable.removeSpan(span)
+                    }
+                } else {
+                    // Nếu bật underline, thêm span underline vào đoạn văn bản
+                    spannable.setSpan(
+                        UnderlineSpan(),
+                        start,
+                        end,
+                        Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
+                    )
+                }
+            }
             binding.underline.setBackgroundColor(if (!currentFormat.isUnderline) colorUncheck else colorChecked)
         }
 
         binding.strikethrough.setOnClickListener {
             currentFormat = currentFormat.copy(isStrikethrough = !currentFormat.isStrikethrough)
+
+            val start = binding.edtNote.selectionStart
+            val end = binding.edtNote.selectionEnd
+            val spannable = binding.edtNote.text as SpannableStringBuilder
+
+            if (start != end) {
+                val strikeSpans = spannable.getSpans(start, end, StrikethroughSpan::class.java)
+                if (!currentFormat.isStrikethrough) {
+                    // Nếu tắt strikethrough, xóa span strikethrough trong phạm vi này
+                    for (span in strikeSpans) {
+                        spannable.removeSpan(span)
+                    }
+                } else {
+                    // Nếu bật strikethrough, thêm span strikethrough vào đoạn văn bản
+                    spannable.setSpan(
+                        StrikethroughSpan(),
+                        start,
+                        end,
+                        Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
+                    )
+                }
+            }
             binding.strikethrough.setBackgroundColor(if (!currentFormat.isStrikethrough) colorUncheck else colorChecked)
         }
 
@@ -744,6 +844,7 @@ class NoteDetailFragment : Fragment(), MenuProvider {
                 colorFillTextColor = ContextCompat.getColor(requireContext(), R.color.text)
                 tvColor.setTextColor(colorFillTextColor)
             }
+            applyRangeFormatting()
             for (i in 0 until gridlayoutColor.childCount) {
                 val childView = gridlayoutColor.getChildAt(i) as? TextView
                 childView?.text = null
@@ -858,6 +959,7 @@ class NoteDetailFragment : Fragment(), MenuProvider {
                 }
                 currentFormat = currentFormat.copy(textColor = colorFillTextColor)
             }
+            applyRangeFormatting()
             dialog.dismiss()
         }
         tvCancel.setOnClickListener {
@@ -898,11 +1000,13 @@ class NoteDetailFragment : Fragment(), MenuProvider {
             tvTextSize.text = getString(R.string.text_size_18)
             sbTextSize.setProgress(18, true)
             currentFormat.textSize = 18
+            applyRangeFormatting()
         }
         tvOK.setOnClickListener {
             binding.fontSize.setBackgroundColor(if (s == 18) colorUncheck else colorChecked)
-            dialog.dismiss()
             currentFormat = currentFormat.copy(textSize = s)
+            applyRangeFormatting()
+            dialog.dismiss()
         }
         tvCancel.setOnClickListener {
             dialog.dismiss()
@@ -971,5 +1075,84 @@ class NoteDetailFragment : Fragment(), MenuProvider {
                 }
             }
         })
+    }
+
+    private fun applyRangeFormatting() {
+        val start = binding.edtNote.selectionStart
+        val end = binding.edtNote.selectionEnd
+        val spannable = binding.edtNote.text as SpannableStringBuilder
+
+        if (start != end) {
+            val textSpans = spannable.getSpans(start, end, Any::class.java)
+
+            for (span in textSpans) {
+                if (span is StyleSpan) {
+                    if (span.style == Typeface.BOLD && !currentFormat.isBold) spannable.removeSpan(
+                        span
+                    )
+                    if (span.style == Typeface.ITALIC && !currentFormat.isItalic) spannable.removeSpan(
+                        span
+                    )
+                }
+                if (span is UnderlineSpan && !currentFormat.isUnderline) {
+                    spannable.removeSpan(span)
+                }
+                if (span is StrikethroughSpan && !currentFormat.isStrikethrough) {
+                    spannable.removeSpan(span)
+                }
+                if (span is BackgroundColorSpan && currentFormat.backgroundColor != span.backgroundColor) {
+                    spannable.removeSpan(span)
+                }
+                if (span is ForegroundColorSpan && currentFormat.textColor != span.foregroundColor) {
+                    spannable.removeSpan(span)
+                }
+                if (span is AbsoluteSizeSpan && span.size != currentFormat.textSize) {
+                    spannable.removeSpan(span)
+                }
+            }
+
+            if (currentFormat.isBold) spannable.setSpan(
+                StyleSpan(Typeface.BOLD),
+                start,
+                end,
+                Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
+            )
+            if (currentFormat.isItalic) spannable.setSpan(
+                StyleSpan(Typeface.ITALIC),
+                start,
+                end,
+                Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
+            )
+            if (currentFormat.isUnderline) spannable.setSpan(
+                UnderlineSpan(),
+                start,
+                end,
+                Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
+            )
+            if (currentFormat.isStrikethrough) spannable.setSpan(
+                StrikethroughSpan(),
+                start,
+                end,
+                Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
+            )
+            if (currentFormat.backgroundColor != Color.TRANSPARENT) spannable.setSpan(
+                BackgroundColorSpan(currentFormat.backgroundColor),
+                start,
+                end,
+                Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
+            )
+            if (currentFormat.textColor != Color.BLACK) spannable.setSpan(
+                ForegroundColorSpan(
+                    currentFormat.textColor
+                ), start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
+            )
+
+            spannable.setSpan(
+                AbsoluteSizeSpan(currentFormat.textSize, true),
+                start,
+                end,
+                Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+            )
+        }
     }
 }
