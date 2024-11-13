@@ -21,7 +21,6 @@ import android.text.style.ForegroundColorSpan
 import android.text.style.StrikethroughSpan
 import android.text.style.StyleSpan
 import android.text.style.UnderlineSpan
-import android.util.Log
 import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.Menu
@@ -115,6 +114,7 @@ class NoteDetailFragment : Fragment(), MenuProvider {
 
         noteViewModel.getNoteById(noteId).observe(viewLifecycleOwner) { note ->
             note?.let {
+                listNoteSelected.clear()
                 listNoteSelected.add(it)
                 binding.edtTitle.setText(it.title)
                 if (it.note != null) {
@@ -176,8 +176,6 @@ class NoteDetailFragment : Fragment(), MenuProvider {
         }
 
         applyFormatting(binding.edtNote)
-
-        Log.d("formattedTextSegments_start", formattedTextSegments.toString())
         return root
     }
 
@@ -249,9 +247,6 @@ class NoteDetailFragment : Fragment(), MenuProvider {
     }
 
     private fun saveNote() {
-        Log.d("Save Note", "Save Note")
-        Log.d("editText_save", binding.edtNote.text.toString())
-        Log.d("formattedTextSegments_save", formattedTextSegments.toString())
         val spannableText = SpannableStringBuilder(binding.edtNote.text)
         val noteContent =
             FormatTextSupport().spannableToNoteContent(requireContext(), spannableText)
@@ -689,14 +684,12 @@ class NoteDetailFragment : Fragment(), MenuProvider {
             if (start != end) {
                 val boldSpans = spannable.getSpans(start, end, StyleSpan::class.java)
                 if (!currentFormat.isBold) {
-                    // Nếu tắt bold, xóa span bold trong phạm vi này
                     for (span in boldSpans) {
                         if (span.style == Typeface.BOLD) {
                             spannable.removeSpan(span)
                         }
                     }
                 } else {
-                    // Nếu bật bold, thêm span bold vào đoạn văn bản
                     spannable.setSpan(
                         StyleSpan(Typeface.BOLD),
                         start,
@@ -718,14 +711,12 @@ class NoteDetailFragment : Fragment(), MenuProvider {
             if (start != end) {
                 val italicSpans = spannable.getSpans(start, end, StyleSpan::class.java)
                 if (!currentFormat.isItalic) {
-                    // Nếu tắt italic, xóa span italic trong phạm vi này
                     for (span in italicSpans) {
                         if (span.style == Typeface.ITALIC) {
                             spannable.removeSpan(span)
                         }
                     }
                 } else {
-                    // Nếu bật italic, thêm span italic vào đoạn văn bản
                     spannable.setSpan(
                         StyleSpan(Typeface.ITALIC),
                         start,
@@ -747,12 +738,10 @@ class NoteDetailFragment : Fragment(), MenuProvider {
             if (start != end) {
                 val underlineSpans = spannable.getSpans(start, end, UnderlineSpan::class.java)
                 if (!currentFormat.isUnderline) {
-                    // Nếu tắt underline, xóa span underline trong phạm vi này
                     for (span in underlineSpans) {
                         spannable.removeSpan(span)
                     }
                 } else {
-                    // Nếu bật underline, thêm span underline vào đoạn văn bản
                     spannable.setSpan(
                         UnderlineSpan(),
                         start,
@@ -774,12 +763,10 @@ class NoteDetailFragment : Fragment(), MenuProvider {
             if (start != end) {
                 val strikeSpans = spannable.getSpans(start, end, StrikethroughSpan::class.java)
                 if (!currentFormat.isStrikethrough) {
-                    // Nếu tắt strikethrough, xóa span strikethrough trong phạm vi này
                     for (span in strikeSpans) {
                         spannable.removeSpan(span)
                     }
                 } else {
-                    // Nếu bật strikethrough, thêm span strikethrough vào đoạn văn bản
                     spannable.setSpan(
                         StrikethroughSpan(),
                         start,
