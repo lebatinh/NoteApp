@@ -4,7 +4,7 @@
         android:id="@+id/undelete_all"
         android:title="@string/undelete_all" />
     <item
-        android:id="@+id/export_notes_to_text_files_trash"
+        android:id="@+id/export_notes_to_text_files"
         android:title="@string/export_notes_to_text_files" />
     <item
         android:id="@+id/empty_trash"

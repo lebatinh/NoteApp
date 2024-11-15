@@ -42,6 +42,7 @@ class TrashFragment : Fragment(), MenuProvider {
     private lateinit var noteViewModel: NoteViewModel
 
     private lateinit var listNoteSelected: MutableList<Note>
+    private lateinit var allNote: MutableList<Note>
 
     private var editMode = false
     private var selectedDirectoryUri: Uri? = null
@@ -50,6 +51,7 @@ class TrashFragment : Fragment(), MenuProvider {
 
         noteViewModel = ViewModelProvider(this)[NoteViewModel::class.java]
         listNoteSelected = mutableListOf()
+        allNote = mutableListOf()
     }
 
     override fun onCreateView(
@@ -82,6 +84,7 @@ class TrashFragment : Fragment(), MenuProvider {
         noteViewModel.allTrashNote.observe(viewLifecycleOwner) {
             it.let {
                 noteAdapter.updateListNote(it)
+                allNote.addAll(it)
             }
         }
         return root
@@ -126,7 +129,7 @@ class TrashFragment : Fragment(), MenuProvider {
             }
 
             imgRestore.setOnClickListener {
-                restoreDialog(true)
+                restoreDialog(true, false)
             }
 
             imgSelectAll.setOnClickListener {
@@ -295,12 +298,12 @@ class TrashFragment : Fragment(), MenuProvider {
         }
         popupMenu.setOnMenuItemClickListener { menuItem ->
             when (menuItem.itemId) {
+                // trash more
                 R.id.undelete_all -> {
-                    restoreDialog(true)
+                    restoreDialog(true, false)
                     true
                 }
-
-                R.id.export_notes_to_text_files_trash -> {
+                R.id.export_notes_to_text_files -> {
                     FileProcess().checkAndRequestPermissions {
                         openDirectoryChooser()
                     }
@@ -310,7 +313,17 @@ class TrashFragment : Fragment(), MenuProvider {
                 }
 
                 R.id.empty_trash -> {
-                    restoreDialog(false)
+                    restoreDialog(false, true)
+                    true
+                }
+
+                //trash more editmode
+                R.id.export_notes_to_text_files_trash -> {
+                    FileProcess().checkAndRequestPermissions {
+                        openDirectoryChooser()
+                    }
+                    editMode = false
+                    startEditMode(false)
                     true
                 }
 
@@ -328,6 +341,9 @@ class TrashFragment : Fragment(), MenuProvider {
         // Hiển thị PopupMenu
         popupMenu.show()
     }
+    private fun openDirectoryChooser() {
+        selectDirectoryLauncher.launch(null)
+    }
     private val selectDirectoryLauncher =
         registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri: Uri? ->
             uri?.let {
@@ -336,15 +352,12 @@ class TrashFragment : Fragment(), MenuProvider {
                     Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
                 requireContext().contentResolver.takePersistableUriPermission(it, takeFlags)
 
-                FileProcess().exportNotesToDirectory(selectedDirectoryUri, requireContext(), listNoteSelected)
+                FileProcess().exportNotesToDirectory(selectedDirectoryUri, requireContext(), if (editMode) listNoteSelected else allNote)
                 noteAdapter.exitEditMode()
             }
         }
 
-    private fun openDirectoryChooser() {
-        selectDirectoryLauncher.launch(null)
-    }
-    private fun restoreDialog(isEmptyTrash: Boolean) {
+    private fun restoreDialog(isEmptyTrash: Boolean, isAllNote: Boolean) {
         val dialogView = layoutInflater.inflate(R.layout.restore_dialog, null)
         val tvRestore = dialogView.findViewById<TextView>(R.id.tvRestore)
         val tvYes = dialogView.findViewById<TextView>(R.id.tvYes)
@@ -361,13 +374,19 @@ class TrashFragment : Fragment(), MenuProvider {
 
         tvYes.setOnClickListener {
             if (!isEmptyTrash) {
-                for (note in listNoteSelected) {
-                    noteViewModel.emptyTrash()
+                if (!isAllNote){
+                    for (note in listNoteSelected) {
+                        noteViewModel.emptyTrash()
+                    }
+                }else{
+                    for (note in allNote) {
+                        noteViewModel.emptyTrash()
+                    }
                 }
-                Toast.makeText(requireContext(), getString(R.string.delete_log), Toast.LENGTH_SHORT)
+                Toast.makeText(requireContext(), getString(R.string.deleted_notes), Toast.LENGTH_SHORT)
                     .show()
             } else {
-                for (note in listNoteSelected) {
+                for (note in allNote) {
                     noteViewModel.restoreAllNote()
                 }
                 Toast.makeText(
