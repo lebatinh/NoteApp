@@ -11,7 +11,7 @@
         android:title="@string/import_text_files"
         app:showAsAction="never" />
     <item
-        android:id="@+id/export_notes_to_text_files"
+        android:id="@+id/export_notes_to_text_files_all_note"
         android:orderInCategory="100"
         android:title="@string/export_notes_to_text_files"
         app:showAsAction="never" />

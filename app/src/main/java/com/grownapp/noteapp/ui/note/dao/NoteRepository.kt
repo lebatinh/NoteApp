@@ -146,7 +146,7 @@ class NoteRepository(
 
     val allTrashNote: LiveData<List<Note>> = noteDao.getNoteOnTrash()
 
-    fun pushInTrash(onTrash: Boolean, noteId: Int) {
+    suspend fun pushInTrash(onTrash: Boolean, noteId: Int) {
         noteDao.pushInTrash(onTrash, noteId)
     }
 

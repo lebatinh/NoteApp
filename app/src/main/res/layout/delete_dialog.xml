@@ -11,6 +11,7 @@
         android:layout_height="wrap_content"
         android:textColor="@color/text"
         android:textSize="@dimen/_13sdp"
+        android:text="@string/delete_log_confirm"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 

@@ -350,6 +350,10 @@ class NoteDetailFragment : Fragment(), MenuProvider {
         popupMenu.show()
     }
 
+    private fun openDirectoryChooser() {
+        selectDirectoryLauncher.launch(null)
+    }
+
     private val selectDirectoryLauncher =
         registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri: Uri? ->
             uri?.let {
@@ -366,9 +370,6 @@ class NoteDetailFragment : Fragment(), MenuProvider {
             }
         }
 
-    private fun openDirectoryChooser() {
-        selectDirectoryLauncher.launch(null)
-    }
 
     private fun dialogPickBackgroundColor() {
         val dialogView = layoutInflater.inflate(R.layout.pick_color, null)
@@ -1142,4 +1143,8 @@ class NoteDetailFragment : Fragment(), MenuProvider {
             )
         }
     }
+
+    // TODO undo, redo, undo all sai
+    // TODO tìm kiếm kí tự bị crash
+    // TODO thêm convert to checklist và switch to read mode
 }

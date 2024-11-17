@@ -159,4 +159,6 @@
     <string name="keep_screen_on_des">Keeps the screen from turning off after opening a note</string>
     <string name="disable_text_autocomplete">Disable text autocomplete</string>
     <string name="disable_text_autocomplete_des">Disables phone keyboard\'s autocomplete feature.\nMay cause side effects, for example disabling starting sentences with a capital letter. Recommended solution is to disable autocompletion directly in the phone keyboard\'s settings.</string>
+    <string name="restore_the_selected_notes">Restore the selected notes?</string>
+    <string name="delete_selected_trash_log">Are you sure that you want to delete the selected notes? The notes will be deleted permanently.</string>
 </resources>

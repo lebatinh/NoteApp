@@ -121,7 +121,7 @@
     <string name="restore_note">Restore note</string>
     <string name="delete_log">The note will be deleted permanently!\nAre you sure that you want to delete the \'%1$s\' note?</string>
     <string name="deleted_notes">Deleted notes</string>
-    <string name="delete_log_confirm">Are you sure that you want to delete the selected notes?\nThe notes will be deleted permanently!</string>
+    <string name="delete_log_confirm">Are you sure that you want to delete the selected notes?\nThe notes will be deleted permanently.</string>
     <string name="restore_all_notes">Restore all notes?</string>
     <string name="delete_trash_log">All trashed notes will be deleted permanently. Are you sure that you want to delete all of the trashed notes?</string>
     <string name="restored_notes">Restored notes</string>
@@ -156,4 +156,6 @@
     <string name="keep_screen_on_des">Keeps the screen from turning off after opening a note</string>
     <string name="disable_text_autocomplete">Disable text autocomplete</string>
     <string name="disable_text_autocomplete_des">Disables phone keyboard\'s autocomplete feature.\nMay cause side effects, for example disabling starting sentences with a capital letter. Recommended solution is to disable autocompletion directly in the phone keyboard\'s settings.</string>
+    <string name="restore_the_selected_notes">Restore the selected notes?</string>
+    <string name="delete_selected_trash_log">Are you sure that you want to delete the selected notes? The notes will be deleted permanently.</string>
 </resources>

@@ -3,17 +3,23 @@ package com.grownapp.noteapp.ui.note
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
+import android.graphics.Color
 import android.net.Uri
 import android.os.Bundle
 import android.text.SpannableStringBuilder
+import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.Menu
 import android.view.MenuInflater
 import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
+import android.view.ViewTreeObserver
+import android.widget.Button
+import android.widget.GridLayout
 import android.widget.ImageView
 import android.widget.RadioGroup
+import android.widget.SeekBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
@@ -22,10 +28,13 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.PopupMenu
 import androidx.appcompat.widget.SearchView
 import androidx.appcompat.widget.Toolbar
+import androidx.core.content.ContextCompat
 import androidx.core.view.MenuHost
 import androidx.core.view.MenuProvider
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
@@ -57,11 +66,17 @@ class NoteListFragment : Fragment(), MenuProvider {
     private lateinit var noteAdapter: NoteAdapter
     private lateinit var sharedPreferences: SharedPreferences
     private var categoryId: Int? = null
-    private var hideCreated: Boolean = false
-    private lateinit var listNoteSelected: MutableList<Note>
-    private var isEditMode = false
+
+    private var hideCreated = MutableLiveData(true)
+
     private var isOnTrash = true
+    private var isEditMode = false
+    private lateinit var listCategory: MutableList<Category>
     private var selectedDirectoryUri: Uri? = null
+    private var lastEditOrCreate = true
+    private var notesToExport: List<Note> = emptyList()
+    private var allNote = emptyList<Note>()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -71,7 +86,7 @@ class NoteListFragment : Fragment(), MenuProvider {
             ViewModelProvider(this)[CategoriesViewModel::class.java]
         sharedPreferences =
             requireContext().getSharedPreferences("app_preferences", Context.MODE_PRIVATE)
-        listNoteSelected = mutableListOf()
+        listCategory = mutableListOf()
     }
 
     override fun onCreateView(
@@ -89,6 +104,13 @@ class NoteListFragment : Fragment(), MenuProvider {
             binding.ctlInstruct.visibility = View.GONE
         }
 
+        val categoryName = arguments?.getString("name")
+        categoryId = arguments?.getString("id")?.toInt()
+        (activity as AppCompatActivity).supportActionBar?.subtitle = categoryName ?: "Uncategorized"
+
+        hideCreated.observe(viewLifecycleOwner) {
+            lastEditOrCreate = it
+        }
         val screenWidth = resources.displayMetrics.widthPixels.toFloat()
         val screenHeight = resources.displayMetrics.heightPixels.toFloat()
 
@@ -101,34 +123,29 @@ class NoteListFragment : Fragment(), MenuProvider {
         super.onViewCreated(view, savedInstanceState)
 
         noteAdapter = NoteAdapter(onClickNote = {
-            val action =
-                NoteListFragmentDirections.actionNoteListFragmentToNoteDetailFragment(it.noteId)
-            findNavController().navigate(action)
+            if (!isEditMode) {
+                val action = NoteFragmentDirections.actionNavNoteToNoteDetailFragment(it.noteId)
+                findNavController().navigate(action)
+            }
         }, onLongClickNote = {
-            startEditMode(!isEditMode)
+            if (!isEditMode) {
+                isEditMode = true
+                startEditMode(true)
+                binding.fab.visibility = View.GONE
+            }
         },
-            listNoteSelectedAdapter = listNoteSelected,
-            updateCountCallback = { updateCountNoteSelected() },
-            getCategoryOfNote = { noteId -> noteViewModel.getCategoryOfNote(noteId) }
+            hideCreated = lastEditOrCreate,
+            listNoteSelectedAdapter = MutableLiveData(mutableListOf()),
+            getCategoryOfNote = { noteId -> noteViewModel.getCategoryOfNote(noteId) },
+            lifecycleOwner = viewLifecycleOwner
         )
-
+        noteAdapter.listNoteSelectedAdapter.observe(viewLifecycleOwner) { selectedNotes ->
+            updateCountNoteSelected(selectedNotes.size)
+        }
         binding.rcvNoteList.layoutManager = LinearLayoutManager(requireContext())
         binding.rcvNoteList.adapter = noteAdapter
 
-        val categoryName = arguments?.getString("name")
-        categoryId = arguments?.getString("id")?.toInt()
-        (activity as AppCompatActivity).supportActionBar?.subtitle = categoryName ?: "Uncategorized"
-
-        if (categoryId != null) {
-            noteViewModel.getNotesByCategory(categoryId!!).observe(viewLifecycleOwner) { notes ->
-                val note = notes.map { it.note }
-                noteAdapter.updateListNote(note)
-            }
-        } else {
-            noteViewModel.allNoteWithoutCategory.observe(viewLifecycleOwner) { notes ->
-                noteAdapter.updateListNote(notes)
-            }
-        }
+        sortBy()
 
         val menuHost: MenuHost = requireActivity()
         menuHost.addMenuProvider(this, viewLifecycleOwner, Lifecycle.State.RESUMED)
@@ -137,12 +154,17 @@ class NoteListFragment : Fragment(), MenuProvider {
             addNote(categoryId)
             sharedPreferences.edit().putBoolean("isVisible", false).apply()
         }
+
+        categoryViewModel.allCategory.observe(viewLifecycleOwner) {
+            listCategory.clear()
+            listCategory.addAll(it)
+        }
     }
 
-    private fun updateCountNoteSelected() {
+    private fun updateCountNoteSelected(cout: Int) {
         val toolbar = requireActivity().findViewById<Toolbar>(R.id.toolbar)
         val tvCountSelected = toolbar?.findViewById<TextView>(R.id.tvCountSeleted)
-        tvCountSelected?.text = listNoteSelected.size.toString()
+        tvCountSelected?.text = cout.toString()
     }
 
     private fun startEditMode(isVisible: Boolean) {
@@ -169,7 +191,9 @@ class NoteListFragment : Fragment(), MenuProvider {
             val imgDelete = toolbar.findViewById<ImageView>(R.id.imgDelete)
             val imgSelectAll = toolbar.findViewById<ImageView>(R.id.imgSelectAll)
 
-            tvCountSelected.text = listNoteSelected.size.toString()
+            noteAdapter.listNoteSelectedAdapter.observe(viewLifecycleOwner) { selectedNotes ->
+                tvCountSelected.text = selectedNotes.size.toString()
+            }
 
             toolbar.setNavigationIcon(R.drawable.back)
             toolbar.setNavigationOnClickListener {
@@ -186,16 +210,11 @@ class NoteListFragment : Fragment(), MenuProvider {
                 }
             }
             imgSelectAll.setOnClickListener {
-                if (listNoteSelected.isEmpty()) {
-                    noteViewModel.allNote.observe(viewLifecycleOwner) {
-                        listNoteSelected = it.toMutableList()
-                        noteAdapter.updateListNoteSelected(listNoteSelected)
-                    }
+                if (noteAdapter.listNoteSelectedAdapter.value.isNullOrEmpty()) {
+                    noteAdapter.selectAllNotes()
                 } else {
-                    listNoteSelected.clear()
-                    noteAdapter.updateListNoteSelected(listNoteSelected)
+                    noteAdapter.updateListNoteSelected(emptyList())
                 }
-                updateCountNoteSelected()
             }
 
             imgDelete.setOnClickListener {
@@ -229,7 +248,7 @@ class NoteListFragment : Fragment(), MenuProvider {
         btnDelete.text = getString(R.string.ok)
 
         btnDelete.setOnClickListener {
-            listNoteSelected.forEach {
+            noteAdapter.listNoteSelectedAdapter.value?.forEach {
                 if (isOnTrash) {
                     noteViewModel.pushInTrash(true, it.noteId)
                 } else {
@@ -237,6 +256,8 @@ class NoteListFragment : Fragment(), MenuProvider {
                 }
             }
             startEditMode(false)
+            noteAdapter.listNoteSelectedAdapter.value?.clear()
+            noteAdapter.exitEditMode()
             dialog.dismiss()
         }
         dialog.show()
@@ -374,39 +395,47 @@ class NoteListFragment : Fragment(), MenuProvider {
             when (selectedRadioButtonId) {
                 R.id.rdbEditNewest -> {
                     editor.putString("sort", getString(R.string.editnewest))
-                    hideCreated = false
+                    noteAdapter.setHideCreated(true)
+                    hideCreated.postValue(true)
                 }
 
                 R.id.rdbEditOldest -> {
                     editor.putString("sort", getString(R.string.editoldest))
-                    hideCreated = false
+                    noteAdapter.setHideCreated(true)
+                    hideCreated.postValue(true)
                 }
 
                 R.id.rdbA_Z -> {
                     editor.putString("sort", getString(R.string.a_z))
-                    hideCreated = false
+                    noteAdapter.setHideCreated(true)
+                    hideCreated.postValue(true)
                 }
 
                 R.id.rdbZ_A -> {
                     editor.putString("sort", getString(R.string.z_a))
-                    hideCreated = false
+                    noteAdapter.setHideCreated(true)
+                    hideCreated.postValue(true)
                 }
 
                 R.id.rdbCreateNewest -> {
                     editor.putString("sort", getString(R.string.createnewest))
-                    hideCreated = true
+                    noteAdapter.setHideCreated(false)
+                    hideCreated.postValue(false)
                 }
 
                 R.id.rdbCreateOldest -> {
                     editor.putString("sort", getString(R.string.createoldest))
-                    hideCreated = true
+                    noteAdapter.setHideCreated(false)
+                    hideCreated.postValue(false)
                 }
 
                 R.id.rdbColor -> {
                     editor.putString("sort", getString(R.string.color))
-                    hideCreated = false
+                    noteAdapter.setHideCreated(true)
+                    hideCreated.postValue(true)
                 }
             }
+            hideCreated.value?.let { it1 -> editor.putBoolean("hideCreated", it1) }
             editor.apply()
 
             sortBy()
@@ -429,8 +458,11 @@ class NoteListFragment : Fragment(), MenuProvider {
         popupMenu.setOnMenuItemClickListener { menuItem ->
             when (menuItem.itemId) {
                 R.id.select_all_notes -> {
-                    startEditMode(true)
-                    noteAdapter.selectAllNotes()
+                    if (allNote.isNotEmpty()) {
+                        startEditMode(true)
+                        binding.fab.visibility = View.VISIBLE
+                        noteAdapter.selectAllNotes()
+                    }
                     true
                 }
 
@@ -438,7 +470,7 @@ class NoteListFragment : Fragment(), MenuProvider {
                     FileProcess().checkAndRequestPermissions {
                         importNotesFromFiles()
                     }
-                    listNoteSelected.clear()
+                    noteAdapter.listNoteSelectedAdapter.value?.clear()
                     noteAdapter.exitEditMode()
                     isEditMode = false
                     startEditMode(false)
@@ -446,20 +478,56 @@ class NoteListFragment : Fragment(), MenuProvider {
                 }
 
                 R.id.export_notes_to_text_files -> {
-                    FileProcess().checkAndRequestPermissions {
-                        openDirectoryChooser()
+                    val selectedNotes = noteAdapter.listNoteSelectedAdapter.value ?: emptyList()
+                    if (isEditMode && selectedNotes.isNotEmpty()) {
+                        notesToExport = selectedNotes
+                        FileProcess().checkAndRequestPermissions {
+                            openDirectoryChooser()
+                        }
+                        isEditMode = false
+                        startEditMode(false)
                     }
-                    isEditMode = false
-                    startEditMode(false)
+                    true
+                }
+
+                R.id.export_notes_to_text_files_all_note -> {
+                    if (categoryId != null) {
+                        noteViewModel.getNotesByCategory(categoryId!!)
+                            .removeObservers(viewLifecycleOwner)
+                        noteViewModel.getNotesByCategory(categoryId!!)
+                            .observe(viewLifecycleOwner) { allNotes ->
+                                if (allNotes.isNotEmpty()) {
+                                    val note = allNotes.map { it.note }
+                                    notesToExport = note
+                                    FileProcess().checkAndRequestPermissions {
+                                        openDirectoryChooser()
+                                    }
+                                }
+                            }
+                    } else {
+                        noteViewModel.allNoteWithoutCategory.removeObservers(viewLifecycleOwner)
+                        noteViewModel.allNoteWithoutCategory.observe(viewLifecycleOwner) { allNotes ->
+                            if (allNotes.isNotEmpty()) {
+                                notesToExport = allNotes
+                                FileProcess().checkAndRequestPermissions {
+                                    openDirectoryChooser()
+                                }
+                            }
+                        }
+                    }
+
                     true
                 }
 
                 R.id.categorize -> {
-                    showCategorizeDialog()
+                    if (listCategory.isNotEmpty()) {
+                        showCategorizeDialog()
+                    }
                     true
                 }
 
                 R.id.colorize -> {
+                    dialogPickColor()
                     true
                 }
 
@@ -469,6 +537,7 @@ class NoteListFragment : Fragment(), MenuProvider {
 
         popupMenu.show()
     }
+
     private val selectDirectoryLauncher =
         registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri: Uri? ->
             uri?.let {
@@ -477,7 +546,11 @@ class NoteListFragment : Fragment(), MenuProvider {
                     Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
                 requireContext().contentResolver.takePersistableUriPermission(it, takeFlags)
 
-                FileProcess().exportNotesToDirectory(selectedDirectoryUri, requireContext(), listNoteSelected)
+                FileProcess().exportNotesToDirectory(
+                    selectedDirectoryUri,
+                    requireContext(),
+                    notesToExport
+                )
                 noteAdapter.exitEditMode()
             }
         }
@@ -517,14 +590,19 @@ class NoteListFragment : Fragment(), MenuProvider {
                     noteViewModel.insert(note) { noteId ->
                         if (categoryId != null) {
                             val noteCategoryCrossRef =
-                                NoteCategoryCrossRef(noteId = noteId.toInt(), categoryId = categoryId!!)
+                                NoteCategoryCrossRef(
+                                    noteId = noteId.toInt(),
+                                    categoryId = categoryId!!
+                                )
                             noteViewModel.insertNoteCategoryCrossRef(noteCategoryCrossRef)
                         }
                     }
                     noteViewModel.noteId.observe(viewLifecycleOwner) { id ->
                         id?.let {
                             val action =
-                                NoteListFragmentDirections.actionNoteListFragmentToNoteDetailFragment(it)
+                                NoteListFragmentDirections.actionNoteListFragmentToNoteDetailFragment(
+                                    it
+                                )
                             findNavController().navigate(action)
                             noteViewModel.clearNoteId()
                             noteViewModel.noteId.removeObservers(viewLifecycleOwner)
@@ -532,7 +610,8 @@ class NoteListFragment : Fragment(), MenuProvider {
                     }
                 }
             }
-        } catch (_: Exception) {}
+        } catch (_: Exception) {
+        }
     }
 
     private fun showCategorizeDialog() {
@@ -550,7 +629,7 @@ class NoteListFragment : Fragment(), MenuProvider {
             CategoryForNoteAdapter(categoryMutableList.toList(), selectedCategory)
         categoryListView.adapter = categoryForNoteAdapter
 
-        if (listNoteSelected.isNotEmpty()) {
+        if (noteAdapter.listNoteSelectedAdapter.value?.isNotEmpty() == true) {
             categoryViewModel.allCategory.observe(this) { categories ->
                 categoryMutableList.clear()
                 categoryMutableList.addAll(categories)
@@ -564,9 +643,9 @@ class NoteListFragment : Fragment(), MenuProvider {
         }
 
         okButton.setOnClickListener {
-            if (listNoteSelected.isNotEmpty()) {
+            if (noteAdapter.listNoteSelectedAdapter.value?.isNotEmpty() == true) {
                 for (categoryId in selectedCategory) {
-                    listNoteSelected.forEach {
+                    noteAdapter.listNoteSelectedAdapter.value?.forEach {
                         val noteCategoryCrossRef =
                             NoteCategoryCrossRef(noteId = it.noteId, categoryId = categoryId)
                         noteViewModel.insertNoteCategoryCrossRef(noteCategoryCrossRef)
@@ -585,10 +664,104 @@ class NoteListFragment : Fragment(), MenuProvider {
         dialog.show()
     }
 
+    private fun dialogPickColor() {
+        val dialogView = layoutInflater.inflate(R.layout.pick_color, null)
+        val tvColor = dialogView.findViewById<TextView>(R.id.tvColor)
+        val gridlayoutColor = dialogView.findViewById<GridLayout>(R.id.gridlayoutColor)
+        val tvOpacity = dialogView.findViewById<TextView>(R.id.tvOpacity)
+        val sbPercentOpacity = dialogView.findViewById<SeekBar>(R.id.sbPercentOpacity)
+        val btnRemoveColor = dialogView.findViewById<Button>(R.id.btnRemoveColor)
+        val tvOK = dialogView.findViewById<TextView>(R.id.tvOK)
+        val tvCancel = dialogView.findViewById<TextView>(R.id.tvCancel)
+
+        val dialog = AlertDialog.Builder(requireContext()).setView(dialogView).create()
+
+        tvOpacity.visibility = View.GONE
+        sbPercentOpacity.visibility = View.GONE
+
+        var colorFillBackground = ContextCompat.getColor(requireContext(), R.color.transparent)
+        tvColor.setBackgroundColor(colorFillBackground)
+
+        val colorList = ColorPicker().colorBackgroundItem
+
+        btnRemoveColor.setOnClickListener {
+            colorFillBackground = ContextCompat.getColor(requireContext(), R.color.transparent)
+            tvColor.setBackgroundColor(colorFillBackground)
+
+            for (i in 0 until gridlayoutColor.childCount) {
+                val childView = gridlayoutColor.getChildAt(i) as? TextView
+                childView?.text = null
+            }
+        }
+
+        dialogView.viewTreeObserver.addOnGlobalLayoutListener(object :
+            ViewTreeObserver.OnGlobalLayoutListener {
+            override fun onGlobalLayout() {
+                val dialogWidth = dialogView.width
+                val itemWidth = dialogWidth / 6
+                gridlayoutColor.removeAllViews()
+                gridlayoutColor.columnCount = 6
+
+                for (color in colorList) {
+                    val colorView = TextView(requireContext()).apply {
+                        setBackgroundColor(Color.parseColor(color))
+                        layoutParams = GridLayout.LayoutParams().apply {
+                            width = itemWidth
+                            height = itemWidth
+                        }
+                        gravity = Gravity.CENTER
+                        text = null
+                        textSize = 30f
+                    }
+                    colorView.setOnClickListener {
+                        val parseColor = Color.parseColor(color)
+
+                        colorFillBackground = parseColor
+
+                        tvColor.setBackgroundColor(colorFillBackground)
+
+                        for (i in 0 until gridlayoutColor.childCount) {
+                            val childView = gridlayoutColor.getChildAt(i) as? TextView
+                            childView?.text = null
+                            childView?.setBackgroundColor(Color.parseColor(colorList[i]))
+
+                        }
+
+                        "+".also { colorView.text = it }
+
+                        colorView.setBackgroundColor(parseColor)
+                    }
+
+                    gridlayoutColor.addView(colorView)
+                }
+                dialogView.viewTreeObserver.removeOnGlobalLayoutListener(this)
+            }
+        })
+        tvOK.setOnClickListener {
+            noteAdapter.listNoteSelectedAdapter.value?.let { it1 ->
+                noteViewModel.updateBackgroundColor(
+                    it1.map { it.noteId },
+                    colorFillBackground
+                )
+            }
+            noteAdapter.listNoteSelectedAdapter.value?.clear()
+            noteAdapter.exitEditMode()
+            isEditMode = false
+            startEditMode(false)
+            dialog.dismiss()
+        }
+        tvCancel.setOnClickListener {
+            dialog.dismiss()
+        }
+        dialog.show()
+    }
+
     private fun sortBy() {
         val sort = sharedPreferences.getString("sort", null)
-        val sortObserver = { notes: List<Note> -> noteAdapter.updateListNote(notes) }
-
+        val sortObserver = Observer<List<Note>> { notes ->
+            noteAdapter.updateListNote(notes)
+            allNote = notes
+        }
         when (sort) {
             getString(R.string.editnewest) -> if (categoryId != null) {
                 noteViewModel.sortedByUpdatedTimeDescByCategory(categoryId!!)
@@ -644,6 +817,16 @@ class NoteListFragment : Fragment(), MenuProvider {
             } else {
                 noteViewModel.sortedByColorWithoutCategory()
                     .observe(viewLifecycleOwner, sortObserver)
+            }
+
+            null -> if (categoryId != null) {
+                noteViewModel.getNotesByCategory(categoryId!!)
+                    .observe(viewLifecycleOwner) { notes ->
+                        val note = notes.map { it.note }
+                        noteAdapter.updateListNote(note)
+                    }
+            } else {
+                noteViewModel.allNoteWithoutCategory.observe(viewLifecycleOwner, sortObserver)
             }
         }
     }

@@ -21,6 +21,7 @@ import androidx.core.view.MenuHost
 import androidx.core.view.MenuProvider
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.gson.Gson
@@ -41,17 +42,15 @@ class TrashFragment : Fragment(), MenuProvider {
     private lateinit var noteAdapter: NoteAdapter
     private lateinit var noteViewModel: NoteViewModel
 
-    private lateinit var listNoteSelected: MutableList<Note>
-    private lateinit var allNote: MutableList<Note>
-
     private var editMode = false
     private var selectedDirectoryUri: Uri? = null
+
+    private var notesToExport: List<Note> = emptyList()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         noteViewModel = ViewModelProvider(this)[NoteViewModel::class.java]
-        listNoteSelected = mutableListOf()
-        allNote = mutableListOf()
     }
 
     override fun onCreateView(
@@ -73,27 +72,28 @@ class TrashFragment : Fragment(), MenuProvider {
                 startEditMode(!editMode)
             },
             hideCreated = true,
-            listNoteSelectedAdapter = listNoteSelected,
-            updateCountCallback = { updateCountNoteSelected() },
-            getCategoryOfNote = { noteId -> noteViewModel.getCategoryOfNote(noteId) }
+            listNoteSelectedAdapter = MutableLiveData(mutableListOf()),
+            getCategoryOfNote = { noteId -> noteViewModel.getCategoryOfNote(noteId) },
+            lifecycleOwner = viewLifecycleOwner
         )
-
+        noteAdapter.listNoteSelectedAdapter.observe(viewLifecycleOwner) { selectedNotes ->
+            updateCountNoteSelected(selectedNotes.size)
+        }
         binding.rcvNoteTrash.layoutManager = LinearLayoutManager(requireContext())
         binding.rcvNoteTrash.adapter = noteAdapter
 
         noteViewModel.allTrashNote.observe(viewLifecycleOwner) {
-            it.let {
+            it?.let {
                 noteAdapter.updateListNote(it)
-                allNote.addAll(it)
             }
         }
         return root
     }
 
-    private fun updateCountNoteSelected() {
+    private fun updateCountNoteSelected(count: Int) {
         val toolbar = requireActivity().findViewById<Toolbar>(R.id.toolbar)
         val tvCountSelectedTrash = toolbar?.findViewById<TextView>(R.id.tvCountSeletedTrash)
-        tvCountSelectedTrash?.text = listNoteSelected.size.toString()
+        tvCountSelectedTrash?.text = count.toString()
     }
 
     private fun startEditMode(isVisible: Boolean) {
@@ -112,7 +112,9 @@ class TrashFragment : Fragment(), MenuProvider {
             val imgRestore = toolbar.findViewById<ImageView>(R.id.imgRestore)
             val imgSelectAll = toolbar.findViewById<ImageView>(R.id.imgSelectAll)
 
-            tvCountSelectedTrash.text = listNoteSelected.size.toString()
+            noteAdapter.listNoteSelectedAdapter.observe(viewLifecycleOwner) { selectedNotes ->
+                tvCountSelectedTrash.text = selectedNotes.size.toString()
+            }
 
             toolbar.setNavigationIcon(R.drawable.back)
             toolbar.setNavigationOnClickListener {
@@ -129,20 +131,16 @@ class TrashFragment : Fragment(), MenuProvider {
             }
 
             imgRestore.setOnClickListener {
-                restoreDialog(true, false)
+                notesToExport = noteAdapter.listNoteSelectedAdapter.value ?: emptyList()
+                restoreDialog(isEmptyTrash = false, isAllNote = false)
             }
 
             imgSelectAll.setOnClickListener {
-                if (listNoteSelected.isEmpty()) {
-                    noteViewModel.allTrashNote.observe(viewLifecycleOwner) {
-                        listNoteSelected = it.toMutableList()
-                        noteAdapter.updateListNoteSelected(listNoteSelected)
-                    }
+                if (noteAdapter.listNoteSelectedAdapter.value.isNullOrEmpty()) {
+                    noteAdapter.selectAllNotes()
                 } else {
-                    listNoteSelected.clear()
-                    noteAdapter.updateListNoteSelected(listNoteSelected)
+                    noteAdapter.updateListNoteSelected(emptyList())
                 }
-                updateCountNoteSelected()
             }
         } else {
             val trashLayout = toolbar.findViewById<View>(R.id.custom_trash_toolbar)
@@ -154,8 +152,6 @@ class TrashFragment : Fragment(), MenuProvider {
                 (activity as MainActivity).setupDefaultToolbar()
             }
         }
-
-        requireActivity().invalidateOptionsMenu()
     }
 
     private fun dialogDeleteOrUndelete(note: Note) {
@@ -170,6 +166,8 @@ class TrashFragment : Fragment(), MenuProvider {
         val dialog = AlertDialog.Builder(requireContext()).setView(dialogView).create()
         btnCancel.setOnClickListener {
             dialog.dismiss()
+            noteAdapter.exitEditMode()
+            startEditMode(false)
         }
         var isDelete = false
 
@@ -240,23 +238,17 @@ class TrashFragment : Fragment(), MenuProvider {
 
     private fun dialogDeleteSelected() {
         val dialogView = layoutInflater.inflate(R.layout.delete_dialog, null)
-        val deleteLog = dialogView.findViewById<TextView>(R.id.delete_log)
         val btnDelete = dialogView.findViewById<TextView>(R.id.btnDelete)
         val btnCancel = dialogView.findViewById<TextView>(R.id.btnCancel)
 
         val dialog = android.app.AlertDialog.Builder(requireContext()).setView(dialogView).create()
-
-        deleteLog.text = buildString {
-            getString(R.string.delete_log_confirm)
-        }
-
         btnCancel.setOnClickListener {
             dialog.dismiss()
         }
 
         btnDelete.setOnClickListener {
-            for (note in listNoteSelected) {
-                noteViewModel.delete(note.noteId)
+            noteAdapter.listNoteSelectedAdapter.value?.forEach {
+                noteViewModel.delete(it.noteId)
             }
             Toast.makeText(requireContext(), getString(R.string.deleted_notes), Toast.LENGTH_SHORT)
                 .show()
@@ -300,35 +292,60 @@ class TrashFragment : Fragment(), MenuProvider {
             when (menuItem.itemId) {
                 // trash more
                 R.id.undelete_all -> {
-                    restoreDialog(true, false)
+                    noteViewModel.allTrashNote.observe(viewLifecycleOwner) { allTrashNote ->
+                        if (allTrashNote.isNotEmpty()) {
+                            notesToExport = allTrashNote
+                        }
+                    }
+                    if (notesToExport.isNotEmpty()) {
+                        restoreDialog(isEmptyTrash = false, isAllNote = true)
+                    }
                     true
                 }
-                R.id.export_notes_to_text_files -> {
-                    FileProcess().checkAndRequestPermissions {
-                        openDirectoryChooser()
+
+                R.id.export_notes_to_text_files_all_trash -> {
+                    noteViewModel.allTrashNote.removeObservers(viewLifecycleOwner)
+                    noteViewModel.allTrashNote.observe(viewLifecycleOwner) { allTrashNote ->
+                        if (allTrashNote.isNotEmpty()) {
+                            notesToExport = allTrashNote
+                            FileProcess().checkAndRequestPermissions {
+                                openDirectoryChooser()
+                            }
+                        }
                     }
-                    editMode = false
-                    startEditMode(false)
                     true
                 }
 
                 R.id.empty_trash -> {
-                    restoreDialog(false, true)
+                    var allTrashNote = emptyList<Note>()
+                    noteViewModel.allTrashNote.observe(viewLifecycleOwner) {
+                        allTrashNote = it
+                        notesToExport = it
+                    }
+                    if (allTrashNote.isNotEmpty()) {
+                        restoreDialog(isEmptyTrash = true, isAllNote = true)
+                    }
                     true
                 }
 
                 //trash more editmode
                 R.id.export_notes_to_text_files_trash -> {
-                    FileProcess().checkAndRequestPermissions {
-                        openDirectoryChooser()
+                    val selectedNotes = noteAdapter.listNoteSelectedAdapter.value ?: emptyList()
+                    if (isEditMode && selectedNotes.isNotEmpty()) {
+                        notesToExport = selectedNotes
+                        FileProcess().checkAndRequestPermissions {
+                            openDirectoryChooser()
+                        }
+                        editMode = false
+                        startEditMode(false)
                     }
-                    editMode = false
-                    startEditMode(false)
                     true
                 }
 
                 R.id.delete_trash -> {
-                    if (isEditMode) {
+                    val selectedNotes = noteAdapter.listNoteSelectedAdapter.value ?: emptyList()
+                    if (isEditMode && selectedNotes.isNotEmpty()) {
+                        notesToExport = selectedNotes
                         dialogDeleteSelected()
                     }
                     true
@@ -341,9 +358,11 @@ class TrashFragment : Fragment(), MenuProvider {
         // Hiển thị PopupMenu
         popupMenu.show()
     }
+
     private fun openDirectoryChooser() {
         selectDirectoryLauncher.launch(null)
     }
+
     private val selectDirectoryLauncher =
         registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri: Uri? ->
             uri?.let {
@@ -352,9 +371,13 @@ class TrashFragment : Fragment(), MenuProvider {
                     Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
                 requireContext().contentResolver.takePersistableUriPermission(it, takeFlags)
 
-                FileProcess().exportNotesToDirectory(selectedDirectoryUri, requireContext(), if (editMode) listNoteSelected else allNote)
-                noteAdapter.exitEditMode()
+                FileProcess().exportNotesToDirectory(
+                    selectedDirectoryUri,
+                    requireContext(),
+                    notesToExport
+                )
             }
+            noteAdapter.exitEditMode()
         }
 
     private fun restoreDialog(isEmptyTrash: Boolean, isAllNote: Boolean) {
@@ -366,7 +389,19 @@ class TrashFragment : Fragment(), MenuProvider {
         val dialog = android.app.AlertDialog.Builder(requireContext()).setView(dialogView).create()
 
         tvRestore.text =
-            if (isEmptyTrash) getString(R.string.restore_all_notes) else getString(R.string.delete_trash_log)
+            if (!isEmptyTrash) {
+                if (isAllNote) {
+                    getString(R.string.restore_all_notes)
+                } else {
+                    getString(R.string.restore_the_selected_notes)
+                }
+            } else {
+                if (isAllNote) {
+                    getString(R.string.delete_trash_log)
+                } else {
+                    getString(R.string.delete_selected_trash_log)
+                }
+            }
 
         tvNo.setOnClickListener {
             dialog.dismiss()
@@ -374,24 +409,30 @@ class TrashFragment : Fragment(), MenuProvider {
 
         tvYes.setOnClickListener {
             if (!isEmptyTrash) {
-                if (!isAllNote){
-                    for (note in listNoteSelected) {
-                        noteViewModel.emptyTrash()
-                    }
-                }else{
-                    for (note in allNote) {
-                        noteViewModel.emptyTrash()
-                    }
-                }
-                Toast.makeText(requireContext(), getString(R.string.deleted_notes), Toast.LENGTH_SHORT)
-                    .show()
-            } else {
-                for (note in allNote) {
+                if (isAllNote) {
                     noteViewModel.restoreAllNote()
+                } else {
+                    notesToExport.forEach {
+                        noteViewModel.pushInTrash(false, it.noteId)
+                    }
                 }
                 Toast.makeText(
                     requireContext(),
                     getString(R.string.restored_notes), Toast.LENGTH_SHORT
+                ).show()
+
+            } else {
+                if (isAllNote) {
+                    noteViewModel.emptyTrash()
+                } else {
+                    notesToExport.forEach {
+                        noteViewModel.delete(it.noteId)
+                    }
+                }
+                Toast.makeText(
+                    requireContext(),
+                    getString(R.string.deleted_notes),
+                    Toast.LENGTH_SHORT
                 ).show()
             }
             dialog.dismiss()

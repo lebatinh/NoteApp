@@ -17,7 +17,7 @@ class FileProcess {
     fun exportNotesToDirectory(
         directoryUri: Uri?,
         context: Context,
-        listNoteSelected: MutableList<Note>
+        listNoteSelected: List<Note>
     ) {
         if (directoryUri == null) {
             Toast.makeText(
@@ -46,7 +46,6 @@ class FileProcess {
                 context.getString(R.string.select_none_note), Toast.LENGTH_SHORT
             ).show()
         }
-        listNoteSelected.clear()
     }
 
     private fun createFileInDirectory(directoryUri: Uri, fileName: String, context: Context): Uri? {

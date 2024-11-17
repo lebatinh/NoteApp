@@ -33,6 +33,7 @@ import androidx.core.view.MenuProvider
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
@@ -62,16 +63,21 @@ class NoteFragment : Fragment(), MenuProvider {
 
     private val binding get() = _binding!!
 
-    private lateinit var noteAdapter: NoteAdapter
     private lateinit var noteViewModel: NoteViewModel
     private lateinit var categoryViewModel: CategoriesViewModel
+    private lateinit var noteAdapter: NoteAdapter
     private lateinit var sharedPreferences: SharedPreferences
+
     private var hideCreated = MutableLiveData(true)
 
     private var isOnTrash = true
     private var isEditMode = false
-    private lateinit var listNoteSelected: MutableList<Note>
+    private lateinit var listCategory: MutableList<Category>
     private var selectedDirectoryUri: Uri? = null
+    private var lastEditOrCreate = true
+    private var notesToExport: List<Note> = emptyList()
+    private var allNote = emptyList<Note>()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -82,7 +88,7 @@ class NoteFragment : Fragment(), MenuProvider {
 
         sharedPreferences =
             requireContext().getSharedPreferences("app_preferences", Context.MODE_PRIVATE)
-        listNoteSelected = mutableListOf()
+        listCategory = mutableListOf()
     }
 
     override fun onCreateView(
@@ -102,6 +108,9 @@ class NoteFragment : Fragment(), MenuProvider {
             binding.ctlInstruct.visibility = View.GONE
         }
 
+        hideCreated.observe(viewLifecycleOwner) {
+            lastEditOrCreate = it
+        }
         noteAdapter = NoteAdapter(
             onClickNote = {
                 if (!isEditMode) {
@@ -116,19 +125,23 @@ class NoteFragment : Fragment(), MenuProvider {
                     binding.fab.visibility = View.GONE
                 }
             },
-            hideCreated = true,
-            listNoteSelectedAdapter = listNoteSelected,
-            updateCountCallback = { updateCountNoteSelected() },
-            getCategoryOfNote = { noteId -> noteViewModel.getCategoryOfNote(noteId) }
+            hideCreated = lastEditOrCreate,
+            listNoteSelectedAdapter = MutableLiveData(mutableListOf()),
+            getCategoryOfNote = { noteId -> noteViewModel.getCategoryOfNote(noteId) },
+            lifecycleOwner = viewLifecycleOwner
         )
+        noteAdapter.listNoteSelectedAdapter.observe(viewLifecycleOwner) { selectedNotes ->
+            updateCountNoteSelected(selectedNotes.size)
+        }
 
         binding.rcvNote.layoutManager = LinearLayoutManager(requireContext())
         binding.rcvNote.adapter = noteAdapter
 
-        noteViewModel.allNote.observe(viewLifecycleOwner) { notes ->
-            notes.let {
-                noteAdapter.updateListNote(notes)
-            }
+        sortBy()
+
+        categoryViewModel.allCategory.observe(viewLifecycleOwner) {
+            listCategory.clear()
+            listCategory.addAll(it)
         }
 
         val menuHost: MenuHost = requireActivity()
@@ -144,15 +157,13 @@ class NoteFragment : Fragment(), MenuProvider {
 
         rotateArrowToCorner(binding.arrowImageView, screenWidth, screenHeight)
 
-        sortBy()
-
         return root
     }
 
-    private fun updateCountNoteSelected() {
+    private fun updateCountNoteSelected(count: Int) {
         val toolbar = requireActivity().findViewById<Toolbar>(R.id.toolbar)
         val tvCountSelected = toolbar?.findViewById<TextView>(R.id.tvCountSeleted)
-        tvCountSelected?.text = listNoteSelected.size.toString()
+        tvCountSelected?.text = count.toString()
     }
 
     private fun startEditMode(isVisible: Boolean) {
@@ -179,7 +190,9 @@ class NoteFragment : Fragment(), MenuProvider {
             val imgDelete = toolbar.findViewById<ImageView>(R.id.imgDelete)
             val imgSelectAll = toolbar.findViewById<ImageView>(R.id.imgSelectAll)
 
-            tvCountSelected.text = listNoteSelected.size.toString()
+            noteAdapter.listNoteSelectedAdapter.observe(viewLifecycleOwner) { selectedNotes ->
+                tvCountSelected.text = selectedNotes.size.toString()
+            }
 
             toolbar.setNavigationIcon(R.drawable.back)
             toolbar.setNavigationOnClickListener {
@@ -197,16 +210,11 @@ class NoteFragment : Fragment(), MenuProvider {
             }
 
             imgSelectAll.setOnClickListener {
-                if (listNoteSelected.isEmpty()) {
-                    noteViewModel.allNote.observe(viewLifecycleOwner) {
-                        listNoteSelected = it.toMutableList()
-                        noteAdapter.updateListNoteSelected(listNoteSelected)
-                    }
+                if (noteAdapter.listNoteSelectedAdapter.value.isNullOrEmpty()) {
+                    noteAdapter.selectAllNotes()
                 } else {
-                    listNoteSelected.clear()
-                    noteAdapter.updateListNoteSelected(listNoteSelected)
+                    noteAdapter.updateListNoteSelected(emptyList())
                 }
-                updateCountNoteSelected()
             }
 
             imgDelete.setOnClickListener {
@@ -245,7 +253,7 @@ class NoteFragment : Fragment(), MenuProvider {
         btnDelete.text = getString(R.string.ok)
 
         btnDelete.setOnClickListener {
-            listNoteSelected.forEach {
+            noteAdapter.listNoteSelectedAdapter.value?.forEach {
                 if (isOnTrash) {
                     noteViewModel.pushInTrash(true, it.noteId)
                 } else {
@@ -253,7 +261,7 @@ class NoteFragment : Fragment(), MenuProvider {
                 }
             }
             startEditMode(false)
-            listNoteSelected.clear()
+            noteAdapter.listNoteSelectedAdapter.value?.clear()
             noteAdapter.exitEditMode()
             dialog.dismiss()
         }
@@ -380,9 +388,12 @@ class NoteFragment : Fragment(), MenuProvider {
         popupMenu.setOnMenuItemClickListener { menuItem ->
             when (menuItem.itemId) {
                 R.id.select_all_notes -> {
-                    startEditMode(true)
-                    binding.fab.visibility = View.VISIBLE
-                    noteAdapter.selectAllNotes()
+                    if (allNote.isNotEmpty()) {
+                        startEditMode(true)
+                        binding.fab.visibility = View.VISIBLE
+                        noteAdapter.selectAllNotes()
+                    }
+
                     true
                 }
 
@@ -390,24 +401,44 @@ class NoteFragment : Fragment(), MenuProvider {
                     FileProcess().checkAndRequestPermissions {
                         importNotesFromFiles()
                     }
-                    listNoteSelected.clear()
+                    noteAdapter.listNoteSelectedAdapter.value?.clear()
                     noteAdapter.exitEditMode()
                     isEditMode = false
                     startEditMode(false)
                     true
                 }
 
-                R.id.export_notes_to_text_files -> {
-                    FileProcess().checkAndRequestPermissions {
-                        openDirectoryChooser()
+                R.id.export_notes_to_text_files_all_note -> {
+                    noteViewModel.allNote.removeObservers(viewLifecycleOwner)
+                    noteViewModel.allNote.observe(viewLifecycleOwner) { allNotes ->
+                        if (allNotes.isNotEmpty()) {
+                            notesToExport = allNotes
+                            FileProcess().checkAndRequestPermissions {
+                                openDirectoryChooser()
+                            }
+                        }
                     }
-                    isEditMode = false
-                    startEditMode(false)
+                    true
+                }
+
+                R.id.export_notes_to_text_files -> {
+                    val selectedNotes = noteAdapter.listNoteSelectedAdapter.value ?: emptyList()
+                    if (isEditMode && selectedNotes.isNotEmpty()) {
+                        notesToExport = selectedNotes
+                        FileProcess().checkAndRequestPermissions {
+                            openDirectoryChooser()
+                        }
+                        isEditMode = false
+                        startEditMode(false)
+                    }
+
                     true
                 }
 
                 R.id.categorize -> {
-                    showCategorizeDialog()
+                    if (listCategory.isNotEmpty()) {
+                        showCategorizeDialog()
+                    }
                     true
                 }
 
@@ -422,6 +453,11 @@ class NoteFragment : Fragment(), MenuProvider {
         popupMenu.show()
     }
 
+    // export text files
+    private fun openDirectoryChooser() {
+        selectDirectoryLauncher.launch(null)
+    }
+
     private val selectDirectoryLauncher =
         registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri: Uri? ->
             uri?.let {
@@ -430,15 +466,16 @@ class NoteFragment : Fragment(), MenuProvider {
                     Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
                 requireContext().contentResolver.takePersistableUriPermission(it, takeFlags)
 
-                FileProcess().exportNotesToDirectory(selectedDirectoryUri, requireContext(), listNoteSelected)
-                noteAdapter.exitEditMode()
+                FileProcess().exportNotesToDirectory(
+                    selectedDirectoryUri,
+                    requireContext(),
+                    notesToExport
+                )
             }
+            noteAdapter.exitEditMode()
         }
 
-    private fun openDirectoryChooser() {
-        selectDirectoryLauncher.launch(null)
-    }
-
+    // import text file
     private fun importNotesFromFiles() {
         openFileLauncher.launch(arrayOf(getString(R.string.text_plain)))
     }
@@ -480,7 +517,8 @@ class NoteFragment : Fragment(), MenuProvider {
                     }
                 }
             }
-        } catch (_: Exception) {}
+        } catch (_: Exception) {
+        }
     }
 
     private fun dialogPickColor() {
@@ -497,8 +535,11 @@ class NoteFragment : Fragment(), MenuProvider {
 
         tvOpacity.visibility = View.GONE
         sbPercentOpacity.visibility = View.GONE
+
         var colorFillBackground = ContextCompat.getColor(requireContext(), R.color.transparent)
         tvColor.setBackgroundColor(colorFillBackground)
+
+        val colorList = ColorPicker().colorBackgroundItem
 
         btnRemoveColor.setOnClickListener {
             colorFillBackground = ContextCompat.getColor(requireContext(), R.color.transparent)
@@ -518,7 +559,7 @@ class NoteFragment : Fragment(), MenuProvider {
                 gridlayoutColor.removeAllViews()
                 gridlayoutColor.columnCount = 6
 
-                for (color in ColorPicker().colorBackgroundItem) {
+                for (color in colorList) {
                     val colorView = TextView(requireContext()).apply {
                         setBackgroundColor(Color.parseColor(color))
                         layoutParams = GridLayout.LayoutParams().apply {
@@ -539,7 +580,7 @@ class NoteFragment : Fragment(), MenuProvider {
                         for (i in 0 until gridlayoutColor.childCount) {
                             val childView = gridlayoutColor.getChildAt(i) as? TextView
                             childView?.text = null
-                            childView?.setBackgroundColor(Color.parseColor(ColorPicker().colorBackgroundItem[i]))
+                            childView?.setBackgroundColor(Color.parseColor(colorList[i]))
 
                         }
 
@@ -554,11 +595,13 @@ class NoteFragment : Fragment(), MenuProvider {
             }
         })
         tvOK.setOnClickListener {
-            noteViewModel.updateBackgroundColor(
-                listNoteSelected.map { it.noteId },
-                colorFillBackground
-            )
-            listNoteSelected.clear()
+            noteAdapter.listNoteSelectedAdapter.value?.let { it1 ->
+                noteViewModel.updateBackgroundColor(
+                    it1.map { it.noteId },
+                    colorFillBackground
+                )
+            }
+            noteAdapter.listNoteSelectedAdapter.value?.clear()
             noteAdapter.exitEditMode()
             isEditMode = false
             startEditMode(false)
@@ -585,7 +628,7 @@ class NoteFragment : Fragment(), MenuProvider {
             CategoryForNoteAdapter(categoryMutableList.toList(), selectedCategory)
         categoryListView.adapter = categoryForNoteAdapter
 
-        if (listNoteSelected.isNotEmpty()) {
+        if (noteAdapter.listNoteSelectedAdapter.value?.isNotEmpty() == true) {
             categoryViewModel.allCategory.observe(this) { categories ->
                 categoryMutableList.clear()
                 categoryMutableList.addAll(categories)
@@ -599,9 +642,9 @@ class NoteFragment : Fragment(), MenuProvider {
         }
 
         okButton.setOnClickListener {
-            if (listNoteSelected.isNotEmpty()) {
+            if (noteAdapter.listNoteSelectedAdapter.value?.isNotEmpty() == true) {
                 for (categoryId in selectedCategory) {
-                    listNoteSelected.forEach {
+                    noteAdapter.listNoteSelectedAdapter.value?.forEach {
                         val noteCategoryCrossRef =
                             NoteCategoryCrossRef(noteId = it.noteId, categoryId = categoryId)
                         noteViewModel.insertNoteCategoryCrossRef(noteCategoryCrossRef)
@@ -653,36 +696,43 @@ class NoteFragment : Fragment(), MenuProvider {
             when (selectedRadioButtonId) {
                 R.id.rdbEditNewest -> {
                     editor.putString("sort", getString(R.string.editnewest))
+                    noteAdapter.setHideCreated(true)
                     hideCreated.postValue(true)
                 }
 
                 R.id.rdbEditOldest -> {
                     editor.putString("sort", getString(R.string.editoldest))
+                    noteAdapter.setHideCreated(true)
                     hideCreated.postValue(true)
                 }
 
                 R.id.rdbA_Z -> {
                     editor.putString("sort", getString(R.string.a_z))
+                    noteAdapter.setHideCreated(true)
                     hideCreated.postValue(true)
                 }
 
                 R.id.rdbZ_A -> {
                     editor.putString("sort", getString(R.string.z_a))
+                    noteAdapter.setHideCreated(true)
                     hideCreated.postValue(true)
                 }
 
                 R.id.rdbCreateNewest -> {
                     editor.putString("sort", getString(R.string.createnewest))
+                    noteAdapter.setHideCreated(false)
                     hideCreated.postValue(false)
                 }
 
                 R.id.rdbCreateOldest -> {
                     editor.putString("sort", getString(R.string.createoldest))
+                    noteAdapter.setHideCreated(false)
                     hideCreated.postValue(false)
                 }
 
                 R.id.rdbColor -> {
                     editor.putString("sort", getString(R.string.color))
+                    noteAdapter.setHideCreated(true)
                     hideCreated.postValue(true)
                 }
             }
@@ -697,31 +747,37 @@ class NoteFragment : Fragment(), MenuProvider {
 
     private fun sortBy() {
         val sort = sharedPreferences.getString("sort", null)
-        val sortObserver = { notes: List<Note> -> noteAdapter.updateListNote(notes) }
+
+        val sortObserver = Observer<List<Note>> { notes ->
+            noteAdapter.updateListNote(notes)
+            allNote = notes
+        }
 
         when (sort) {
-            getString(R.string.editnewest) -> noteViewModel.sortedByUpdatedTimeDesc()
-                .observe(viewLifecycleOwner, sortObserver)
+            getString(R.string.editnewest) ->
+                noteViewModel.sortedByUpdatedTimeDesc().observe(viewLifecycleOwner, sortObserver)
 
-            getString(R.string.editoldest) -> noteViewModel.sortedByUpdatedTimeAsc()
-                .observe(viewLifecycleOwner, sortObserver)
+            getString(R.string.editoldest) ->
+                noteViewModel.sortedByUpdatedTimeAsc().observe(viewLifecycleOwner, sortObserver)
 
-            getString(R.string.a_z) -> noteViewModel.sortedByTitleAsc()
-                .observe(viewLifecycleOwner, sortObserver)
+            getString(R.string.a_z) ->
+                noteViewModel.sortedByTitleAsc().observe(viewLifecycleOwner, sortObserver)
 
-            getString(R.string.z_a) -> noteViewModel.sortedByTitleDesc()
-                .observe(viewLifecycleOwner, sortObserver)
+            getString(R.string.z_a) ->
+                noteViewModel.sortedByTitleDesc().observe(viewLifecycleOwner, sortObserver)
 
-            getString(R.string.createnewest) -> noteViewModel.sortedByCreatedTimeDesc()
-                .observe(viewLifecycleOwner, sortObserver)
+            getString(R.string.createnewest) ->
+                noteViewModel.sortedByCreatedTimeDesc().observe(viewLifecycleOwner, sortObserver)
 
-            getString(R.string.createoldest) -> noteViewModel.sortedByCreatedTimeAsc()
-                .observe(viewLifecycleOwner, sortObserver)
+            getString(R.string.createoldest) ->
+                noteViewModel.sortedByCreatedTimeAsc().observe(viewLifecycleOwner, sortObserver)
 
-            getString(R.string.color) -> {
-                noteViewModel.sortedByColorAsc()
-                    .observe(viewLifecycleOwner, sortObserver)
-            }
+            getString(R.string.color) ->
+                noteViewModel.sortedByColorAsc().observe(viewLifecycleOwner, sortObserver)
+
+            null -> noteViewModel.allNote.observe(viewLifecycleOwner, sortObserver)
         }
     }
+
+    // TODO tìm kiếm rồi chọn item thì crash
 }

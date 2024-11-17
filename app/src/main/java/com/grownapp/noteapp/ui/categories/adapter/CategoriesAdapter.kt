@@ -39,8 +39,6 @@ class CategoriesAdapter(
         holder.imgDeleteCategoryItem.setOnClickListener {
             onDelete(category)
         }
-
-        //TODO: di chuyển thứ tự category
     }
 
     override fun getItemCount(): Int = categories.size
