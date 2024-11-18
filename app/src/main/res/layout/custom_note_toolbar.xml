@@ -4,11 +4,11 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/custom_note_toolbar"
     android:layout_height="?attr/actionBarSize"
-    android:background="@color/topBarBackgroundLight">
+    android:background="@color/transparent">
 
     <TextView
         android:id="@+id/tvCountSeleted"
-        android:textSize="@dimen/_13sdp"
+        android:textSize="@dimen/_18sdp"
         android:textColor="@color/textTopBar"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toBottomOf="parent"

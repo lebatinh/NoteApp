@@ -56,6 +56,7 @@ import com.grownapp.noteapp.databinding.FragmentNoteDetailBinding
 import com.grownapp.noteapp.ui.categories.CategoriesViewModel
 import com.grownapp.noteapp.ui.categories.dao.Category
 import com.grownapp.noteapp.ui.note.adapter.CategoryForNoteAdapter
+import com.grownapp.noteapp.ui.note.adapter.NoteContentListAdapter
 import com.grownapp.noteapp.ui.note.dao.Note
 import com.grownapp.noteapp.ui.note.support.FileProcess
 import com.grownapp.noteapp.ui.note.support.FormatTextSupport
@@ -74,6 +75,7 @@ class NoteDetailFragment : Fragment(), MenuProvider {
     private lateinit var noteViewModel: NoteViewModel
     private lateinit var categoryViewModel: CategoriesViewModel
     private lateinit var sharedPreferences: SharedPreferences
+    private lateinit var adapter: NoteContentListAdapter
 
     private var noteId: Int = 0
     private var category: String? = null
@@ -85,6 +87,10 @@ class NoteDetailFragment : Fragment(), MenuProvider {
     private var isShowSearch = false
     private var selectedDirectoryUri: Uri? = null
     private lateinit var listNoteSelected: MutableList<Note>
+
+    private var isReadMode: Boolean = false
+    private var isChecklistMode = false
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -247,7 +253,7 @@ class NoteDetailFragment : Fragment(), MenuProvider {
     }
 
     private fun saveNote() {
-        val spannableText = SpannableStringBuilder(binding.edtNote.text)
+        val spannableText = if (isChecklistMode) adapter.getFormattedText() else SpannableStringBuilder(binding.edtNote.text)
         val noteContent =
             FormatTextSupport().spannableToNoteContent(requireContext(), spannableText)
 
@@ -266,7 +272,11 @@ class NoteDetailFragment : Fragment(), MenuProvider {
 
         val popupMenu = PopupMenu(requireContext(), anchorView)
 
-        popupMenu.menuInflater.inflate(R.menu.menu_more_note_detail, popupMenu.menu)
+        if (isReadMode){
+            popupMenu.menuInflater.inflate(R.menu.menu_more_note_detail_read_mode, popupMenu.menu)
+        }else{
+            popupMenu.menuInflater.inflate(R.menu.menu_more_note_detail, popupMenu.menu)
+        }
 
         popupMenu.setOnMenuItemClickListener { menuItem ->
             when (menuItem.itemId) {
@@ -322,10 +332,17 @@ class NoteDetailFragment : Fragment(), MenuProvider {
                 }
 
                 R.id.convert_to_checklist -> {
+                    isChecklistMode = !isChecklistMode
+                    convertCheckList()
+                    adapter = NoteContentListAdapter(formattedTextSegments, isChecklistMode)
+                    adapter.updateChecklistMode(isChecklistMode)
+                    binding.rcvNoteContentList.layoutManager = LinearLayoutManager(requireContext())
+                    binding.rcvNoteContentList.adapter = adapter
                     true
                 }
 
                 R.id.switch_to_read_mode -> {
+                    readMode(true)
                     true
                 }
 
@@ -348,6 +365,20 @@ class NoteDetailFragment : Fragment(), MenuProvider {
             }
         }
         popupMenu.show()
+    }
+
+    private fun convertCheckList() {
+        if (isChecklistMode) {
+            binding.constraintNoteContentList.visibility = View.VISIBLE
+            binding.edtNote.visibility = View.GONE
+            binding.tvAddCategories.setOnClickListener {
+                adapter.addItem(SpannableStringBuilder(""))
+                binding.rcvNoteContentList.scrollToPosition(adapter.itemCount - 1)
+            }
+        } else {
+            binding.constraintNoteContentList.visibility = View.GONE
+            binding.edtNote.visibility = View.VISIBLE
+        }
     }
 
     private fun openDirectoryChooser() {
@@ -529,6 +560,77 @@ class NoteDetailFragment : Fragment(), MenuProvider {
         }
     }
 
+    private fun readMode(enableReadMode: Boolean) {
+        isReadMode = enableReadMode
+        val toolbar = requireActivity().findViewById<Toolbar>(R.id.toolbar)
+        val btnSave = toolbar.findViewById<View>(R.id.item_save)
+        val btnUndo = toolbar.findViewById<View>(R.id.item_undo)
+
+        if (isReadMode) {
+            btnSave?.visibility = View.GONE
+            btnUndo?.visibility = View.GONE
+
+            val layoutParams = Toolbar.LayoutParams(
+                Toolbar.LayoutParams.MATCH_PARENT,
+                Toolbar.LayoutParams.WRAP_CONTENT
+            )
+            val readModeLayout = layoutInflater.inflate(R.layout.custom_readmode_toolbar, toolbar, false)
+
+            val existingReadModeLayout = toolbar.findViewById<View>(R.id.custom_readmode_toolbar)
+            if (existingReadModeLayout != null) {
+                toolbar.removeView(existingReadModeLayout)
+            }
+            toolbar.addView(readModeLayout, layoutParams)
+
+            binding.edtTitle.isEnabled = false
+            binding.edtNote.isEnabled = false
+
+            binding.edtTitle.hint = ""
+            binding.edtNote.hint = ""
+            binding.constraint.visibility = View.GONE
+            sharedPreferences.edit().putBoolean("isShowFormattingBar", false).apply()
+
+            val imgExportNote = toolbar.findViewById<ImageView>(R.id.imgExportNote)
+            val imgEdit = toolbar.findViewById<ImageView>(R.id.imgEdit)
+
+            toolbar.setNavigationIcon(R.drawable.back)
+            toolbar.setNavigationOnClickListener {
+                imgExportNote?.visibility = View.GONE
+                imgEdit?.visibility = View.GONE
+                readMode(false)
+            }
+
+            imgExportNote.setOnClickListener {
+                FileProcess().checkAndRequestPermissions {
+                    openDirectoryChooser()
+                }
+
+                readMode(true)
+            }
+            imgEdit.setOnClickListener {
+                readMode(false)
+            }
+        } else {
+            btnSave?.visibility = View.VISIBLE
+            btnUndo?.visibility = View.VISIBLE
+
+            val readModeLayout =
+                toolbar.findViewById<View>(R.id.custom_readmode_toolbar)
+            if (readModeLayout != null) {
+                toolbar.removeView(readModeLayout)
+            }
+            toolbar.setNavigationIcon(R.drawable.back)
+            toolbar.setNavigationOnClickListener {
+                view?.let {
+                    findNavController().navigateUp()
+                }
+            }
+
+            binding.edtTitle.isEnabled = true
+            binding.edtNote.isEnabled = true
+        }
+    }
+
     private fun searchKeyword(query: String) {
         val searchLayout = layoutInflater.inflate(R.layout.custom_search_toolbar, null)
         val searchCountView = searchLayout.findViewById<TextView>(R.id.searchCount)
@@ -538,7 +640,10 @@ class NoteDetailFragment : Fragment(), MenuProvider {
         val pattern = Regex(query, RegexOption.IGNORE_CASE)
         val matches = pattern.findAll(text).map { it.range }.toList()
 
-        searchCountView.text = "1/${matches.size}"
+        searchCountView.text = buildString {
+        append("1/")
+        append(matches.size)
+    }
 
         highlightMatches(matches)
     }
@@ -1146,5 +1251,5 @@ class NoteDetailFragment : Fragment(), MenuProvider {
 
     // TODO undo, redo, undo all sai
     // TODO tìm kiếm kí tự bị crash
-    // TODO thêm convert to checklist và switch to read mode
+    // TODO convert to checklist nhưng các chữ đã có định dạng thì lại không giữ
 }
