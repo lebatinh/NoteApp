@@ -3,6 +3,7 @@ package com.grownapp.noteapp.ui.note
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
+import androidx.lifecycle.MediatorLiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
 import com.grownapp.noteapp.ReturnResult
@@ -29,12 +30,58 @@ class NoteViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _returnResult = MutableLiveData<ReturnResult>()
 
+    private val searchQuery = MutableLiveData<String>()
+    val searchResult = MediatorLiveData<List<Note>>()
+
+    private val categoryId = MutableLiveData<Int?>()
+    val searchResultCategory = MediatorLiveData<List<NoteWithCategories>>()
+
     init {
         val noteDao = NoteDatabase.getDatabase(application).noteDao()
         repository = NoteRepository(noteDao)
         allNote = repository.allNote
         allNoteWithoutCategory = repository.notesWithoutCategory
         allTrashNote = repository.allTrashNote
+
+        searchResult.addSource(searchQuery) { query ->
+            if (!query.isNullOrEmpty()) {
+                val source = repository.searchNote(query)
+                searchResult.addSource(source) { notes ->
+                    searchResult.value = notes
+                    searchResult.removeSource(source)
+                }
+            }
+        }
+
+        searchResultCategory.addSource(searchQuery) { query ->
+            performSearch(query, categoryId.value)
+        }
+        searchResultCategory.addSource(categoryId) { id ->
+            performSearch(searchQuery.value, id)
+        }
+
+    }
+
+    fun setSearchQuery(query: String) {
+        searchQuery.value = query
+    }
+    fun setCategoryId(id: Int?) {
+        categoryId.value = id
+    }
+    private fun performSearch(query: String?, id: Int?) {
+        if (query.isNullOrEmpty()) {
+            searchResultCategory.value = emptyList()
+            return
+        }
+        val source = if (id == null) {
+            repository.searchNoteWithoutCategory(query)
+        } else {
+            repository.searchNoteWithCategory(query, id)
+        }
+        searchResultCategory.addSource(source) { notes ->
+            searchResultCategory.value = notes
+            searchResultCategory.removeSource(source)
+        }
     }
 
     fun insertFirst(note: Note) {
@@ -104,21 +151,6 @@ class NoteViewModel(application: Application) : AndroidViewModel(application) {
 
     fun clearNoteId() {
         _noteId.postValue(null)
-    }
-
-    fun searchNoteWithCategory(
-        searchQuery: String,
-        categoryId: Int
-    ): LiveData<List<NoteWithCategories>> {
-        return repository.searchNoteWithCategory("%$searchQuery%", categoryId)
-    }
-
-    fun searchNoteWithoutCategory(searchQuery: String): LiveData<List<NoteWithCategories>> {
-        return repository.searchNoteWithoutCategory("%$searchQuery%")
-    }
-
-    fun search(searchQuery: String): LiveData<List<Note>> {
-        return repository.searchNote("%$searchQuery%")
     }
 
     //all

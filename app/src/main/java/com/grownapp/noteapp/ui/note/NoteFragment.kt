@@ -134,6 +134,10 @@ class NoteFragment : Fragment(), MenuProvider {
             updateCountNoteSelected(selectedNotes.size)
         }
 
+        noteViewModel.searchResult.observe(viewLifecycleOwner){
+            noteAdapter.updateListNote(it)
+        }
+
         binding.rcvNote.layoutManager = LinearLayoutManager(requireContext())
         binding.rcvNote.adapter = noteAdapter
 
@@ -341,18 +345,14 @@ class NoteFragment : Fragment(), MenuProvider {
                 searchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
                     override fun onQueryTextSubmit(query: String?): Boolean {
                         query?.let {
-                            noteViewModel.search("%$it%").observe(viewLifecycleOwner) { notes ->
-                                noteAdapter.updateListNote(notes)
-                            }
+                            noteViewModel.setSearchQuery("%${query}%")
                         }
                         return true
                     }
 
                     override fun onQueryTextChange(newText: String?): Boolean {
                         newText?.let {
-                            noteViewModel.search(it).observe(viewLifecycleOwner) { notes ->
-                                noteAdapter.updateListNote(notes)
-                            }
+                            noteViewModel.setSearchQuery("%${newText}%")
                         }
                         return true
                     }
@@ -778,6 +778,4 @@ class NoteFragment : Fragment(), MenuProvider {
             null -> noteViewModel.allNote.observe(viewLifecycleOwner, sortObserver)
         }
     }
-
-    // TODO tìm kiếm rồi chọn item thì crash
 }

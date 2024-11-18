@@ -124,7 +124,7 @@ class NoteListFragment : Fragment(), MenuProvider {
 
         noteAdapter = NoteAdapter(onClickNote = {
             if (!isEditMode) {
-                val action = NoteFragmentDirections.actionNavNoteToNoteDetailFragment(it.noteId)
+                val action = NoteListFragmentDirections.actionNoteListFragmentToNoteDetailFragment(it.noteId)
                 findNavController().navigate(action)
             }
         }, onLongClickNote = {
@@ -158,6 +158,11 @@ class NoteListFragment : Fragment(), MenuProvider {
         categoryViewModel.allCategory.observe(viewLifecycleOwner) {
             listCategory.clear()
             listCategory.addAll(it)
+        }
+        noteViewModel.setCategoryId(categoryId)
+        noteViewModel.searchResultCategory.observe(viewLifecycleOwner) { notes ->
+            val note = notes.map { it.note }
+            noteAdapter.updateListNote(note)
         }
     }
 
@@ -293,41 +298,12 @@ class NoteListFragment : Fragment(), MenuProvider {
                 val searchView = menuItem.actionView as SearchView
                 searchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
                     override fun onQueryTextSubmit(query: String?): Boolean {
-                        query?.let { q ->
-                            if (categoryId != null) {
-                                noteViewModel.searchNoteWithCategory("%$q%", categoryId!!)
-                                    .observe(viewLifecycleOwner) { notes ->
-                                        val note = notes.map { it.note }
-                                        noteAdapter.updateListNote(note)
-                                    }
-                            } else {
-                                noteViewModel.searchNoteWithoutCategory("%$q%")
-                                    .observe(viewLifecycleOwner) { notes ->
-                                        val note = notes.map { it.note }
-                                        noteAdapter.updateListNote(note)
-                                    }
-                            }
-
-                        }
+                        query?.let { noteViewModel.setSearchQuery("%${it}%") }
                         return true
                     }
 
                     override fun onQueryTextChange(newText: String?): Boolean {
-                        newText?.let { q ->
-                            if (categoryId != null) {
-                                noteViewModel.searchNoteWithCategory("%$q%", categoryId!!)
-                                    .observe(viewLifecycleOwner) { notes ->
-                                        val note = notes.map { it.note }
-                                        noteAdapter.updateListNote(note)
-                                    }
-                            } else {
-                                noteViewModel.searchNoteWithoutCategory("%$q%")
-                                    .observe(viewLifecycleOwner) { notes ->
-                                        val note = notes.map { it.note }
-                                        noteAdapter.updateListNote(note)
-                                    }
-                            }
-                        }
+                        newText?.let { noteViewModel.setSearchQuery("%${it}%") }
                         return true
                     }
 
