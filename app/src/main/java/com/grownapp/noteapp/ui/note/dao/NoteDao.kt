@@ -264,4 +264,7 @@ interface NoteDao {
 
     @Query("UPDATE note SET backgroundColor = :backgroundColor WHERE noteId IN (:noteIds)")
     suspend fun updateBackgroundColor(noteIds: List<Int>, backgroundColor: Int)
+
+    @Query("UPDATE note SET checklistMode = :isChecklistMode WHERE noteId = :noteId")
+    suspend fun updateChecklistMode(noteId: Int, isChecklistMode: Boolean)
 }

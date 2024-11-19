@@ -9,12 +9,13 @@ import java.util.Locale
 @Entity(tableName = "note")
 data class Note(
     @PrimaryKey(autoGenerate = true) val noteId: Int = 0,
-    val title: String? = null,
-    val note: String? = null,
+    var title: String? = null,
+    var note: String? = null,
     var timeCreate: String? = null,
     var timeLastEdit: String? = getCurrentTime(),
     var onTrash: Boolean? = false,
-    var backgroundColor: Int? = null
+    var backgroundColor: Int? = null,
+    var checklistMode: Boolean? = false
 ) {
     companion object {
         fun getCurrentTime(): String {

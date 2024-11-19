@@ -13,6 +13,7 @@ import android.text.style.UnderlineSpan
 import android.widget.EditText
 import androidx.core.content.ContextCompat
 import com.grownapp.noteapp.R
+import com.grownapp.noteapp.ui.note.adapter.ChecklistItem
 
 class FormatTextSupport {
     fun applyCurrentFormat(
@@ -178,4 +179,18 @@ class FormatTextSupport {
         }
         return spannable
     }
+
+    fun spannableToChecklistItems(spannable: SpannableStringBuilder): List<ChecklistItem> {
+        val items = mutableListOf<ChecklistItem>()
+        val lines = spannable.split("\n")
+        var start = 0
+        for (line in lines) {
+            val end = start + line.length
+            val lineSpannable = SpannableStringBuilder(spannable.subSequence(start, end))
+            items.add(ChecklistItem(lineSpannable, false))
+            start = end + 1
+        }
+        return items
+    }
+
 }

@@ -259,4 +259,10 @@ class NoteViewModel(application: Application) : AndroidViewModel(application) {
             repository.updateBackgroundColor(noteIds, backgroundColor)
         }
     }
+
+    fun updateChecklistMode(noteId: Int, isChecklistMode: Boolean){
+        viewModelScope.launch {
+            repository.updateChecklistMode(noteId, isChecklistMode)
+        }
+    }
 }

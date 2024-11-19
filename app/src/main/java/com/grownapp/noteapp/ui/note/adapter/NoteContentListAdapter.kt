@@ -4,109 +4,108 @@ import android.text.Editable
 import android.text.SpannableStringBuilder
 import android.text.TextWatcher
 import android.view.LayoutInflater
-import android.view.View
 import android.view.ViewGroup
-import android.widget.CheckBox
-import android.widget.EditText
-import android.widget.ImageView
 import androidx.recyclerview.widget.RecyclerView
-import com.grownapp.noteapp.R
+import com.grownapp.noteapp.databinding.NoteContentItemBinding
 
 class NoteContentListAdapter(
-    private var formattedTextSegments: SpannableStringBuilder,
-    private var isChecklistMode: Boolean
-): RecyclerView.Adapter<NoteContentListAdapter.NoteContentListViewHolder>() {
+    private val onItemCheckedChanged: (position: Int, isChecked: Boolean) -> Unit,
+    private val onItemTextChanged: (position: Int, text: SpannableStringBuilder) -> Unit,
+    private val onItemDeleted: (position: Int) -> Unit
+) : RecyclerView.Adapter<NoteContentListAdapter.ViewHolder>() {
 
-    private var items: List<CharSequence> = parseItems()
+    private val items = mutableListOf<ChecklistItem>()
 
-    private fun parseItems(): List<CharSequence> {
-        return if (isChecklistMode) {
-            formattedTextSegments.split("\n").map { SpannableStringBuilder(it.trim()) }
-        } else {
-            listOf(formattedTextSegments)
+    fun setItems(newItems: List<ChecklistItem>) {
+        items.clear()
+        items.addAll(newItems)
+        notifyDataSetChanged()
+    }
+
+    fun addItem(item: ChecklistItem) {
+        items.add(item)
+        notifyItemInserted(items.size - 1)
+    }
+
+    fun removeItem(position: Int) {
+        if (position in items.indices) {
+            items.removeAt(position)
+            notifyItemRemoved(position)
         }
     }
 
-    class NoteContentListViewHolder(itemView: View): RecyclerView.ViewHolder(itemView){
-        val ckbNoteItem: CheckBox = itemView.findViewById(R.id.ckbNoteItem)
-        val edtItemNote: EditText = itemView.findViewById(R.id.edtItemNote)
-        val imgDeleteNoteItem: ImageView = itemView.findViewById(R.id.imgDeleteNoteItem)
+    fun convertCheckListToSpannable(): SpannableStringBuilder {
+        val spannableBuilder = SpannableStringBuilder()
+        if (items.isEmpty()) {
+            return spannableBuilder
+        }
+
+        for (item in items) {
+            spannableBuilder.append(item.text).append("\n")
+        }
+        if (spannableBuilder.isNotEmpty()) spannableBuilder.delete(
+            spannableBuilder.length - 1,
+            spannableBuilder.length
+        )
+        return spannableBuilder
     }
 
-    override fun onCreateViewHolder(
-        parent: ViewGroup,
-        viewType: Int
-    ): NoteContentListViewHolder {
-        val view = LayoutInflater.from(parent.context).inflate(R.layout.note_content_item, parent, false)
-        return NoteContentListViewHolder(view)
-    }
+    inner class ViewHolder(private val binding: NoteContentItemBinding) :
+        RecyclerView.ViewHolder(binding.root) {
+        fun bind(position: Int) {
+            val item = items[position]
 
-    override fun onBindViewHolder(
-        holder: NoteContentListViewHolder,
-        position: Int
-    ) {
-        val item = items[position]
+            binding.ckbNoteItem.isChecked = item.isChecked
+            binding.edtItemNote.text = item.text
 
-        holder.edtItemNote.text = item as? Editable ?: SpannableStringBuilder(item)
-        holder.edtItemNote.addTextChangedListener(object : TextWatcher {
-            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-
-            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
-                if (s != null) {
-                    updateItem(position, SpannableStringBuilder(s))
+            binding.ckbNoteItem.setOnCheckedChangeListener { _, isChecked ->
+                if (item.isChecked != isChecked) {
+                    onItemCheckedChanged(position, isChecked)
+                    item.isChecked = isChecked
                 }
             }
 
-            override fun afterTextChanged(s: Editable?) {}
-        })
-        if (isChecklistMode) {
-            holder.imgDeleteNoteItem.setOnClickListener {
+            binding.edtItemNote.addTextChangedListener(object : TextWatcher {
+                override fun beforeTextChanged(
+                    s: CharSequence?,
+                    start: Int,
+                    count: Int,
+                    after: Int
+                ) {
+                }
+
+                override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                    val newText = SpannableStringBuilder(s ?: "")
+                    if (item.text.toString() != newText.toString()) {
+                        onItemTextChanged(position, newText)
+                        item.text = newText
+                    }
+                }
+
+                override fun afterTextChanged(s: Editable?) {}
+            })
+
+            binding.imgDeleteNoteItem.setOnClickListener {
+                onItemDeleted(position)
                 removeItem(position)
             }
         }
     }
 
-    override fun getItemCount(): Int =  items.size
-
-    private fun removeItem(position: Int) {
-        if (isChecklistMode) {
-            items = items.toMutableList().apply { removeAt(position) }
-            formattedTextSegments = SpannableStringBuilder(items.joinToString("\n"))
-            notifyItemRemoved(position)
-        }
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
+        val binding =
+            NoteContentItemBinding.inflate(LayoutInflater.from(parent.context), parent, false)
+        return ViewHolder(binding)
     }
 
-    private fun updateItem(position: Int, newText: CharSequence) {
-        val mutableItems = items.toMutableList()
-        mutableItems[position] = newText
-        items = mutableItems
-        formattedTextSegments = SpannableStringBuilder(items.joinToString("\n"))
-    }
-    fun addItem(newText: CharSequence) {
-        val mutableItems = items.toMutableList()
-        mutableItems.add(newText)
-        items = mutableItems
-
-        formattedTextSegments = SpannableStringBuilder(items.joinToString("\n"))
-
-        notifyItemInserted(items.size - 1)
+    override fun onBindViewHolder(holder: ViewHolder, position: Int) {
+        holder.bind(position)
     }
 
-    fun updateChecklistMode(isChecklistMode: Boolean) {
-        this.isChecklistMode = isChecklistMode
-        items = if (isChecklistMode) {
-            formattedTextSegments.split("\n").map { SpannableStringBuilder(it) }
-        } else {
-            listOf(formattedTextSegments)
-        }
-        notifyDataSetChanged()
-    }
-    fun getFormattedText(): SpannableStringBuilder {
-        return if (isChecklistMode) {
-            SpannableStringBuilder(items.joinToString("\n"))
-        } else {
-            formattedTextSegments
-        }
-    }
-
+    override fun getItemCount(): Int = items.size
 }
+
+data class ChecklistItem(
+    var text: SpannableStringBuilder,
+    var isChecked: Boolean
+)

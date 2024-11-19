@@ -161,4 +161,8 @@ class NoteRepository(
     suspend fun updateBackgroundColor(noteIds: List<Int>, backgroundColor: Int) {
         noteDao.updateBackgroundColor(noteIds, backgroundColor)
     }
+
+    suspend fun updateChecklistMode(noteId: Int, isChecklistMode: Boolean){
+        noteDao.updateChecklistMode(noteId, isChecklistMode)
+    }
 }
