@@ -21,6 +21,7 @@ import android.text.style.ForegroundColorSpan
 import android.text.style.StrikethroughSpan
 import android.text.style.StyleSpan
 import android.text.style.UnderlineSpan
+import android.util.Log
 import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.Menu
@@ -413,6 +414,7 @@ class NoteDetailFragment : Fragment(), MenuProvider {
     private fun convertToChecklist() {
         if (isChecklistMode) {
             formattedTextSegments = SpannableStringBuilder(binding.edtNote.text)
+            Log.wtf("formattedTextSegments", formattedTextSegments.toString())
 
             val checklistItems =
                 FormatTextSupport().spannableToChecklistItems(formattedTextSegments)
@@ -423,9 +425,11 @@ class NoteDetailFragment : Fragment(), MenuProvider {
             binding.constraint.visibility = View.GONE
         } else {
             formattedTextSegments = adapter.convertCheckListToSpannable()
+            Log.wtf("formattedTextSegments", formattedTextSegments.toString())
             binding.edtNote.text = formattedTextSegments
             binding.constraintNoteContentList.visibility = View.GONE
             binding.edtNote.visibility = View.VISIBLE
+            formattedTextSegments = SpannableStringBuilder(binding.edtNote.text)
         }
     }
 
@@ -1336,10 +1340,10 @@ class NoteDetailFragment : Fragment(), MenuProvider {
                 ContextCompat.getDrawable(requireContext(), R.drawable.background_add_note)
         }
     }
-
-    // TODO nếu viết thêm vào các đoạn có định dạng tên danh sách checklist thì các chữ định dạng sẽ mất điều này là sai
-    // TODO chỉ có các chữ mới thêm vào không có định dạng thôi còn các chữ đã sẵn định dạng sẽ vẫn có định dạng
-
-    // TODO nếu chèn vào giữa edittext trên danh sách checklist hoặc chuyển từ checklist về chế độ thường rồi viết chữ thì sẽ crash
-    // TODO chỉ chuyển được các chữ đã lưu vào database sang checklist chứ k chuyển được chữ trên edtNote hiện tại sang checklist
 }
+
+// TODO nếu chuyển từ checklist về chế độ thường rồi viết chữ ở bất kì vị trí nào khác 0 thì sẽ crash (lúc này formattedTextSegments rỗng)
+// nếu thêm mã dưới vào trước formattedTextSegments.insert thì sẽ không còn lỗi crash nhưng sẽ có lỗi thêm 1 chữ không có định dạng ở sau chữ vừa được thêm vào (sau con trỏ)
+// if (formattedTextSegments.isEmpty()) {
+//        formattedTextSegments.append(binding.edtNote.text)
+//    }
