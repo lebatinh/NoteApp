@@ -21,7 +21,6 @@ import android.text.style.ForegroundColorSpan
 import android.text.style.StrikethroughSpan
 import android.text.style.StyleSpan
 import android.text.style.UnderlineSpan
-import android.util.Log
 import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.Menu
@@ -76,7 +75,7 @@ class NoteDetailFragment : Fragment(), MenuProvider {
     private lateinit var noteViewModel: NoteViewModel
     private lateinit var categoryViewModel: CategoriesViewModel
     private lateinit var sharedPreferences: SharedPreferences
-    private lateinit var adapter: NoteContentListAdapter
+    private var adapter = NoteContentListAdapter()
 
     private var noteId: Int = 0
     private var category: String? = null
@@ -119,15 +118,6 @@ class NoteDetailFragment : Fragment(), MenuProvider {
             category = arguments?.getString("categoryName")
         }
 
-        adapter = NoteContentListAdapter(
-            onItemCheckedChanged = { position, isChecked ->
-            },
-            onItemTextChanged = { position, text ->
-            },
-            onItemDeleted = { position ->
-            }
-        )
-
         noteViewModel.getNoteById(noteId).observe(viewLifecycleOwner) { note ->
             note?.let {
                 listNoteSelected.clear()
@@ -150,9 +140,6 @@ class NoteDetailFragment : Fragment(), MenuProvider {
                 isChecklistMode = note.checklistMode == true
 
                 if (isChecklistMode) {
-                    val checklistItems =
-                        FormatTextSupport().spannableToChecklistItems(formattedTextSegments)
-                    adapter.setItems(checklistItems)
                     binding.constraintNoteContentList.visibility = View.VISIBLE
                     binding.edtNote.visibility = View.GONE
 
@@ -243,7 +230,6 @@ class NoteDetailFragment : Fragment(), MenuProvider {
 
         val undoItem = menu.findItem(R.id.item_undo)
         undoItem.isEnabled = !isChecklistMode
-        requireActivity().invalidateOptionsMenu()
     }
 
     override fun onMenuItemSelected(menuItem: MenuItem): Boolean {
@@ -311,12 +297,17 @@ class NoteDetailFragment : Fragment(), MenuProvider {
             showFormattingBar.isEnabled = false
         } else {
             convertToChecklistItem?.title = getString(R.string.convert_to_checklist)
-            redo.isEnabled = true
-            undoAll.isEnabled = true
+            if (!isReadMode){
+                redo.isEnabled = true
+                undoAll.isEnabled = true
+                val isShowFormattingBar = sharedPreferences.getBoolean("isShowFormattingBar", false)
+                showFormattingBar.isEnabled = !isShowFormattingBar
+            }
 
-            val isShowFormattingBar = sharedPreferences.getBoolean("isShowFormattingBar", false)
-            showFormattingBar.isEnabled = !isShowFormattingBar
         }
+
+        val search = popupMenu.menu.findItem(R.id.search)
+        search.isVisible = !isShowSearch
 
         popupMenu.setOnMenuItemClickListener { menuItem ->
             when (menuItem.itemId) {
@@ -349,7 +340,6 @@ class NoteDetailFragment : Fragment(), MenuProvider {
 
                 R.id.search -> {
                     isShowSearch = true
-                    menuItem.isVisible = !isShowSearch
                     toggleSearchToolbar(isShowSearch)
                     true
                 }
@@ -377,11 +367,6 @@ class NoteDetailFragment : Fragment(), MenuProvider {
                     noteViewModel.updateChecklistMode(noteId, isChecklistMode)
                     convertToChecklist()
                     formattedTextSegments = SpannableStringBuilder(binding.edtNote.text)
-                    menuItem.title = if (isChecklistMode) {
-                        getString(R.string.convert_to_text)
-                    } else {
-                        getString(R.string.convert_to_checklist)
-                    }
                     true
                 }
 
@@ -413,8 +398,7 @@ class NoteDetailFragment : Fragment(), MenuProvider {
 
     private fun convertToChecklist() {
         if (isChecklistMode) {
-            formattedTextSegments = SpannableStringBuilder(binding.edtNote.text)
-            Log.wtf("formattedTextSegments", formattedTextSegments.toString())
+            formattedTextSegments = SpannableStringBuilder(binding.edtNote.text ?: "")
 
             val checklistItems =
                 FormatTextSupport().spannableToChecklistItems(formattedTextSegments)
@@ -425,7 +409,6 @@ class NoteDetailFragment : Fragment(), MenuProvider {
             binding.constraint.visibility = View.GONE
         } else {
             formattedTextSegments = adapter.convertCheckListToSpannable()
-            Log.wtf("formattedTextSegments", formattedTextSegments.toString())
             binding.edtNote.text = formattedTextSegments
             binding.constraintNoteContentList.visibility = View.GONE
             binding.edtNote.visibility = View.VISIBLE
@@ -537,11 +520,12 @@ class NoteDetailFragment : Fragment(), MenuProvider {
     }
 
     private fun toggleSearchToolbar(isVisible: Boolean) {
+        isShowSearch = isVisible
         val toolbar = requireActivity().findViewById<Toolbar>(R.id.toolbar)
         val btnSave = toolbar.findViewById<View>(R.id.item_save)
         val btnUndo = toolbar.findViewById<View>(R.id.item_undo)
 
-        if (isVisible) {
+        if (isShowSearch) {
             btnSave?.visibility = View.GONE
             btnUndo?.visibility = View.GONE
 
@@ -566,6 +550,8 @@ class NoteDetailFragment : Fragment(), MenuProvider {
                 btnPrev?.visibility = View.GONE
                 btnNext?.visibility = View.GONE
                 search?.visibility = View.GONE
+
+                clearSearchHighlights()
             }
             toolbar.addView(searchLayout, layoutParams)
 
@@ -689,9 +675,7 @@ class NoteDetailFragment : Fragment(), MenuProvider {
         val searchCountView = searchLayout.findViewById<TextView>(R.id.searchCount)
         val text = binding.edtNote.text?.toString() ?: ""
 
-        if (text.isEmpty()) {
-            return
-        }
+        if (text.isEmpty()) return
 
         clearSearchHighlights()
 

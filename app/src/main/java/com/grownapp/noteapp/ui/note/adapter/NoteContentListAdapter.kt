@@ -8,11 +8,7 @@ import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
 import com.grownapp.noteapp.databinding.NoteContentItemBinding
 
-class NoteContentListAdapter(
-    private val onItemCheckedChanged: (position: Int, isChecked: Boolean) -> Unit,
-    private val onItemTextChanged: (position: Int, text: SpannableStringBuilder) -> Unit,
-    private val onItemDeleted: (position: Int) -> Unit
-) : RecyclerView.Adapter<NoteContentListAdapter.ViewHolder>() {
+class NoteContentListAdapter : RecyclerView.Adapter<NoteContentListAdapter.ViewHolder>() {
 
     private val items = mutableListOf<ChecklistItem>()
 
@@ -31,6 +27,7 @@ class NoteContentListAdapter(
         if (position in items.indices) {
             items.removeAt(position)
             notifyItemRemoved(position)
+            notifyItemRangeChanged(position, items.size - position)
         }
     }
 
@@ -60,7 +57,6 @@ class NoteContentListAdapter(
 
             binding.ckbNoteItem.setOnCheckedChangeListener { _, isChecked ->
                 if (item.isChecked != isChecked) {
-                    onItemCheckedChanged(position, isChecked)
                     item.isChecked = isChecked
                 }
             }
@@ -77,7 +73,6 @@ class NoteContentListAdapter(
                 override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
                     val newText = SpannableStringBuilder(s ?: "")
                     if (item.text.toString() != newText.toString()) {
-                        onItemTextChanged(position, newText)
                         item.text = newText
                     }
                 }
@@ -86,7 +81,6 @@ class NoteContentListAdapter(
             })
 
             binding.imgDeleteNoteItem.setOnClickListener {
-                onItemDeleted(position)
                 removeItem(position)
             }
         }
