@@ -159,4 +159,5 @@
     <string name="restore_the_selected_notes">Restore the selected notes?</string>
     <string name="delete_selected_trash_log">Are you sure that you want to delete the selected notes? The notes will be deleted permanently.</string>
     <string name="add_item">+ ADD ITEM</string>
+    <string name="convert_to_text">Convert to text</string>
 </resources>

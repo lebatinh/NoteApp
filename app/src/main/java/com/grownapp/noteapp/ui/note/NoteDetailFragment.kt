@@ -239,6 +239,10 @@ class NoteDetailFragment : Fragment(), MenuProvider {
     override fun onCreateMenu(menu: Menu, menuInflater: MenuInflater) {
         menu.clear()
         menuInflater.inflate(R.menu.menu_note_detail, menu)
+
+        val undoItem = menu.findItem(R.id.item_undo)
+        undoItem.isEnabled = !isChecklistMode
+        requireActivity().invalidateOptionsMenu()
     }
 
     override fun onMenuItemSelected(menuItem: MenuItem): Boolean {
@@ -293,6 +297,24 @@ class NoteDetailFragment : Fragment(), MenuProvider {
             popupMenu.menuInflater.inflate(R.menu.menu_more_note_detail_read_mode, popupMenu.menu)
         } else {
             popupMenu.menuInflater.inflate(R.menu.menu_more_note_detail, popupMenu.menu)
+        }
+
+        val redo = popupMenu.menu.findItem(R.id.redo)
+        val undoAll = popupMenu.menu.findItem(R.id.undo_all)
+        val showFormattingBar = popupMenu.menu.findItem(R.id.show_formatting_bar)
+        val convertToChecklistItem = popupMenu.menu.findItem(R.id.convert_to_checklist)
+        if (isChecklistMode) {
+            convertToChecklistItem?.title = getString(R.string.convert_to_text)
+            redo.isEnabled = false
+            undoAll.isEnabled = false
+            showFormattingBar.isEnabled = false
+        } else {
+            convertToChecklistItem?.title = getString(R.string.convert_to_checklist)
+            redo.isEnabled = true
+            undoAll.isEnabled = true
+
+            val isShowFormattingBar = sharedPreferences.getBoolean("isShowFormattingBar", false)
+            showFormattingBar.isEnabled = !isShowFormattingBar
         }
 
         popupMenu.setOnMenuItemClickListener { menuItem ->
@@ -354,6 +376,11 @@ class NoteDetailFragment : Fragment(), MenuProvider {
                     noteViewModel.updateChecklistMode(noteId, isChecklistMode)
                     convertToChecklist()
                     formattedTextSegments = SpannableStringBuilder(binding.edtNote.text)
+                    menuItem.title = if (isChecklistMode) {
+                        getString(R.string.convert_to_text)
+                    } else {
+                        getString(R.string.convert_to_checklist)
+                    }
                     true
                 }
 
