@@ -3,7 +3,7 @@ package com.grownapp.noteapp.ui.note.support
 import android.text.SpannableStringBuilder
 
 class UndoRedoManager {
-    val history: MutableList<SpannableStringBuilder> = mutableListOf()
+    private val history: MutableList<SpannableStringBuilder> = mutableListOf()
     private var currentPosition = -1
 
     fun addState(newText: SpannableStringBuilder) {

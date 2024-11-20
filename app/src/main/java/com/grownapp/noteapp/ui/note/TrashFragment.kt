@@ -96,6 +96,11 @@ class TrashFragment : Fragment(), MenuProvider {
         tvCountSelectedTrash?.text = count.toString()
     }
 
+    override fun onPause() {
+        super.onPause()
+        startEditMode(false)
+    }
+
     private fun startEditMode(isVisible: Boolean) {
         editMode = isVisible
         val toolbar = requireActivity().findViewById<Toolbar>(R.id.toolbar)

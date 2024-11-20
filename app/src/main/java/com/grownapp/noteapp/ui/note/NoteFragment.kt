@@ -164,6 +164,11 @@ class NoteFragment : Fragment(), MenuProvider {
         return root
     }
 
+    override fun onPause() {
+        super.onPause()
+        startEditMode(false)
+    }
+
     private fun updateCountNoteSelected(count: Int) {
         val toolbar = requireActivity().findViewById<Toolbar>(R.id.toolbar)
         val tvCountSelected = toolbar?.findViewById<TextView>(R.id.tvCountSeleted)

@@ -165,6 +165,10 @@ class NoteListFragment : Fragment(), MenuProvider {
             noteAdapter.updateListNote(note)
         }
     }
+    override fun onPause() {
+        super.onPause()
+        startEditMode(false)
+    }
 
     private fun updateCountNoteSelected(cout: Int) {
         val toolbar = requireActivity().findViewById<Toolbar>(R.id.toolbar)

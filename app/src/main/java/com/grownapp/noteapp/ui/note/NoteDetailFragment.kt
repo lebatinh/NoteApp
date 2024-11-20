@@ -21,7 +21,6 @@ import android.text.style.ForegroundColorSpan
 import android.text.style.StrikethroughSpan
 import android.text.style.StyleSpan
 import android.text.style.UnderlineSpan
-import android.util.Log
 import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.Menu
@@ -66,7 +65,6 @@ import com.grownapp.noteapp.ui.note.support.NoteContent
 import com.grownapp.noteapp.ui.note.support.TextFormat
 import com.grownapp.noteapp.ui.note.support.UndoRedoManager
 import com.grownapp.noteapp.ui.note_category.NoteCategoryCrossRef
-
 
 class NoteDetailFragment : Fragment(), MenuProvider {
 
@@ -148,13 +146,11 @@ class NoteDetailFragment : Fragment(), MenuProvider {
 
                 undoRedoManager.addState(formattedTextSegments)
 
-                Log.d("isChecklistMode_1", isChecklistMode.toString())
                 isChecklistMode = note.checklistMode == true
 
-                Log.d("isChecklistMode_2", isChecklistMode.toString())
-
                 if (isChecklistMode) {
-                    val checklistItems = FormatTextSupport().spannableToChecklistItems(formattedTextSegments)
+                    val checklistItems =
+                        FormatTextSupport().spannableToChecklistItems(formattedTextSegments)
                     adapter.setItems(checklistItems)
                     binding.constraintNoteContentList.visibility = View.VISIBLE
                     binding.edtNote.visibility = View.GONE
@@ -166,7 +162,6 @@ class NoteDetailFragment : Fragment(), MenuProvider {
                     binding.constraintNoteContentList.visibility = View.GONE
                     binding.edtNote.visibility = View.VISIBLE
                 }
-                Log.d("isChecklistMode_3", isChecklistMode.toString())
                 binding.rcvNoteContentList.layoutManager = LinearLayoutManager(requireContext())
                 binding.rcvNoteContentList.adapter = adapter
 
@@ -202,6 +197,9 @@ class NoteDetailFragment : Fragment(), MenuProvider {
     override fun onPause() {
         super.onPause()
         saveNote()
+
+        toggleSearchToolbar(false)
+        readMode(false)
     }
 
     override fun onDestroyView() {
@@ -267,11 +265,11 @@ class NoteDetailFragment : Fragment(), MenuProvider {
     }
 
     private fun saveNote() {
-        Log.d("isChecklistMode_4", isChecklistMode.toString())
         val spannableText =
-            if (isChecklistMode) adapter.convertCheckListToSpannable() else SpannableStringBuilder(binding.edtNote.text)
+            if (isChecklistMode) adapter.convertCheckListToSpannable() else SpannableStringBuilder(
+                binding.edtNote.text
+            )
 
-        Log.d("formattedTextSegments_2", formattedTextSegments.toString())
         val noteContent =
             FormatTextSupport().spannableToNoteContent(requireContext(), spannableText)
 
@@ -352,12 +350,9 @@ class NoteDetailFragment : Fragment(), MenuProvider {
 
                 R.id.convert_to_checklist -> {
                     saveNote()
-                    Log.d("isChecklistMode_5", isChecklistMode.toString())
-                    Log.d("formattedTextSegments_3", formattedTextSegments.toString())
                     isChecklistMode = !isChecklistMode
                     noteViewModel.updateChecklistMode(noteId, isChecklistMode)
                     convertToChecklist()
-                    Log.d("isChecklistMode_6", isChecklistMode.toString())
                     formattedTextSegments = SpannableStringBuilder(binding.edtNote.text)
                     true
                 }
@@ -389,11 +384,11 @@ class NoteDetailFragment : Fragment(), MenuProvider {
     }
 
     private fun convertToChecklist() {
-        Log.d("formattedTextSegments_4", formattedTextSegments.toString())
         if (isChecklistMode) {
             formattedTextSegments = SpannableStringBuilder(binding.edtNote.text)
 
-            val checklistItems = FormatTextSupport().spannableToChecklistItems(formattedTextSegments)
+            val checklistItems =
+                FormatTextSupport().spannableToChecklistItems(formattedTextSegments)
             adapter.setItems(checklistItems)
 
             binding.constraintNoteContentList.visibility = View.VISIBLE
@@ -405,14 +400,14 @@ class NoteDetailFragment : Fragment(), MenuProvider {
             binding.constraintNoteContentList.visibility = View.GONE
             binding.edtNote.visibility = View.VISIBLE
         }
-        Log.d("formattedTextSegments_5", formattedTextSegments.toString())
     }
 
     private fun openDirectoryChooser() {
         selectDirectoryLauncher.launch(null)
     }
 
-    private val selectDirectoryLauncher = registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri: Uri? ->
+    private val selectDirectoryLauncher =
+        registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri: Uri? ->
             uri?.let {
                 selectedDirectoryUri = it
                 val takeFlags =
@@ -661,39 +656,50 @@ class NoteDetailFragment : Fragment(), MenuProvider {
         val toolbar = requireActivity().findViewById<Toolbar>(R.id.toolbar)
         val searchLayout = layoutInflater.inflate(R.layout.custom_search_toolbar, toolbar, false)
         val searchCountView = searchLayout.findViewById<TextView>(R.id.searchCount)
-        val text = binding.edtNote.text.toString()
+        val text = binding.edtNote.text?.toString() ?: ""
+
+        if (text.isEmpty()) {
+            return
+        }
+
         clearSearchHighlights()
 
         val pattern = Regex(query, RegexOption.IGNORE_CASE)
         val matches = pattern.findAll(text).map { it.range }.toList()
+        val validMatches = matches.filter { it.first >= 0 && it.last < text.length }
+        highlightMatches(validMatches)
 
         searchCountView.text = buildString {
             append("1/")
             append(matches.size)
         }
-
-        highlightMatches(matches)
     }
 
     private fun highlightMatches(matches: List<IntRange>) {
-        val spannable = SpannableStringBuilder(binding.edtNote.text)
-        val highlightColor =
-            ContextCompat.getColor(requireContext(), R.color.searchHighlightColor)
+        val editable = binding.edtNote.editableText
+        val highlightColor = ContextCompat.getColor(requireContext(), R.color.searchHighlightColor)
 
-        for (range in matches) {
-            spannable.setSpan(
-                BackgroundColorSpan(highlightColor),
-                range.first,
-                range.last + 1,
-                Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
-            )
+        // Xóa các spans cũ trước khi thêm spans mới
+        val spans = editable.getSpans(0, editable.length, BackgroundColorSpan::class.java)
+        for (span in spans) {
+            editable.removeSpan(span)
         }
 
-        binding.edtNote.text = spannable
+        // Thêm spans mới
+        for (range in matches) {
+            if (range.first >= 0 && range.last < editable.length) {
+                editable.setSpan(
+                    BackgroundColorSpan(highlightColor),
+                    range.first,
+                    range.last + 1,
+                    Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+                )
+            }
+        }
     }
 
     private fun clearSearchHighlights() {
-        binding.edtNote.text = SpannableStringBuilder(binding.edtNote.text.toString())
+        binding.edtNote.text = SpannableStringBuilder(binding.edtNote.text)
     }
 
     private fun highlightPreviousResult() {}
@@ -1191,8 +1197,8 @@ class NoteDetailFragment : Fragment(), MenuProvider {
 
                             editText.text = formattedTextSegments
                             editText.setSelection(endPos)
+                            undoRedoManager.addState(formattedTextSegments)
                         }
-                        undoRedoManager.addState(formattedTextSegments)
                     }
                     editText.addTextChangedListener(this)
                 }
@@ -1289,7 +1295,8 @@ class NoteDetailFragment : Fragment(), MenuProvider {
             gradientDrawable.setStroke(0, Color.TRANSPARENT)
 
             val borderDrawable =
-                ContextCompat.getDrawable(requireContext(), R.drawable.background_add_note)?.mutate()
+                ContextCompat.getDrawable(requireContext(), R.drawable.background_add_note)
+                    ?.mutate()
             (borderDrawable as? GradientDrawable)?.setColor(Color.TRANSPARENT)
             val layerDrawable = LayerDrawable(arrayOf(gradientDrawable, borderDrawable))
 
@@ -1303,7 +1310,9 @@ class NoteDetailFragment : Fragment(), MenuProvider {
         }
     }
 
-    // TODO undo, redo, undo all sai
-    // TODO tìm kiếm kí tự bị crash
-    // TODO convert to checklist nhưng kcác chữ đã có định dạng thì lại không giữ
+    // TODO nếu viết thêm vào các đoạn có định dạng tên danh sách checklist thì các chữ định dạng sẽ mất điều này là sai
+    // TODO chỉ có các chữ mới thêm vào không có định dạng thôi còn các chữ đã sẵn định dạng sẽ vẫn có định dạng
+
+    // TODO nếu chèn vào giữa edittext trên danh sách checklist hoặc chuyển từ checklist về chế độ thường rồi viết chữ thì sẽ crash
+    // TODO chỉ chuyển được các chữ đã lưu vào database sang checklist chứ k chuyển được chữ trên edtNote hiện tại sang checklist
 }
