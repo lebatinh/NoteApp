@@ -7,6 +7,7 @@ import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
 import com.grownapp.noteapp.databinding.NoteContentItemBinding
+import com.grownapp.noteapp.ui.note.support.ChecklistItem
 
 class NoteContentListAdapter : RecyclerView.Adapter<NoteContentListAdapter.ViewHolder>() {
 
@@ -45,6 +46,19 @@ class NoteContentListAdapter : RecyclerView.Adapter<NoteContentListAdapter.ViewH
             spannableBuilder.length
         )
         return spannableBuilder
+    }
+
+    fun spannableToChecklistItems(spannable: SpannableStringBuilder): List<ChecklistItem> {
+        val items = mutableListOf<ChecklistItem>()
+        val lines = spannable.split("\n")
+        var start = 0
+        for (line in lines) {
+            val end = start + line.length
+            val lineSpannable = SpannableStringBuilder(spannable.subSequence(start, end))
+            items.add(ChecklistItem(lineSpannable, false))
+            start = end + 1
+        }
+        return items
     }
 
     inner class ViewHolder(private val binding: NoteContentItemBinding) :
@@ -98,8 +112,3 @@ class NoteContentListAdapter : RecyclerView.Adapter<NoteContentListAdapter.ViewH
 
     override fun getItemCount(): Int = items.size
 }
-
-data class ChecklistItem(
-    var text: SpannableStringBuilder,
-    var isChecked: Boolean
-)

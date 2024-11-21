@@ -56,9 +56,9 @@ import com.grownapp.noteapp.databinding.FragmentNoteDetailBinding
 import com.grownapp.noteapp.ui.categories.CategoriesViewModel
 import com.grownapp.noteapp.ui.categories.dao.Category
 import com.grownapp.noteapp.ui.note.adapter.CategoryForNoteAdapter
-import com.grownapp.noteapp.ui.note.adapter.ChecklistItem
 import com.grownapp.noteapp.ui.note.adapter.NoteContentListAdapter
 import com.grownapp.noteapp.ui.note.dao.Note
+import com.grownapp.noteapp.ui.note.support.ChecklistItem
 import com.grownapp.noteapp.ui.note.support.FileProcess
 import com.grownapp.noteapp.ui.note.support.FormatTextSupport
 import com.grownapp.noteapp.ui.note.support.NoteContent
@@ -223,7 +223,6 @@ class NoteDetailFragment : Fragment(), MenuProvider {
             })
 
         requireActivity().addMenuProvider(this, viewLifecycleOwner, Lifecycle.State.RESUMED)
-        requireActivity().invalidateOptionsMenu()
     }
 
     override fun onCreateMenu(menu: Menu, menuInflater: MenuInflater) {
@@ -292,6 +291,10 @@ class NoteDetailFragment : Fragment(), MenuProvider {
         val undoAll = popupMenu.menu.findItem(R.id.undo_all)
         val showFormattingBar = popupMenu.menu.findItem(R.id.show_formatting_bar)
         val convertToChecklistItem = popupMenu.menu.findItem(R.id.convert_to_checklist)
+
+        var isShowFormattingBar = sharedPreferences.getBoolean("isShowFormattingBar", false)
+        showFormattingBar.isEnabled = isShowFormattingBar
+
         if (isChecklistMode) {
             convertToChecklistItem?.title = getString(R.string.convert_to_text)
             redo.isEnabled = false
@@ -303,10 +306,9 @@ class NoteDetailFragment : Fragment(), MenuProvider {
                 redo.isEnabled = true
                 undoAll.isEnabled = true
                 sharedPreferences.edit().putBoolean("isShowFormattingBar", false).apply()
-                val isShowFormattingBar = sharedPreferences.getBoolean("isShowFormattingBar", false)
+                isShowFormattingBar = sharedPreferences.getBoolean("isShowFormattingBar", false)
                 showFormattingBar.isEnabled = !isShowFormattingBar
             }
-
         }
 
         val search = popupMenu.menu.findItem(R.id.search)
@@ -385,7 +387,6 @@ class NoteDetailFragment : Fragment(), MenuProvider {
                 R.id.show_formatting_bar -> {
                     showFormattingBar()
                     sharedPreferences.edit().putBoolean("isShowFormattingBar", true).apply()
-                    requireActivity().invalidateOptionsMenu()
                     true
                 }
 
@@ -401,18 +402,16 @@ class NoteDetailFragment : Fragment(), MenuProvider {
 
     private fun convertToChecklist() {
         if (isChecklistMode) {
-            // Chế độ checklist: chuyển văn bản thành các mục checklist
-            val spannable = SpannableStringBuilder(binding.edtNote.text ?: "")
-            val checklistItems = FormatTextSupport().spannableToChecklistItems(spannable)
+            formattedTextSegments = SpannableStringBuilder(binding.edtNote.text ?: "")
+            val checklistItems = adapter.spannableToChecklistItems(formattedTextSegments)
             adapter.setItems(checklistItems)
 
             binding.constraintNoteContentList.visibility = View.VISIBLE
             binding.edtNote.visibility = View.GONE
             binding.constraint.visibility = View.GONE
         } else {
-            val spannable = adapter.convertCheckListToSpannable()
-            binding.edtNote.text = spannable
-            formattedTextSegments = SpannableStringBuilder(spannable)
+            formattedTextSegments = adapter.convertCheckListToSpannable()
+            binding.edtNote.text = formattedTextSegments
 
             binding.constraintNoteContentList.visibility = View.GONE
             binding.edtNote.visibility = View.VISIBLE
@@ -825,7 +824,6 @@ class NoteDetailFragment : Fragment(), MenuProvider {
         binding.hideFormattingBar.setOnClickListener {
             binding.constraint.visibility = View.GONE
             sharedPreferences.edit().putBoolean("isShowFormattingBar", false).apply()
-            requireActivity().invalidateOptionsMenu()
         }
 
         val colorUncheck = ContextCompat.getColor(requireContext(), R.color.background)
@@ -1176,9 +1174,6 @@ class NoteDetailFragment : Fragment(), MenuProvider {
 
                     editText.removeTextChangedListener(this)
 
-                    if (formattedTextSegments.isEmpty()) {
-                        formattedTextSegments.append(it)
-                    }
                     if (startPos < endPos) {
                         val newText = it.subSequence(startPos, endPos)
                         formattedTextSegments.insert(startPos, newText)
@@ -1204,7 +1199,6 @@ class NoteDetailFragment : Fragment(), MenuProvider {
                             if (formattedTextSegments.isNotEmpty()) {
                                 formattedTextSegments.delete(previousSelectionStart, startPos)
                             }
-                            // Lấy văn bản thay thế mới
                             val replaceText = it.subSequence(previousSelectionStart, endPos)
 
                             formattedTextSegments.insert(previousSelectionStart, replaceText)
