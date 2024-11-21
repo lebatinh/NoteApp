@@ -82,6 +82,7 @@ class NoteDetailFragment : Fragment(), MenuProvider {
     private val undoRedoManager = UndoRedoManager()
     private var formattedTextSegments = SpannableStringBuilder()
     private var currentFormat = TextFormat()
+    private var defaultFormat = TextFormat()
 
     private var isOnTrash = true
     private var isShowSearch = false
@@ -104,6 +105,7 @@ class NoteDetailFragment : Fragment(), MenuProvider {
             backgroundColor = ContextCompat.getColor(requireContext(), R.color.transparent),
             textColor = ContextCompat.getColor(requireContext(), R.color.text)
         )
+        defaultFormat = currentFormat
         listNoteSelected = mutableListOf()
     }
 
@@ -258,9 +260,9 @@ class NoteDetailFragment : Fragment(), MenuProvider {
     private fun saveNote() {
         val spannableText =
             if (isChecklistMode) adapter.convertCheckListToSpannable() else SpannableStringBuilder(
-                binding.edtNote.text
+                binding.edtNote.text ?: ""
             )
-
+        formattedTextSegments = SpannableStringBuilder(spannableText)
         val noteContent =
             FormatTextSupport().spannableToNoteContent(requireContext(), spannableText)
 
@@ -297,9 +299,10 @@ class NoteDetailFragment : Fragment(), MenuProvider {
             showFormattingBar.isEnabled = false
         } else {
             convertToChecklistItem?.title = getString(R.string.convert_to_checklist)
-            if (!isReadMode){
+            if (!isReadMode) {
                 redo.isEnabled = true
                 undoAll.isEnabled = true
+                sharedPreferences.edit().putBoolean("isShowFormattingBar", false).apply()
                 val isShowFormattingBar = sharedPreferences.getBoolean("isShowFormattingBar", false)
                 showFormattingBar.isEnabled = !isShowFormattingBar
             }
@@ -362,11 +365,11 @@ class NoteDetailFragment : Fragment(), MenuProvider {
                 }
 
                 R.id.convert_to_checklist -> {
-                    saveNote()
+                    currentFormat = defaultFormat
                     isChecklistMode = !isChecklistMode
-                    noteViewModel.updateChecklistMode(noteId, isChecklistMode)
                     convertToChecklist()
-                    formattedTextSegments = SpannableStringBuilder(binding.edtNote.text)
+                    saveNote()
+                    noteViewModel.updateChecklistMode(noteId, isChecklistMode)
                     true
                 }
 
@@ -398,21 +401,21 @@ class NoteDetailFragment : Fragment(), MenuProvider {
 
     private fun convertToChecklist() {
         if (isChecklistMode) {
-            formattedTextSegments = SpannableStringBuilder(binding.edtNote.text ?: "")
-
-            val checklistItems =
-                FormatTextSupport().spannableToChecklistItems(formattedTextSegments)
+            // Chế độ checklist: chuyển văn bản thành các mục checklist
+            val spannable = SpannableStringBuilder(binding.edtNote.text ?: "")
+            val checklistItems = FormatTextSupport().spannableToChecklistItems(spannable)
             adapter.setItems(checklistItems)
 
             binding.constraintNoteContentList.visibility = View.VISIBLE
             binding.edtNote.visibility = View.GONE
             binding.constraint.visibility = View.GONE
         } else {
-            formattedTextSegments = adapter.convertCheckListToSpannable()
-            binding.edtNote.text = formattedTextSegments
+            val spannable = adapter.convertCheckListToSpannable()
+            binding.edtNote.text = spannable
+            formattedTextSegments = SpannableStringBuilder(spannable)
+
             binding.constraintNoteContentList.visibility = View.GONE
             binding.edtNote.visibility = View.VISIBLE
-            formattedTextSegments = SpannableStringBuilder(binding.edtNote.text)
         }
     }
 
@@ -833,7 +836,7 @@ class NoteDetailFragment : Fragment(), MenuProvider {
 
             val start = binding.edtNote.selectionStart
             val end = binding.edtNote.selectionEnd
-            val spannable = binding.edtNote.text as SpannableStringBuilder
+            val spannable = SpannableStringBuilder(binding.edtNote.text ?: "")
 
             if (start != end) {
                 val boldSpans = spannable.getSpans(start, end, StyleSpan::class.java)
@@ -860,7 +863,7 @@ class NoteDetailFragment : Fragment(), MenuProvider {
 
             val start = binding.edtNote.selectionStart
             val end = binding.edtNote.selectionEnd
-            val spannable = binding.edtNote.text as SpannableStringBuilder
+            val spannable = SpannableStringBuilder(binding.edtNote.text ?: "")
 
             if (start != end) {
                 val italicSpans = spannable.getSpans(start, end, StyleSpan::class.java)
@@ -887,7 +890,7 @@ class NoteDetailFragment : Fragment(), MenuProvider {
 
             val start = binding.edtNote.selectionStart
             val end = binding.edtNote.selectionEnd
-            val spannable = binding.edtNote.text as SpannableStringBuilder
+            val spannable = SpannableStringBuilder(binding.edtNote.text ?: "")
 
             if (start != end) {
                 val underlineSpans = spannable.getSpans(start, end, UnderlineSpan::class.java)
@@ -912,7 +915,7 @@ class NoteDetailFragment : Fragment(), MenuProvider {
 
             val start = binding.edtNote.selectionStart
             val end = binding.edtNote.selectionEnd
-            val spannable = binding.edtNote.text as SpannableStringBuilder
+            val spannable = SpannableStringBuilder(binding.edtNote.text ?: "")
 
             if (start != end) {
                 val strikeSpans = spannable.getSpans(start, end, StrikethroughSpan::class.java)
@@ -1172,6 +1175,10 @@ class NoteDetailFragment : Fragment(), MenuProvider {
                     val endPos = editText.selectionEnd
 
                     editText.removeTextChangedListener(this)
+
+                    if (formattedTextSegments.isEmpty()) {
+                        formattedTextSegments.append(it)
+                    }
                     if (startPos < endPos) {
                         val newText = it.subSequence(startPos, endPos)
                         formattedTextSegments.insert(startPos, newText)
@@ -1224,7 +1231,7 @@ class NoteDetailFragment : Fragment(), MenuProvider {
     private fun applyRangeFormatting() {
         val start = binding.edtNote.selectionStart
         val end = binding.edtNote.selectionEnd
-        val spannable = binding.edtNote.text as SpannableStringBuilder
+        val spannable = SpannableStringBuilder(binding.edtNote.text ?: "")
 
         if (start != end) {
             val textSpans = spannable.getSpans(start, end, Any::class.java)
