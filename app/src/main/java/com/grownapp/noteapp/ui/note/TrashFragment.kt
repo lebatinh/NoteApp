@@ -152,10 +152,6 @@ class TrashFragment : Fragment(), MenuProvider {
             if (trashLayout != null) {
                 toolbar.removeView(trashLayout)
             }
-            toolbar.setNavigationIcon(R.drawable.nav)
-            toolbar.setNavigationOnClickListener {
-                (activity as MainActivity).setupDefaultToolbar()
-            }
         }
     }
 

@@ -119,7 +119,6 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        invalidateOptionsMenu()
         val navController = findNavController(R.id.nav_host_fragment_content_main)
         setupActionBarWithNavController(navController, appBarConfiguration)
         binding.navView.setupWithNavController(navController)
@@ -134,7 +133,6 @@ class MainActivity : AppCompatActivity() {
         setupActionBarWithNavController(navController, appBarConfiguration)
         binding.navView.setupWithNavController(navController)
         toolbar.menu.clear()
-        invalidateOptionsMenu()
     }
 
 }

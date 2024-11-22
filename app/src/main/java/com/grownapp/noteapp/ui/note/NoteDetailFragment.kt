@@ -244,6 +244,7 @@ class NoteDetailFragment : Fragment(), MenuProvider {
                 val previousState = undoRedoManager.undo()
                 if (previousState != null) {
                     binding.edtNote.text = previousState
+                    formattedTextSegments = previousState
                     binding.edtNote.selectionEnd
                 }
             }
@@ -320,6 +321,7 @@ class NoteDetailFragment : Fragment(), MenuProvider {
                     val previousState = undoRedoManager.redo()
                     if (previousState != null) {
                         binding.edtNote.text = previousState
+                        formattedTextSegments = previousState
                         binding.edtNote.selectionEnd
                     }
                     true
@@ -329,6 +331,7 @@ class NoteDetailFragment : Fragment(), MenuProvider {
                     val previousState = undoRedoManager.undoAll()
                     if (previousState != null) {
                         binding.edtNote.text = previousState
+                        formattedTextSegments = previousState
                         binding.edtNote.selectionEnd
                     }
                     true
@@ -1173,7 +1176,6 @@ class NoteDetailFragment : Fragment(), MenuProvider {
                     val endPos = editText.selectionEnd
 
                     editText.removeTextChangedListener(this)
-
                     if (startPos < endPos) {
                         val newText = it.subSequence(startPos, endPos)
                         formattedTextSegments.insert(startPos, newText)
@@ -1189,7 +1191,6 @@ class NoteDetailFragment : Fragment(), MenuProvider {
                         editText.text = formattedTextSegments
                         editText.setSelection(endPos)
                         undoRedoManager.addState(formattedTextSegments)
-
                     } else if (endPos in 0 until startPos) {
                         if (previousSelectionStart == endPos) {
                             if (formattedTextSegments.isNotEmpty()) {
