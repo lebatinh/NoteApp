@@ -50,6 +50,7 @@ import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.gson.Gson
+import com.google.gson.JsonParser
 import com.grownapp.noteapp.MainActivity
 import com.grownapp.noteapp.R
 import com.grownapp.noteapp.databinding.FragmentNoteDetailBinding
@@ -127,31 +128,46 @@ class NoteDetailFragment : Fragment(), MenuProvider {
                 listNoteSelected.add(it)
                 binding.edtTitle.setText(it.title)
 
-                if (it.note != null) {
-                    val formattedText =
-                        FormatTextSupport().noteContentToSpannable(
-                            requireContext(),
-                            Gson().fromJson(note.note!!, NoteContent::class.java)
-                        )
-                    formattedTextSegments = SpannableStringBuilder(formattedText)
-                } else {
-                    formattedTextSegments = SpannableStringBuilder("")
-                }
-
-                undoRedoManager.addState(formattedTextSegments)
-
                 isChecklistMode = note.checklistMode == true
 
                 if (isChecklistMode) {
                     binding.constraintNoteContentList.visibility = View.VISIBLE
                     binding.edtNote.visibility = View.GONE
 
-                    val checklistItems = adapter.spannableToChecklistItems(requireContext(), formattedTextSegments)
+                    val checklistItems = if (note.note != null) {
+                        try {
+                            val jsonElement = JsonParser.parseString(note.note)
+                            if (jsonElement.isJsonArray) {
+                                Gson().fromJson(note.note, Array<ChecklistItem>::class.java).toList()
+                            } else {
+                                val noteContent = Gson().fromJson(note.note, NoteContent::class.java)
+                                noteContent.segments.map { segment ->
+                                    ChecklistItem(NoteContent(listOf(segment)), false)
+                                }
+                            }
+                        } catch (e: Exception) {
+                            emptyList()
+                        }
+                    } else {
+                        emptyList()
+                    }
                     adapter.setItems(checklistItems)
 
                     binding.rcvNoteContentList.layoutManager = LinearLayoutManager(requireContext())
                     binding.rcvNoteContentList.adapter = adapter
                 } else {
+                    val noteContent = if (it.note != null) {
+                        Gson().fromJson(it.note, NoteContent::class.java)
+                    } else {
+                        NoteContent(emptyList())
+                    }
+
+                    formattedTextSegments = SpannableStringBuilder(
+                        FormatTextSupport().noteContentToSpannable(requireContext(), noteContent)
+                    )
+
+                    undoRedoManager.addState(formattedTextSegments)
+
                     binding.edtNote.text = formattedTextSegments
                     binding.constraintNoteContentList.visibility = View.GONE
                     binding.edtNote.visibility = View.VISIBLE
@@ -262,18 +278,16 @@ class NoteDetailFragment : Fragment(), MenuProvider {
     }
 
     private fun saveNote() {
-        val spannableText =
-            if (isChecklistMode) adapter.convertCheckListToSpannable(requireContext()) else SpannableStringBuilder(
-                binding.edtNote.text ?: ""
-            )
-        formattedTextSegments = SpannableStringBuilder(spannableText)
-        val noteContent =
-            FormatTextSupport().spannableToNoteContent(requireContext(), spannableText)
+        val currentNoteContent = if (isChecklistMode) {
+            Gson().toJson(adapter.getItems())
+        } else {
+            Gson().toJson(FormatTextSupport().spannableToNoteContent(requireContext(), formattedTextSegments))
+        }
 
         val updateNote = Note().copy(
             noteId = noteId,
             title = binding.edtTitle.text.toString(),
-            note = Gson().toJson(noteContent),
+            note = currentNoteContent,
             checklistMode = isChecklistMode
         )
 
@@ -409,17 +423,21 @@ class NoteDetailFragment : Fragment(), MenuProvider {
 
     private fun convertToChecklist() {
         if (isChecklistMode) {
-            formattedTextSegments = SpannableStringBuilder(binding.edtNote.text ?: "")
-            val checklistItems = adapter.spannableToChecklistItems(requireContext(), formattedTextSegments)
-            adapter.setItems(checklistItems)
+            val noteContent = FormatTextSupport().spannableToNoteContent(requireContext(), formattedTextSegments)
+            adapter.setItemsFromNoteContent(Gson().toJson(noteContent))
 
             binding.constraintNoteContentList.visibility = View.VISIBLE
             binding.edtNote.visibility = View.GONE
             binding.constraint.visibility = View.GONE
         } else {
-            formattedTextSegments = adapter.convertCheckListToSpannable(requireContext())
+            val noteContent = adapter.convertChecklistToNoteContent()
+            formattedTextSegments = SpannableStringBuilder(
+                FormatTextSupport().noteContentToSpannable(
+                    requireContext(),
+                    Gson().fromJson(noteContent, NoteContent::class.java)
+                )
+            )
             binding.edtNote.text = formattedTextSegments
-
             binding.constraintNoteContentList.visibility = View.GONE
             binding.edtNote.visibility = View.VISIBLE
         }
@@ -841,7 +859,7 @@ class NoteDetailFragment : Fragment(), MenuProvider {
 
             val start = binding.edtNote.selectionStart
             val end = binding.edtNote.selectionEnd
-            val spannable = SpannableStringBuilder(binding.edtNote.text ?: "")
+            val spannable = SpannableStringBuilder(binding.edtNote.text)
 
             if (start != end) {
                 val boldSpans = spannable.getSpans(start, end, StyleSpan::class.java)
@@ -868,7 +886,7 @@ class NoteDetailFragment : Fragment(), MenuProvider {
 
             val start = binding.edtNote.selectionStart
             val end = binding.edtNote.selectionEnd
-            val spannable = SpannableStringBuilder(binding.edtNote.text ?: "")
+            val spannable = SpannableStringBuilder(binding.edtNote.text)
 
             if (start != end) {
                 val italicSpans = spannable.getSpans(start, end, StyleSpan::class.java)
@@ -895,7 +913,7 @@ class NoteDetailFragment : Fragment(), MenuProvider {
 
             val start = binding.edtNote.selectionStart
             val end = binding.edtNote.selectionEnd
-            val spannable = SpannableStringBuilder(binding.edtNote.text ?: "")
+            val spannable = SpannableStringBuilder(binding.edtNote.text)
 
             if (start != end) {
                 val underlineSpans = spannable.getSpans(start, end, UnderlineSpan::class.java)
@@ -920,7 +938,7 @@ class NoteDetailFragment : Fragment(), MenuProvider {
 
             val start = binding.edtNote.selectionStart
             val end = binding.edtNote.selectionEnd
-            val spannable = SpannableStringBuilder(binding.edtNote.text ?: "")
+            val spannable = SpannableStringBuilder(binding.edtNote.text)
 
             if (start != end) {
                 val strikeSpans = spannable.getSpans(start, end, StrikethroughSpan::class.java)
@@ -1230,7 +1248,7 @@ class NoteDetailFragment : Fragment(), MenuProvider {
     private fun applyRangeFormatting() {
         val start = binding.edtNote.selectionStart
         val end = binding.edtNote.selectionEnd
-        val spannable = SpannableStringBuilder(binding.edtNote.text ?: "")
+        val spannable = SpannableStringBuilder(binding.edtNote.text)
 
         if (start != end) {
             val textSpans = spannable.getSpans(start, end, Any::class.java)

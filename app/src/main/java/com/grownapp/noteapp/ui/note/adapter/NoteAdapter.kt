@@ -3,7 +3,6 @@ package com.grownapp.noteapp.ui.note.adapter
 import android.content.Context
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -18,6 +17,7 @@ import com.grownapp.noteapp.R
 import com.grownapp.noteapp.databinding.NoteItemBinding
 import com.grownapp.noteapp.ui.categories.dao.Category
 import com.grownapp.noteapp.ui.note.dao.Note
+import com.grownapp.noteapp.ui.note.support.ChecklistItem
 import com.grownapp.noteapp.ui.note.support.NoteContent
 
 class NoteAdapter(
@@ -55,7 +55,11 @@ class NoteAdapter(
         private fun bindTitleAndContent(note: Note) {
             val titleText = note.title?.takeIf { it.isNotBlank() }
             val contentText = note.note?.takeIf { it.isNotBlank() }?.let {
-                val noteContent = Gson().fromJson(it, NoteContent::class.java)
+                val noteContent = if (note.checklistMode == false) Gson().fromJson(
+                    it,
+                    NoteContent::class.java
+                ) else
+                    convertChecklistJsonToNoteContent(it)
                 noteContentToPlainText(noteContent)
             }
 
@@ -139,10 +143,16 @@ class NoteAdapter(
 
             if (isSelected == true) {
                 val blendedDrawable = if (note.backgroundColor == null) {
-                    ContextCompat.getDrawable(binding.root.context, R.drawable.long_click_item_background)
+                    ContextCompat.getDrawable(
+                        binding.root.context,
+                        R.drawable.long_click_item_background
+                    )
                 } else {
                     val blendedColor = blendColors(
-                        ContextCompat.getColor(binding.root.context, R.color.bottomBackgroundColorLongClick),
+                        ContextCompat.getColor(
+                            binding.root.context,
+                            R.color.bottomBackgroundColorLongClick
+                        ),
                         note.backgroundColor!!
                     )
                     applyBlendedColorsToDrawable(drawable, blendedColor, binding.root.context)
@@ -153,8 +163,12 @@ class NoteAdapter(
             }
         }
 
-        private fun getNoteBackgroundDrawable(context: Context, backgroundColor: Int?): GradientDrawable {
-            val drawable = ContextCompat.getDrawable(context, R.drawable.border_item_note) as GradientDrawable
+        private fun getNoteBackgroundDrawable(
+            context: Context,
+            backgroundColor: Int?
+        ): GradientDrawable {
+            val drawable =
+                ContextCompat.getDrawable(context, R.drawable.border_item_note) as GradientDrawable
             if (backgroundColor != null) {
                 drawable.mutate()
                 val white = ContextCompat.getColor(context, R.color.topBackgroundItem)
@@ -202,12 +216,32 @@ class NoteAdapter(
 
     override fun getItemCount(): Int = noteList.size
 
+    fun convertChecklistJsonToNoteContent(json: String): NoteContent {
+        val checklistItems = Gson().fromJson(json, Array<ChecklistItem>::class.java).toList()
+
+        val allSegments = checklistItems.flatMapIndexed { index, checklistItem ->
+            val lineSegments = checklistItem.text.segments.toMutableList()
+
+            if (index < checklistItems.size - 1 && lineSegments.isNotEmpty()) {
+                val lastSegment = lineSegments.last()
+                lineSegments[lineSegments.lastIndex] = lastSegment.copy(
+                    text = lastSegment.text + "\n"
+                )
+            }
+            lineSegments
+        }
+
+        return NoteContent(segments = allSegments)
+    }
+
+
     fun updateListNote(newListNote: List<Note>) {
         val diffCallback = object : DiffUtil.Callback() {
             override fun getOldListSize() = noteList.size
             override fun getNewListSize() = newListNote.size
             override fun areItemsTheSame(oldItemPosition: Int, newItemPosition: Int) =
                 noteList[oldItemPosition].noteId == newListNote[newItemPosition].noteId
+
             override fun areContentsTheSame(oldItemPosition: Int, newItemPosition: Int) =
                 noteList[oldItemPosition] == newListNote[newItemPosition]
         }
@@ -236,7 +270,7 @@ class NoteAdapter(
     }
 
     fun selectAllNotes() {
-        if (!isEditMode){
+        if (!isEditMode) {
             isEditMode = true
         }
         if (listNoteSelectedAdapter.value?.size != noteList.size) {

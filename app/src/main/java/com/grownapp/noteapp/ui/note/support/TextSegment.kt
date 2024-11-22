@@ -1,7 +1,11 @@
 package com.grownapp.noteapp.ui.note.support
 
 import android.graphics.Color
-import android.text.SpannableStringBuilder
+
+data class ChecklistItem(
+    var text: NoteContent,
+    var isChecked: Boolean = false
+)
 
 data class NoteContent(
     val segments: List<TextSegment>
@@ -26,10 +30,4 @@ data class TextFormat(
     var backgroundColor: Int = 0,
     var textColor: Int = 0,
     var textSize: Int = 18
-)
-
-
-data class ChecklistItem(
-    var text: NoteContent,
-    var isChecked: Boolean
 )

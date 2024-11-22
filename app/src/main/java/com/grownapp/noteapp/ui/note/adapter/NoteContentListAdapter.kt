@@ -1,15 +1,17 @@
 package com.grownapp.noteapp.ui.note.adapter
 
-import android.content.Context
 import android.text.Editable
 import android.text.SpannableStringBuilder
 import android.text.TextWatcher
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
+import com.google.gson.Gson
 import com.grownapp.noteapp.databinding.NoteContentItemBinding
 import com.grownapp.noteapp.ui.note.support.ChecklistItem
 import com.grownapp.noteapp.ui.note.support.FormatTextSupport
+import com.grownapp.noteapp.ui.note.support.NoteContent
+import com.grownapp.noteapp.ui.note.support.TextSegment
 
 class NoteContentListAdapter : RecyclerView.Adapter<NoteContentListAdapter.ViewHolder>() {
 
@@ -19,6 +21,10 @@ class NoteContentListAdapter : RecyclerView.Adapter<NoteContentListAdapter.ViewH
         items.clear()
         items.addAll(newItems)
         notifyDataSetChanged()
+    }
+
+    fun getItems(): List<ChecklistItem> {
+        return items
     }
 
     fun addItem(item: ChecklistItem) {
@@ -34,35 +40,52 @@ class NoteContentListAdapter : RecyclerView.Adapter<NoteContentListAdapter.ViewH
         }
     }
 
-    fun convertCheckListToSpannable(context: Context): SpannableStringBuilder {
-        val spannableBuilder = SpannableStringBuilder()
-        if (items.isEmpty()) {
-            return spannableBuilder
+    fun convertChecklistToNoteContent(): String {
+        val segments = items.flatMapIndexed { index, checklistItem ->
+            val lineSegments = checklistItem.text.segments.toMutableList()
+            if (index < items.size - 1 && lineSegments.isNotEmpty()) {
+                val lastSegment = lineSegments.last()
+                lineSegments[lineSegments.lastIndex] = lastSegment.copy(
+                    text = lastSegment.text + "\n"
+                )
+            }
+            lineSegments
         }
-
-        for (item in items) {
-            val spannable = FormatTextSupport().noteContentToSpannable(context, item.text)
-            spannableBuilder.append(spannable).append("\n")
-        }
-        if (spannableBuilder.isNotEmpty()) spannableBuilder.delete(
-            spannableBuilder.length - 1,
-            spannableBuilder.length
-        )
-        return spannableBuilder
+        val noteContent = NoteContent(segments = segments)
+        return Gson().toJson(noteContent)
     }
 
-    fun spannableToChecklistItems(context: Context, spannable: SpannableStringBuilder): List<ChecklistItem> {
-        val items = mutableListOf<ChecklistItem>()
-        val lines = spannable.split("\n")
-        var start = 0
-        for (line in lines) {
-            val end = start + line.length
-            val lineSpannable = SpannableStringBuilder(spannable.subSequence(start, end))
-            val noteContent = FormatTextSupport().spannableToNoteContent(context, lineSpannable)
-            items.add(ChecklistItem(noteContent, false))
-            start = end + 1
+    fun setItemsFromNoteContent(json: String) {
+        val noteContent = Gson().fromJson(json, NoteContent::class.java)
+        val checklistItems = splitSegmentsByLines(noteContent.segments).map { lineSegments ->
+            ChecklistItem(
+                text = NoteContent(lineSegments),
+                isChecked = false
+            )
         }
-        return items
+        setItems(checklistItems)
+    }
+
+    private fun splitSegmentsByLines(segments: List<TextSegment>): List<List<TextSegment>> {
+        val lines = mutableListOf<MutableList<TextSegment>>()
+        var currentLine = mutableListOf<TextSegment>()
+
+        for (segment in segments) {
+            val parts = segment.text?.split("\n") ?: listOf("")
+            for ((index, part) in parts.withIndex()) {
+                if (index > 0) {
+                    lines.add(currentLine)
+                    currentLine = mutableListOf()
+                }
+                if (part.isNotEmpty()) {
+                    currentLine.add(segment.copy(text = part))
+                }
+            }
+        }
+        if (currentLine.isNotEmpty()) {
+            lines.add(currentLine)
+        }
+        return lines
     }
 
     inner class ViewHolder(private val binding: NoteContentItemBinding) :
@@ -70,9 +93,11 @@ class NoteContentListAdapter : RecyclerView.Adapter<NoteContentListAdapter.ViewH
         fun bind(position: Int) {
             val item = items[position]
 
-            val spannableText = FormatTextSupport().noteContentToSpannable(binding.root.context, item.text)
+            val spannableText =
+                FormatTextSupport().noteContentToSpannable(binding.root.context, item.text)
             binding.edtItemNote.text = spannableText
 
+            binding.ckbNoteItem.isChecked = item.isChecked
             binding.ckbNoteItem.setOnCheckedChangeListener { _, isChecked ->
                 if (item.isChecked != isChecked) {
                     item.isChecked = isChecked
@@ -85,13 +110,20 @@ class NoteContentListAdapter : RecyclerView.Adapter<NoteContentListAdapter.ViewH
                     start: Int,
                     count: Int,
                     after: Int
-                ) {}
+                ) {
+                }
 
                 override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
-                    val newText = SpannableStringBuilder(s ?: "")
-                    val newNoteContent = FormatTextSupport().spannableToNoteContent(binding.root.context, newText)
-                    if (item.text != newNoteContent) {
-                        item.text = newNoteContent
+                    s?.let {
+                        val newText = SpannableStringBuilder(it)
+                        val newNoteContent =
+                            FormatTextSupport().spannableToNoteContent(
+                                binding.root.context,
+                                newText
+                            )
+                        if (item.text != newNoteContent) {
+                            item.text = newNoteContent
+                        }
                     }
                 }
 
