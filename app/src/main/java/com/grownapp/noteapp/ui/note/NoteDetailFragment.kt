@@ -63,6 +63,7 @@ import com.grownapp.noteapp.ui.note.support.FileProcess
 import com.grownapp.noteapp.ui.note.support.FormatTextSupport
 import com.grownapp.noteapp.ui.note.support.NoteContent
 import com.grownapp.noteapp.ui.note.support.TextFormat
+import com.grownapp.noteapp.ui.note.support.TextSegment
 import com.grownapp.noteapp.ui.note.support.UndoRedoManager
 import com.grownapp.noteapp.ui.note_category.NoteCategoryCrossRef
 
@@ -145,6 +146,9 @@ class NoteDetailFragment : Fragment(), MenuProvider {
                     binding.constraintNoteContentList.visibility = View.VISIBLE
                     binding.edtNote.visibility = View.GONE
 
+                    val checklistItems = adapter.spannableToChecklistItems(requireContext(), formattedTextSegments)
+                    adapter.setItems(checklistItems)
+
                     binding.rcvNoteContentList.layoutManager = LinearLayoutManager(requireContext())
                     binding.rcvNoteContentList.adapter = adapter
                 } else {
@@ -156,7 +160,7 @@ class NoteDetailFragment : Fragment(), MenuProvider {
                 binding.rcvNoteContentList.adapter = adapter
 
                 binding.tvAddCategories.setOnClickListener {
-                    val newItem = ChecklistItem(SpannableStringBuilder(""), false)
+                    val newItem = ChecklistItem(NoteContent(listOf(TextSegment(""))), false)
                     adapter.addItem(newItem)
                     binding.rcvNoteContentList.scrollToPosition(adapter.itemCount - 1)
                 }
@@ -259,7 +263,7 @@ class NoteDetailFragment : Fragment(), MenuProvider {
 
     private fun saveNote() {
         val spannableText =
-            if (isChecklistMode) adapter.convertCheckListToSpannable() else SpannableStringBuilder(
+            if (isChecklistMode) adapter.convertCheckListToSpannable(requireContext()) else SpannableStringBuilder(
                 binding.edtNote.text ?: ""
             )
         formattedTextSegments = SpannableStringBuilder(spannableText)
@@ -406,14 +410,14 @@ class NoteDetailFragment : Fragment(), MenuProvider {
     private fun convertToChecklist() {
         if (isChecklistMode) {
             formattedTextSegments = SpannableStringBuilder(binding.edtNote.text ?: "")
-            val checklistItems = adapter.spannableToChecklistItems(formattedTextSegments)
+            val checklistItems = adapter.spannableToChecklistItems(requireContext(), formattedTextSegments)
             adapter.setItems(checklistItems)
 
             binding.constraintNoteContentList.visibility = View.VISIBLE
             binding.edtNote.visibility = View.GONE
             binding.constraint.visibility = View.GONE
         } else {
-            formattedTextSegments = adapter.convertCheckListToSpannable()
+            formattedTextSegments = adapter.convertCheckListToSpannable(requireContext())
             binding.edtNote.text = formattedTextSegments
 
             binding.constraintNoteContentList.visibility = View.GONE

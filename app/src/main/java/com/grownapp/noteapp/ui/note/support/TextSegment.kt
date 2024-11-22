@@ -30,6 +30,6 @@ data class TextFormat(
 
 
 data class ChecklistItem(
-    var text: SpannableStringBuilder,
+    var text: NoteContent,
     var isChecked: Boolean
 )

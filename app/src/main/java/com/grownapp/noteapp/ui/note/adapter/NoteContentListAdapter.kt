@@ -1,5 +1,6 @@
 package com.grownapp.noteapp.ui.note.adapter
 
+import android.content.Context
 import android.text.Editable
 import android.text.SpannableStringBuilder
 import android.text.TextWatcher
@@ -8,6 +9,7 @@ import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
 import com.grownapp.noteapp.databinding.NoteContentItemBinding
 import com.grownapp.noteapp.ui.note.support.ChecklistItem
+import com.grownapp.noteapp.ui.note.support.FormatTextSupport
 
 class NoteContentListAdapter : RecyclerView.Adapter<NoteContentListAdapter.ViewHolder>() {
 
@@ -32,14 +34,15 @@ class NoteContentListAdapter : RecyclerView.Adapter<NoteContentListAdapter.ViewH
         }
     }
 
-    fun convertCheckListToSpannable(): SpannableStringBuilder {
+    fun convertCheckListToSpannable(context: Context): SpannableStringBuilder {
         val spannableBuilder = SpannableStringBuilder()
         if (items.isEmpty()) {
             return spannableBuilder
         }
 
         for (item in items) {
-            spannableBuilder.append(item.text).append("\n")
+            val spannable = FormatTextSupport().noteContentToSpannable(context, item.text)
+            spannableBuilder.append(spannable).append("\n")
         }
         if (spannableBuilder.isNotEmpty()) spannableBuilder.delete(
             spannableBuilder.length - 1,
@@ -48,14 +51,15 @@ class NoteContentListAdapter : RecyclerView.Adapter<NoteContentListAdapter.ViewH
         return spannableBuilder
     }
 
-    fun spannableToChecklistItems(spannable: SpannableStringBuilder): List<ChecklistItem> {
+    fun spannableToChecklistItems(context: Context, spannable: SpannableStringBuilder): List<ChecklistItem> {
         val items = mutableListOf<ChecklistItem>()
         val lines = spannable.split("\n")
         var start = 0
         for (line in lines) {
             val end = start + line.length
             val lineSpannable = SpannableStringBuilder(spannable.subSequence(start, end))
-            items.add(ChecklistItem(lineSpannable, false))
+            val noteContent = FormatTextSupport().spannableToNoteContent(context, lineSpannable)
+            items.add(ChecklistItem(noteContent, false))
             start = end + 1
         }
         return items
@@ -66,8 +70,8 @@ class NoteContentListAdapter : RecyclerView.Adapter<NoteContentListAdapter.ViewH
         fun bind(position: Int) {
             val item = items[position]
 
-            binding.ckbNoteItem.isChecked = item.isChecked
-            binding.edtItemNote.text = item.text
+            val spannableText = FormatTextSupport().noteContentToSpannable(binding.root.context, item.text)
+            binding.edtItemNote.text = spannableText
 
             binding.ckbNoteItem.setOnCheckedChangeListener { _, isChecked ->
                 if (item.isChecked != isChecked) {
@@ -81,13 +85,13 @@ class NoteContentListAdapter : RecyclerView.Adapter<NoteContentListAdapter.ViewH
                     start: Int,
                     count: Int,
                     after: Int
-                ) {
-                }
+                ) {}
 
                 override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
                     val newText = SpannableStringBuilder(s ?: "")
-                    if (item.text.toString() != newText.toString()) {
-                        item.text = newText
+                    val newNoteContent = FormatTextSupport().spannableToNoteContent(binding.root.context, newText)
+                    if (item.text != newNoteContent) {
+                        item.text = newNoteContent
                     }
                 }
 
